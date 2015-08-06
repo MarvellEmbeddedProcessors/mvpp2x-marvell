@@ -1,0 +1,9 @@
+_private*/
+*.zip
+*.log
+*_old*
+*_OLD*
+*pcap
+*.prev
+
+~*
