@@ -5,5 +5,11 @@ _private*/
 *_OLD*
 *pcap
 *.prev
+*Kconfig*
 
 ~*
+
+.templates/bl_body.template
+.templates/bl_version.template
+.templates/default.txt
+.templates/makebaseline_mail.txt
