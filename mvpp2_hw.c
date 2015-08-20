@@ -2371,11 +2371,11 @@ void mvpp2_get_mac_address(struct mvpp2_port *port, unsigned char *addr)
 
 void mvpp2_cause_error(struct net_device *dev, int cause)
 {
-	if (cause & MVPP2_CAUSE_FCS_ERR_MASK)
+	if (cause & MVPP21_CAUSE_FCS_ERR_MASK)
 		netdev_err(dev, "FCS error\n");
-	if (cause & MVPP2_CAUSE_RX_FIFO_OVERRUN_MASK)
+	if (cause & MVPP21_CAUSE_RX_FIFO_OVERRUN_MASK)
 		netdev_err(dev, "rx fifo overrun error\n");
-	if (cause & MVPP2_CAUSE_TX_FIFO_UNDERRUN_MASK)
+	if (cause & MVPP21_CAUSE_TX_FIFO_UNDERRUN_MASK)
 		netdev_err(dev, "tx fifo underrun error\n");
 }
 
@@ -2646,14 +2646,14 @@ void mvpp2_rxq_offset_set(struct mvpp2_port *port,
 	/* Convert offset from bytes to units of 32 bytes */
 	offset = offset >> 5;
 
-	val = mvpp2_read(port->priv, MVPP2_RXQ_CONFIG_REG(prxq));
-	val &= ~MVPP2_RXQ_PACKET_OFFSET_MASK;
+	val = mvpp2_read(port->priv, MVPP21_RXQ_CONFIG_REG(prxq));
+	val &= ~MVPP21_RXQ_PACKET_OFFSET_MASK;
 
 	/* Offset is in */
-	val |= ((offset << MVPP2_RXQ_PACKET_OFFSET_OFFS) &
-		MVPP2_RXQ_PACKET_OFFSET_MASK);
+	val |= ((offset << MVPP21_RXQ_PACKET_OFFSET_OFFS) &
+		MVPP21_RXQ_PACKET_OFFSET_MASK);
 
-	mvpp2_write(port->priv, MVPP2_RXQ_CONFIG_REG(prxq), val);
+	mvpp2_write(port->priv, MVPP21_RXQ_CONFIG_REG(prxq), val);
 }
 
 
@@ -2805,12 +2805,12 @@ void mvpp2_rxq_long_pool_set(struct mvpp2_port *port,
 	/* Get queue physical ID */
 	prxq = port->rxqs[lrxq]->id;
 
-	val = mvpp2_read(port->priv, MVPP2_RXQ_CONFIG_REG(prxq));
-	val &= ~MVPP2_RXQ_POOL_LONG_MASK;
-	val |= ((long_pool << MVPP2_RXQ_POOL_LONG_OFFS) &
-		    MVPP2_RXQ_POOL_LONG_MASK);
+	val = mvpp2_read(port->priv, MVPP21_RXQ_CONFIG_REG(prxq));
+	val &= ~MVPP21_RXQ_POOL_LONG_MASK;
+	val |= ((long_pool << MVPP21_RXQ_POOL_LONG_OFFS) &
+		    MVPP21_RXQ_POOL_LONG_MASK);
 
-	mvpp2_write(port->priv, MVPP2_RXQ_CONFIG_REG(prxq), val);
+	mvpp2_write(port->priv, MVPP21_RXQ_CONFIG_REG(prxq), val);
 }
 
 /* Attach short pool to rxq */
@@ -2823,12 +2823,12 @@ void mvpp2_rxq_short_pool_set(struct mvpp2_port *port,
 	/* Get queue physical ID */
 	prxq = port->rxqs[lrxq]->id;
 
-	val = mvpp2_read(port->priv, MVPP2_RXQ_CONFIG_REG(prxq));
-	val &= ~MVPP2_RXQ_POOL_SHORT_MASK;
-	val |= ((short_pool << MVPP2_RXQ_POOL_SHORT_OFFS) &
-		    MVPP2_RXQ_POOL_SHORT_MASK);
+	val = mvpp2_read(port->priv, MVPP21_RXQ_CONFIG_REG(prxq));
+	val &= ~MVPP21_RXQ_POOL_SHORT_MASK;
+	val |= ((short_pool << MVPP21_RXQ_POOL_SHORT_OFFS) &
+		    MVPP21_RXQ_POOL_SHORT_MASK);
 
-	mvpp2_write(port->priv, MVPP2_RXQ_CONFIG_REG(prxq), val);
+	mvpp2_write(port->priv, MVPP21_RXQ_CONFIG_REG(prxq), val);
 }
 
 
@@ -2840,9 +2840,9 @@ void mvpp2_ingress_enable(struct mvpp2_port *port)
 
 	for (lrxq = 0; lrxq < mvpp2_rxq_number; lrxq++) {
 		queue = port->rxqs[lrxq]->id;
-		val = mvpp2_read(port->priv, MVPP2_RXQ_CONFIG_REG(queue));
-		val &= ~MVPP2_RXQ_DISABLE_MASK;
-		mvpp2_write(port->priv, MVPP2_RXQ_CONFIG_REG(queue), val);
+		val = mvpp2_read(port->priv, MVPP21_RXQ_CONFIG_REG(queue));
+		val &= ~MVPP21_RXQ_DISABLE_MASK;
+		mvpp2_write(port->priv, MVPP21_RXQ_CONFIG_REG(queue), val);
 	}
 }
 
@@ -2853,9 +2853,9 @@ void mvpp2_ingress_disable(struct mvpp2_port *port)
 
 	for (lrxq = 0; lrxq < mvpp2_rxq_number; lrxq++) {
 		queue = port->rxqs[lrxq]->id;
-		val = mvpp2_read(port->priv, MVPP2_RXQ_CONFIG_REG(queue));
-		val |= MVPP2_RXQ_DISABLE_MASK;
-		mvpp2_write(port->priv, MVPP2_RXQ_CONFIG_REG(queue), val);
+		val = mvpp2_read(port->priv, MVPP21_RXQ_CONFIG_REG(queue));
+		val |= MVPP21_RXQ_DISABLE_MASK;
+		mvpp2_write(port->priv, MVPP21_RXQ_CONFIG_REG(queue), val);
 	}
 }
 

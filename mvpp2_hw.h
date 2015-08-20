@@ -117,9 +117,9 @@ static inline void mvpp2_interrupts_unmask(void *arg)
 	struct mvpp2_port *port = arg;
 
 	mvpp2_write(port->priv, MVPP2_ISR_RX_TX_MASK_REG(port->id),
-		    (MVPP2_CAUSE_MISC_SUM_MASK |
-		     MVPP2_CAUSE_TXQ_OCCUP_DESC_ALL_MASK |
-		     MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK));
+		    (MVPP21_CAUSE_MISC_SUM_MASK |
+		     MVPP21_CAUSE_TXQ_OCCUP_DESC_ALL_MASK |
+		     MVPP21_CAUSE_RXQ_OCCUP_DESC_ALL_MASK));
 }
 
 
@@ -172,8 +172,8 @@ static inline void mvpp2_bm_pool_mc_put(struct mvpp2_port *port, int pool,
 {
 	u32 val = 0;
 
-	val |= (mc_id & MVPP2_BM_MC_ID_MASK);
-	mvpp2_write(port->priv, MVPP2_BM_MC_RLS_REG, val);
+	val |= (mc_id & MVPP21_BM_MC_ID_MASK);
+	mvpp2_write(port->priv, MVPP21_BM_MC_RLS_REG, val);
 
 	mvpp2_bm_pool_put(port, pool,
 			  buf_phys_addr | MVPP2_BM_PHY_RLS_MC_BUFF_MASK,
@@ -208,10 +208,10 @@ static inline int mvpp2_txq_sent_desc_proc(struct mvpp2_port *port,
 	u32 val;
 
 	/* Reading status reg resets transmitted descriptor counter */
-	val = mvpp2_read(port->priv, MVPP2_TXQ_SENT_REG(txq->id));
+	val = mvpp2_read(port->priv, MVPP21_TXQ_SENT_REG(txq->id));
 
-	return (val & MVPP2_TRANSMITTED_COUNT_MASK) >>
-		MVPP2_TRANSMITTED_COUNT_OFFSET;
+	return (val & MVPP21_TRANSMITTED_COUNT_MASK) >>
+		MVPP21_TRANSMITTED_COUNT_OFFSET;
 }
 
 static inline void mvpp2_txq_desc_put(struct mvpp2_tx_queue *txq)
@@ -231,7 +231,7 @@ static inline void mvpp2_txq_sent_counter_clear(void *arg)
 	for (queue = 0; queue < mvpp2_txq_number; queue++) {
 		int id = port->txqs[queue]->id;
 
-		mvpp2_read(port->priv, MVPP2_TXQ_SENT_REG(id));
+		mvpp2_read(port->priv, MVPP21_TXQ_SENT_REG(id));
 	}
 }
 
