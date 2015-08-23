@@ -40,6 +40,8 @@
 #include <linux/of_mdio.h>
 #include <linux/of_net.h>
 #include <linux/of_address.h>
+#include <linux/of_device.h>
+
 #include <linux/phy.h>
 #include <linux/clk.h>
 #include <uapi/linux/ppp_defs.h>
@@ -228,7 +230,6 @@ static int mvpp2_bm_bufs_add(struct mvpp2_port *port,
 {
 	struct sk_buff *skb;
 	int i, buf_size, total_size;
-	u32 bm;
 	dma_addr_t phys_addr;
 
 	buf_size = MVPP2_RX_BUF_SIZE(bm_pool->pkt_size);
@@ -242,13 +243,12 @@ static int mvpp2_bm_bufs_add(struct mvpp2_port *port,
 		return 0;
 	}
 
-	bm = mvpp2_bm_cookie_pool_set(0, bm_pool->id);
 	for (i = 0; i < buf_num; i++) {
 		skb = mvpp2_skb_alloc(port, bm_pool, &phys_addr, GFP_KERNEL);
 		if (!skb)
 			break;
 
-		mvpp2_pool_refill(port, bm, (u32)phys_addr, (u32)skb);
+		mvpp2_pool_refill(port->priv, (u32)bm_pool->id, phys_addr, skb);
 	}
 
 	/* Update BM driver with number of buffers added to pool */
@@ -522,6 +522,7 @@ static void mvpp2_txq_bufs_free(struct mvpp2_port *port,
 				struct mvpp2_txq_pcpu *txq_pcpu, int num)
 {
 	int i;
+	dma_addr_t buf_phys_addr;
 
 	for (i = 0; i < num; i++) {
 		struct mvpp2_tx_desc *tx_desc = txq->descs +
@@ -532,8 +533,10 @@ static void mvpp2_txq_bufs_free(struct mvpp2_port *port,
 
 		if (!skb)
 			continue;
-
-		dma_unmap_single(port->dev->dev.parent, tx_desc->buf_phys_addr,
+		buf_phys_addr = mvpp2x_txdesc_phys_addr_get(port->priv->pp2_version,
+			tx_desc);
+		
+		dma_unmap_single(port->dev->dev.parent, buf_phys_addr,
 				 tx_desc->data_size, DMA_TO_DEVICE);
 		dev_kfree_skb_any(skb);
 	}
@@ -643,6 +646,8 @@ static void mvpp2_rxq_drop_pkts(struct mvpp2_port *port,
 				struct mvpp2_rx_queue *rxq)
 {
 	int rx_received, i;
+	struct sk_buff *buf_cookie;
+	dma_addr_t buf_phys_addr;
 
 	rx_received = mvpp2_rxq_received(port, rxq->id);
 	if (!rx_received)
@@ -650,10 +655,15 @@ static void mvpp2_rxq_drop_pkts(struct mvpp2_port *port,
 
 	for (i = 0; i < rx_received; i++) {
 		struct mvpp2_rx_desc *rx_desc = mvpp2_rxq_next_desc_get(rxq);
-		u32 bm = mvpp2_bm_cookie_build(rx_desc);
-
-		mvpp2_pool_refill(port, bm, rx_desc->buf_phys_addr,
-				  rx_desc->buf_cookie);
+		if (port->priv->pp2_version == PPV21) {			
+			buf_cookie = mvpp21_rxdesc_cookie_get(rx_desc);
+			buf_phys_addr = mvpp21_rxdesc_phys_addr_get(rx_desc);
+		} else {
+			buf_cookie = mvpp22_rxdesc_cookie_get(rx_desc);
+			buf_phys_addr = mvpp22_rxdesc_phys_addr_get(rx_desc);
+		}		
+		mvpp2_pool_refill(port->priv, MVPP2_RX_DESC_POOL(rx_desc), 
+			buf_phys_addr, buf_cookie);
 	}
 	mvpp2_rxq_status_update(port, rxq->id, rx_received, rx_received);
 }
@@ -996,7 +1006,7 @@ static void mvpp2_link_event(struct net_device *dev)
 /* Reuse skb if possible, or allocate a new skb and add it to BM pool */
 static int mvpp2_rx_refill(struct mvpp2_port *port,
 			   struct mvpp2_bm_pool *bm_pool,
-			   u32 bm, int is_recycle)
+			   u32 pool, int is_recycle)
 {
 	struct sk_buff *skb;
 	dma_addr_t phys_addr;
@@ -1010,7 +1020,7 @@ static int mvpp2_rx_refill(struct mvpp2_port *port,
 	if (!skb)
 		return -ENOMEM;
 
-	mvpp2_pool_refill(port, bm, (u32)phys_addr, (u32)skb);
+	mvpp2_pool_refill(port->priv, pool, phys_addr, skb);
 	atomic_dec(&bm_pool->in_use);
 	return 0;
 }
@@ -1061,8 +1071,9 @@ static void mvpp2_buff_hdr_rx(struct mvpp2_port *port,
 
 	pool_id = (rx_status & MVPP2_RXD_BM_POOL_ID_MASK) >>
 		   MVPP2_RXD_BM_POOL_ID_OFFS;
-	buff_phys_addr = rx_desc->buf_phys_addr;
-	buff_virt_addr = rx_desc->buf_cookie;
+//TODO : YuvalC, this is just workaround to compile. Need to handle mvpp2_buff_hdr_rx().	
+	buff_phys_addr = rx_desc->u.pp21.buf_phys_addr;
+	buff_virt_addr = rx_desc->u.pp21.buf_cookie;
 
 	do {
 		skb = (struct sk_buff *)buff_virt_addr;
@@ -1102,21 +1113,30 @@ static int mvpp2_rx(struct mvpp2_port *port, int rx_todo,
 		struct mvpp2_rx_desc *rx_desc = mvpp2_rxq_next_desc_get(rxq);
 		struct mvpp2_bm_pool *bm_pool;
 		struct sk_buff *skb;
-		u32 bm, rx_status;
-		int pool, rx_bytes, err;
+		u32 rx_status, pool;
+		int rx_bytes, err;		
+		dma_addr_t buf_phys_addr;
 
 		rx_filled++;
 		rx_status = rx_desc->status;
 		rx_bytes = rx_desc->data_size - MVPP2_MH_SIZE;
 
-		bm = mvpp2_bm_cookie_build(rx_desc);
-		pool = mvpp2_bm_cookie_pool_get(bm);
+		pool = MVPP2_RX_DESC_POOL(rx_desc);
 		bm_pool = &port->priv->bm_pools[pool];
 		/* Check if buffer header is used */
 		if (rx_status & MVPP2_RXD_BUF_HDR) {
 			mvpp2_buff_hdr_rx(port, rx_desc);
 			continue;
 		}
+
+		if (port->priv->pp2_version == PPV21) {			
+			skb = mvpp21_rxdesc_cookie_get(rx_desc);
+			buf_phys_addr = mvpp21_rxdesc_phys_addr_get(rx_desc);
+		} else {
+			skb = mvpp22_rxdesc_cookie_get(rx_desc);
+			buf_phys_addr = mvpp22_rxdesc_phys_addr_get(rx_desc);
+		}
+
 
 		/* In case of an error, release the requested buffer pointer
 		 * to the Buffer Manager. This request process is controlled
@@ -1126,12 +1146,10 @@ static int mvpp2_rx(struct mvpp2_port *port, int rx_todo,
 		if (rx_status & MVPP2_RXD_ERR_SUMMARY) {
 			dev->stats.rx_errors++;
 			mvpp2_rx_error(port, rx_desc);
-			mvpp2_pool_refill(port, bm, rx_desc->buf_phys_addr,
-					  rx_desc->buf_cookie);
+			mvpp2_pool_refill(port->priv, pool, buf_phys_addr, skb);
 			continue;
 		}
 
-		skb = (struct sk_buff *)rx_desc->buf_cookie;
 
 		rcvd_pkts++;
 		rcvd_bytes += rx_bytes;
@@ -1144,7 +1162,7 @@ static int mvpp2_rx(struct mvpp2_port *port, int rx_todo,
 
 		napi_gro_receive(&port->napi, skb);
 
-		err = mvpp2_rx_refill(port, bm_pool, bm, 0);
+		err = mvpp2_rx_refill(port, bm_pool, pool, 0);
 		if (err) {
 			netdev_err(port->dev, "failed to refill BM pools\n");
 			rx_filled--;
@@ -1170,7 +1188,11 @@ static int mvpp2_rx(struct mvpp2_port *port, int rx_todo,
 static inline void tx_desc_unmap_put(struct device *dev, struct mvpp2_tx_queue *txq,
 		  struct mvpp2_tx_desc *desc)
 {
-	dma_unmap_single(dev, desc->buf_phys_addr,
+	dma_addr_t buf_phys_addr;
+
+	buf_phys_addr = mvpp2x_txdesc_phys_addr_get(
+		((struct mvpp2 *)(dev_get_drvdata(dev)))->pp2_version, desc);
+	dma_unmap_single(dev, buf_phys_addr,
 			 desc->data_size, DMA_TO_DEVICE);
 	mvpp2_txq_desc_put(txq);
 }
@@ -1201,8 +1223,8 @@ static int mvpp2_tx_frag_process(struct mvpp2_port *port, struct sk_buff *skb,
 			goto error;
 		}
 
-		tx_desc->packet_offset = buf_phys_addr & MVPP2_TX_DESC_ALIGN;
-		tx_desc->buf_phys_addr = buf_phys_addr & (~MVPP2_TX_DESC_ALIGN);
+		mvpp2x_txdesc_phys_addr_set(port->priv->pp2_version, 
+			buf_phys_addr & MVPP2_TX_DESC_ALIGN, tx_desc);
 
 		if (i == (skb_shinfo(skb)->nr_frags - 1)) {
 			/* Last descriptor */
@@ -1269,8 +1291,9 @@ static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 		goto out;
 	}
 	tx_desc->packet_offset = buf_phys_addr & MVPP2_TX_DESC_ALIGN;
-	tx_desc->buf_phys_addr = buf_phys_addr & ~MVPP2_TX_DESC_ALIGN;
-
+	mvpp2x_txdesc_phys_addr_set(port->priv->pp2_version, 
+		buf_phys_addr & MVPP2_TX_DESC_ALIGN, tx_desc);
+	
 	tx_cmd = mvpp2_skb_tx_csum(port, skb);
 
 	if (frags == 1) {
@@ -2187,12 +2210,37 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 	return 0;
 }
 
+
+static const struct mvpp2x_platform_data pp21_pdata = {
+	.pp2x_ver = PPV21,	
+};
+
+static const struct mvpp2x_platform_data pp22_pdata = {
+	.pp2x_ver = PPV22,
+};
+
+
+
+static const struct of_device_id mvpp2_match_tbl[] = {
+        {
+                .compatible = "marvell,armada-375-pp21",
+                .data = &pp21_pdata,
+        },
+        {
+                .compatible = "marvell,pp22",
+                .data = &pp22_pdata,
+        },
+        { /* end */ }
+};
+
+
 static int mvpp2_probe(struct platform_device *pdev)
 {
 	struct device_node *dn = pdev->dev.of_node;
 	struct device_node *port_node;
 	struct mvpp2 *priv;
 	struct resource *res;
+	const struct of_device_id *match;	
 	int port_count, first_rxq;
 	int err;
 
@@ -2200,6 +2248,13 @@ static int mvpp2_probe(struct platform_device *pdev)
 	if (!priv)
 		return -ENOMEM;
 
+	match = of_match_node(mvpp2_match_tbl, dn);
+
+	if (!match)
+		return -ENODEV;
+	priv->pp2xdata = (const struct mvpp2x_platform_data *) match->data;
+	priv->pp2_version = priv->pp2xdata->pp2x_ver;
+		
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	priv->base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(priv->base))
@@ -2303,18 +2358,17 @@ static int mvpp2_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id mvpp2_match[] = {
-	{ .compatible = "marvell,armada-375-pp2" },
-	{ }
-};
-MODULE_DEVICE_TABLE(of, mvpp2_match);
+
+
+
+MODULE_DEVICE_TABLE(of, mvpp2_match_tbl);
 
 static struct platform_driver mvpp2_driver = {
 	.probe = mvpp2_probe,
 	.remove = mvpp2_remove,
 	.driver = {
 		.name = MVPP2_DRIVER_NAME,
-		.of_match_table = mvpp2_match,
+		.of_match_table = mvpp2_match_tbl,
 	},
 };
 

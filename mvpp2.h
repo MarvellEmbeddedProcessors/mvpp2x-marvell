@@ -29,8 +29,9 @@
 #define _MVPP2_H_
 
 #include <linux/skbuff.h>
-#include "mvpp2_hw_type.h"
 #include <linux/netdevice.h>
+#include "mvpp2_hw_type.h"
+
 
 
 #define MVPP2_DRIVER_NAME "mvpp2"
@@ -54,6 +55,16 @@ extern int mvpp2_txq_number;
 #define MVPP2_RX_COAL_PKTS		32
 #define MVPP2_RX_COAL_USEC		100
 
+
+enum mvppv2_version {
+	PPV21 = 1,
+	PPV22
+};
+
+
+struct mvpp2x_platform_data {
+	u8 pp2x_ver;
+};
 
 
 /* Per-CPU Tx queue control */
@@ -151,6 +162,8 @@ struct mvpp2_rx_queue {
 
 /* Shared Packet Processor resources */
 struct mvpp2 {
+	enum mvppv2_version pp2_version;
+	const struct mvpp2x_platform_data *pp2xdata;
 	/* Shared registers' base addresses */
 	void __iomem *base;
 	void __iomem *lms_base;
@@ -184,6 +197,7 @@ struct mvpp2_pcpu_stats {
 	u64	tx_packets;
 	u64	tx_bytes;
 };
+
 
 struct mvpp2_port {
 	u8 id;
@@ -224,6 +238,8 @@ struct mvpp2_port {
 	/* Index of first port's physical RXQ */
 	u8 first_rxq;
 };
+
+
 
 
 /* BM constants */
