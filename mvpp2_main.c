@@ -570,7 +570,7 @@ static void mvpp2_txq_done(struct mvpp2_port *port, struct mvpp2_tx_queue *txq,
 
 /* Allocate and initialize descriptors for aggr TXQ */
 static int mvpp2_aggr_txq_init(struct platform_device *pdev,
-			       struct mvpp2_tx_queue *aggr_txq,
+			       struct mvpp2_aggr_tx_queue *aggr_txq,
 			       int desc_num, int cpu,
 			       struct mvpp2 *priv)
 {
@@ -1199,7 +1199,7 @@ static inline void tx_desc_unmap_put(struct device *dev, struct mvpp2_tx_queue *
 
 /* Handle tx fragmentation processing */
 static int mvpp2_tx_frag_process(struct mvpp2_port *port, struct sk_buff *skb,
-				 struct mvpp2_tx_queue *aggr_txq,
+				 struct mvpp2_aggr_tx_queue *aggr_txq,
 				 struct mvpp2_tx_queue *txq)
 {
 	struct mvpp2_txq_pcpu *txq_pcpu = this_cpu_ptr(txq->pcpu);
@@ -1255,7 +1255,8 @@ error:
 static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 {
 	struct mvpp2_port *port = netdev_priv(dev);
-	struct mvpp2_tx_queue *txq, *aggr_txq;
+	struct mvpp2_tx_queue *txq;
+	struct mvpp2_aggr_tx_queue *aggr_txq;
 	struct mvpp2_txq_pcpu *txq_pcpu;
 	struct mvpp2_tx_desc *tx_desc;
 	dma_addr_t buf_phys_addr;
@@ -1415,7 +1416,7 @@ static int mvpp2_poll(struct napi_struct *napi, int budget)
 			 * so that next iteration will continue from
 			 * the next Rx queue.
 			 */
-			cause_rx &= ~(1 << rxq->logic_rxq);
+			cause_rx &= ~(1 << rxq->log_id);
 		}
 	}
 
@@ -1867,7 +1868,7 @@ static int mvpp2_port_init(struct mvpp2_port *port)
 
 		txq->id = queue_phy_id;
 		txq->log_id = queue;
-		txq->done_pkts_coal = MVPP2_TXDONE_COAL_PKTS_THRESH;
+		txq->pkts_coal = MVPP2_TXDONE_COAL_PKTS_THRESH;
 		for_each_present_cpu(cpu) {
 			txq_pcpu = per_cpu_ptr(txq->pcpu, cpu);
 			txq_pcpu->cpu = cpu;
@@ -1894,7 +1895,7 @@ static int mvpp2_port_init(struct mvpp2_port *port)
 		/* Map this Rx queue to a physical queue */
 		rxq->id = port->first_rxq + queue;
 		rxq->port = port->id;
-		rxq->logic_rxq = queue;
+		rxq->log_id = queue;
 
 		port->rxqs[queue] = rxq;
 	}
@@ -2167,7 +2168,7 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 
 	/* Allocate and initialize aggregated TXQs */
 	priv->aggr_txqs = devm_kcalloc(&pdev->dev, num_present_cpus(),
-				       sizeof(struct mvpp2_tx_queue),
+				       sizeof(struct mvpp2_aggr_tx_queue),
 				       GFP_KERNEL);
 	if (!priv->aggr_txqs)
 		return -ENOMEM;
@@ -2344,7 +2345,7 @@ static int mvpp2_remove(struct platform_device *pdev)
 	}
 
 	for_each_present_cpu(i) {
-		struct mvpp2_tx_queue *aggr_txq = &priv->aggr_txqs[i];
+		struct mvpp2_aggr_tx_queue *aggr_txq = &priv->aggr_txqs[i];
 
 		dma_free_coherent(&pdev->dev,
 				  MVPP2_AGGR_TXQ_SIZE * MVPP2_DESC_ALIGNED_SIZE,

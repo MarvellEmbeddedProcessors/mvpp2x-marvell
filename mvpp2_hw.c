@@ -2457,7 +2457,7 @@ void mvpp2_tx_done_pkts_coal_set(void *arg)
 	for (queue = 0; queue < mvpp2_txq_number; queue++) {
 		struct mvpp2_tx_queue *txq = port->txqs[queue];
 
-		val = (txq->done_pkts_coal << MVPP2_TRANSMITTED_THRESH_OFFSET) &
+		val = (txq->pkts_coal << MVPP2_TRANSMITTED_THRESH_OFFSET) &
 		       MVPP2_TRANSMITTED_THRESH_MASK;
 		mvpp2_write(port->priv, MVPP2_TXQ_NUM_REG, txq->id);
 		mvpp2_write(port->priv, MVPP2_TXQ_THRESH_REG, val);
@@ -2585,12 +2585,12 @@ int mvpp2_txq_pend_desc_num_get(struct mvpp2_port *port,
 }
 
 /* Get pointer to next Tx descriptor to be processed (send) by HW */
-struct mvpp2_tx_desc * mvpp2_txq_next_desc_get(struct mvpp2_tx_queue *txq)
+struct mvpp2_tx_desc * mvpp2_txq_next_desc_get(struct mvpp2_aggr_tx_queue *aggr_txq)
 {
-	int tx_desc = txq->next_desc_to_proc;
+	int tx_desc = aggr_txq->next_desc_to_proc;
 
-	txq->next_desc_to_proc = MVPP2_QUEUE_NEXT_DESC(txq, tx_desc);
-	return txq->descs + tx_desc;
+	aggr_txq->next_desc_to_proc = MVPP2_QUEUE_NEXT_DESC(aggr_txq, tx_desc);
+	return aggr_txq->descs + tx_desc;
 }
 
 /* Update HW with number of aggregated Tx descriptors to be sent */
@@ -2605,7 +2605,7 @@ void mvpp2_aggr_txq_pend_desc_add(struct mvpp2_port *port, int pending)
  * If not, update the number of occupied descriptors and repeat the check.
  */
 int mvpp2_aggr_desc_num_check(struct mvpp2 *priv,
-				     struct mvpp2_tx_queue *aggr_txq, int num)
+				     struct mvpp2_aggr_tx_queue *aggr_txq, int num)
 {
 	if ((aggr_txq->count + num) > aggr_txq->size) {
 		/* Update number of occupied aggregated Tx descriptors */
