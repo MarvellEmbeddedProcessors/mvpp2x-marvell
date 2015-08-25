@@ -283,21 +283,29 @@
 
 
 /* Buffer Manager registers */
-#define MVPP21_BM_POOL_BASE_ADDR_REG(pool)	(0x6000 + ((pool) * 4))
-#define MVPP21_BM_POOL_BASE_ADDR_MASK		0xfffff80
-#define MVPP21_BM_POOL_SIZE_REG(pool)		(0x6040 + ((pool) * 4))
-#define MVPP21_BM_POOL_SIZE_MASK			0xfff0
+#define MVPP2_BM_POOL_BASE_ADDR_REG(pool)	(0x6000 + ((pool) * 4))
+#define MVPP2_BM_POOL_BASE_ADDR_MASK		0xfffff80
+#define MVPP2_BM_POOL_SIZE_REG(pool)		(0x6040 + ((pool) * 4))
+#define MVPP21_BM_POOL_SIZE_MASK		0xfff0
+#define MVPP21_BM_POOL_SIZE_OFFSET		4
+
 #define MVPP21_BM_POOL_READ_PTR_REG(pool)	(0x6080 + ((pool) * 4))
-#define MVPP21_BM_POOL_GET_READ_PTR_MASK		0xfff0
+#define MVPP21_BM_POOL_GET_READ_PTR_MASK	0xfff0
 #define MVPP21_BM_POOL_PTRS_NUM_REG(pool)	(0x60c0 + ((pool) * 4))
 #define MVPP21_BM_POOL_PTRS_NUM_MASK		0xfff0
 
-#define MVPP22_BM_POOL_BASE_ADDR_LOW_REG(pool)	(0x6000 + ((pool) * 4))
-#define MVPP22_BM_POOL_BASE_ADDR_LOW_MASK	0xfffff80
-#define MVPP22_BM_POOL_SIZE_REG(pool)		(0x6040 + ((pool) * 4))
-#define MVPP22_BM_POOL_SIZE_MASK			0xfff8
+#define MVPP22_BM_POOL_SIZE_MASK		0xfff8
+#define MVPP22_BM_POOL_SIZE_OFFSET		3
+
+/* Use PPV21 Pool Size both for PPV21/PPV22, deliberately ignore PPV22 */
+#define MVPP2_BM_POOL_SIZE_MASK			MVPP21_BM_POOL_SIZE_MASK
+#define MVPP2_BM_POOL_SIZE_OFFSET		MVPP21_BM_POOL_SIZE_OFFSET
+#undef  MVPP22_BM_POOL_SIZE_MASK
+#undef	MVPP22_BM_POOL_SIZE_OFFSET  
+
+
 #define MVPP22_BM_POOL_READ_PTR_REG(pool)	(0x6080 + ((pool) * 4))
-#define MVPP22_BM_POOL_GET_READ_PTR_MASK		0xfff8
+#define MVPP22_BM_POOL_GET_READ_PTR_MASK	0xfff8
 #define MVPP22_BM_POOL_PTRS_NUM_REG(pool)	(0x60c0 + ((pool) * 4))
 #define MVPP22_BM_POOL_PTRS_NUM_MASK		0xfff8
 
@@ -338,24 +346,28 @@
 #define MVPP2_BM_PHY_ALLOC_GRNTD_MASK		BIT(0)
 #define MVPP2_BM_VIRT_ALLOC_REG			0x6440
 
-#define MVPP21_BM_PHY_VIRT_HIGH_ALLOC_REG	0x6444
-#define MVPP21_BM_PHY_HIGH_ALLOC_MASK		0xff
-#define MVPP21_BM_VIRT_HIGH_ALLOC_MASK		0xff00
+#define MVPP22_BM_PHY_VIRT_HIGH_ALLOC_REG	0x6444
+#define MVPP22_BM_PHY_HIGH_ALLOC_OFFSET		0
+#define MVPP22_BM_VIRT_HIGH_ALLOC_OFFSET	8
+#define MVPP22_BM_VIRT_HIGH_ALLOC_MASK		0xff00
+
+
 
 #define MVPP2_BM_PHY_RLS_REG(pool)		(0x6480 + ((pool) * 4))
 #define MVPP2_BM_PHY_RLS_MC_BUFF_MASK		BIT(0)
 #define MVPP2_BM_PHY_RLS_PRIO_EN_MASK		BIT(1)
 #define MVPP2_BM_PHY_RLS_GRNTD_MASK		BIT(2)
+
 #define MVPP2_BM_VIRT_RLS_REG			0x64c0
 
 #define MVPP21_BM_MC_RLS_REG			0x64c4 /* Not a mixup */
 #define MVPP21_BM_MC_ID_MASK			0xfff
 #define MVPP21_BM_FORCE_RELEASE_MASK		BIT(12)
 
-#define MVPP22_BM_PHY_VIRT_HIGH_ALLOC_REG	0x64c4 /* Not a mixup */
+#define MVPP22_BM_PHY_VIRT_HIGH_RLS_REG		0x64c4 /* Not a mixup */
 
-#define MVPP22_BM_PHY_HIGH_ALLOC_OFFSET		0
-#define MVPP22_BM_VIRT_HIGH_ALLOC_OFFST		8
+#define MVPP22_BM_PHY_HIGH_RLS_OFFSET		0
+#define MVPP22_BM_VIRT_HIGH_RLS_OFFST		8
 
 
 #define MVPP22_BM_MC_RLS_REG			0x64d4 /* Not a mixup */

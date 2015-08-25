@@ -141,15 +141,13 @@ static inline struct mvpp2_rx_queue *mvpp2_get_rx_queue(struct mvpp2_port *port,
 							u32 cause)
 {
 	int queue = fls(cause) - 1;
-
 	return port->rxqs[queue];
 }
 
-static inline struct mvpp2_tx_queue *mvpp2_get_tx_queue(struct mvpp2_port *port,
-							u32 cause)
+static inline struct mvpp2_tx_queue *mvpp2_get_tx_queue(struct mvpp2_port *port, 
+	u32 cause)
 {
 	int queue = fls(cause >> 16) - 1;
-
 	return port->txqs[queue];
 }
 
@@ -161,6 +159,42 @@ static inline int mvpp2_bm_cookie_pool_get(u32 cookie)
 }
 #endif
 
+
+static inline struct sk_buff *mvpp2_bm_virt_addr_get(struct mvpp2 *priv, 
+						u32 pool) 
+{
+	uintptr_t val = 0;
+	
+	mvpp2_read(priv, MVPP2_BM_PHY_ALLOC_REG(pool));
+#ifdef CONFIG_PHYS_ADDR_T_64BIT //TODO: Validate this is  correct CONFIG_XXX for (sk_buff *),   it is a kmem_cache address (YuvalC).
+	val = mvpp2_read(priv, MVPP22_BM_PHY_VIRT_HIGH_ALLOC_REG);
+	val &= MVPP22_BM_VIRT_HIGH_ALLOC_MASK;
+	val <<= (32 - MVPP22_BM_VIRT_HIGH_ALLOC_OFFSET);
+#endif
+	val |= mvpp2_read(priv, MVPP2_BM_VIRT_ALLOC_REG);	
+	return((struct sk_buff *)val);
+}
+
+
+static inline void mvpp2_bm_hw_pool_create(struct mvpp2 *priv, 
+			u32 pool, dma_addr_t pool_addr, int size) 
+{
+	u32 val;
+
+	mvpp2_write(priv, MVPP2_BM_POOL_BASE_ADDR_REG(pool), lower_32_bits(pool_addr));
+#ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
+	mvpp2_write(priv, MVPP22_BM_POOL_BASE_ADDR_HIGH_REG, 
+	(upper_32_bits(pool_addr)& MVPP22_ADDR_HIGH_MASK);
+#endif
+	mvpp2_write(priv, MVPP2_BM_POOL_SIZE_REG(pool), size);
+
+	val = mvpp2_read(priv, MVPP2_BM_POOL_CTRL_REG(pool));
+	val |= MVPP2_BM_START_MASK;
+	mvpp2_write(priv, MVPP2_BM_POOL_CTRL_REG(pool), val);
+}
+
+
+
 /* Release buffer to BM */
 static inline void mvpp2_bm_pool_put(struct mvpp2 *priv, u32 pool,
 				     dma_addr_t buf_phys_addr, struct sk_buff *buf_virt_addr)
@@ -168,12 +202,12 @@ static inline void mvpp2_bm_pool_put(struct mvpp2 *priv, u32 pool,
 
 #ifdef CONFIG_PHYS_ADDR_T_64BIT //TODO: Validate this is  correct CONFIG_XXX for (sk_buff *),   it is a kmem_cache address (YuvalC).
 	u32 val = 0;
-	val = (upper_32_bits((uintptr_t)buf_virt_addr) && MVPP22_ADDR_HIGH_MASK) << MVPP22_BM_VIRT_HIGH_ALLOC_OFFST;
+	val = (upper_32_bits((uintptr_t)buf_virt_addr) && MVPP22_ADDR_HIGH_MASK) << MVPP22_BM_VIRT_HIGH_RLS_OFFST;
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-	val |= (upper_32_bits(buf_phys_addr) && MVPP22_ADDR_HIGH_MASK) << MVPP22_BM_PHY_HIGH_ALLOC_OFFSET;
+	val |= (upper_32_bits(buf_phys_addr) && MVPP22_ADDR_HIGH_MASK) << MVPP22_BM_PHY_HIGH_RLS_OFFSET;
 	
 #endif
-	mvpp2_write(priv, MVPP22_BM_PHY_VIRT_HIGH_ALLOC_REG, val);
+	mvpp2_write(priv, MVPP22_BM_PHY_VIRT_HIGH_RLS_REG, val);
 #endif
 
 	mvpp2_write(priv, MVPP2_BM_VIRT_RLS_REG, lower_32_bits((uintptr_t)buf_virt_addr));
@@ -359,7 +393,6 @@ int mvpp2_aggr_desc_num_check(struct mvpp2 *priv,
 				     struct mvpp2_aggr_tx_queue *aggr_txq, int num);
 void mvpp2_rxq_offset_set(struct mvpp2_port *port,
 				 int prxq, int offset);
-void mvpp2_bm_bufs_free(struct mvpp2 *priv, struct mvpp2_bm_pool *bm_pool);
 void mvpp2_bm_pool_bufsize_set(struct mvpp2 *priv,
 				      struct mvpp2_bm_pool *bm_pool,
 				      int buf_size);

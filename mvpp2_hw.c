@@ -2772,25 +2772,6 @@ void mvpp2_bm_pool_bufsize_set(struct mvpp2 *priv,
 	mvpp2_write(priv, MVPP2_POOL_BUF_SIZE_REG(bm_pool->id), val);
 }
 
-/* Free all buffers from the pool */
-void mvpp2_bm_bufs_free(struct mvpp2 *priv, struct mvpp2_bm_pool *bm_pool)
-{
-	int i;
-
-	for (i = 0; i < bm_pool->buf_num; i++) {
-		u32 vaddr;
-
-		/* Get buffer virtual adress (indirect access) */
-		mvpp2_read(priv, MVPP2_BM_PHY_ALLOC_REG(bm_pool->id));
-		vaddr = mvpp2_read(priv, MVPP2_BM_VIRT_ALLOC_REG);
-		if (!vaddr)
-			break;
-		dev_kfree_skb_any((struct sk_buff *)vaddr);
-	}
-
-	/* Update BM driver with number of buffers removed from pool */
-	bm_pool->buf_num -= i;
-}
 
 
 /* Attach long pool to rxq */
