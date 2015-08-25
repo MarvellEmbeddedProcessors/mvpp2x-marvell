@@ -49,6 +49,9 @@ extern int mvpp2_txq_number;
 	(((index) < (q)->last_desc) ? ((index) + 1) : 0)
 
 /* Various constants */
+#define MVPP2_MAX_CPUS		4
+#define MVPP2_MAX_SHARED	1
+
 
 /* Coalescing */
 #define MVPP2_TXDONE_COAL_PKTS_THRESH	15
@@ -56,10 +59,33 @@ extern int mvpp2_txq_number;
 #define MVPP2_RX_COAL_PKTS		32
 #define MVPP2_RX_COAL_USEC		100
 
+/* BM constants */
+#define MVPP2_BM_POOLS_NUM		8
+#define MVPP2_BM_LONG_BUF_NUM		1024
+#define MVPP2_BM_SHORT_BUF_NUM		2048
+#define MVPP2_BM_POOL_SIZE_MAX		(16*1024 - MVPP2_BM_POOL_PTR_ALIGN/4)
+#define MVPP2_BM_POOL_PTR_ALIGN		128
+#define MVPP2_BM_SWF_LONG_POOL(port)	((port > 2) ? 2 : port)
+#define MVPP2_BM_SWF_SHORT_POOL		3
+
+
 
 enum mvppv2_version {
 	PPV21 = 21,
 	PPV22
+};
+
+enum mvpp2_queue_vector_type {
+	MVPP2_SHARED, 
+	MVPP2_PRIVATE
+};
+
+enum queue_distribution_mode{
+	SINGLE_MODE,  
+	/* All queues are shared. 
+   	PPv2.1 – this is the only supported mode. 
+  	PPv2.2 – Requires (N+1) interrupts. All rx_queues are configured on the additional interrupt. */
+	MULTI_MODE  // PPv2.2 only requires N interrupts.
 };
 
 
@@ -182,20 +208,66 @@ struct mvpp2_rx_queue {
 };
 
 
+struct mvpp2_hw {
 
-/* Definitions */
-
-/* Shared Packet Processor resources */
-struct mvpp2 {
-	enum mvppv2_version pp2_version;
-	const struct mvpp2x_platform_data *pp2xdata;
 	/* Shared registers' base addresses */
-	void __iomem *base;
-	void __iomem *lms_base;
-
+	void __iomem *base;// PPV22 base_address as received in devm_ioremap_resource().
+	void __iomem *lms_base; 
+	void __iomem *cpu_base[MVPP2_MAX_CPUS]; 
+	void __iomem *shared_base[MVPP2_MAX_SHARED]; 
+/* ppv22_base_address for each CPU. 
+    PPv2.2 - cpu_base[x] = base + cpu_index[smp_processor_id]*MV_PP2_SPACE_64K, for non-participating CPU it is NULL.
+    PPv2.1 cpu_base[x] = base */
 	/* Common clocks */
 	struct clk *pp_clk;
 	struct clk *gop_clk;
+	u32 tclk;
+	
+	/* PRS shadow table */	
+	struct mvpp2_prs_shadow *prs_shadow;
+	/* PRS auxiliary table for double vlan entries control */	
+	bool *prs_double_vlans;
+};
+
+struct mvpp2_cos {
+	u8 cos_classifier;    //CoS based on VLAN or DSCP
+	u8 num_cos_queues;     //number of queue to do CoS
+	u8 default_cos;       //Default CoS value for non-IP or non-VLAN
+	u8 reserved;
+	u32 pri_map;          //32 bits, each nibble maps a cos_value(0~7) to a queue.
+};
+
+struct mvpp2_rss {
+	u8 queue_mode ;//single/multi mode
+	u8 rss_mode;//UDP packet
+	u8 dflt_cpu;//non-IP packet
+	u8 reserved;	
+};
+
+
+
+struct mvpp2_param_config {
+	struct mvpp2_cos cos_cfg;
+	struct mvpp2_rss rss_cfg;
+	u8 first_bm_pool;
+	bool jumbo_pool; // pp2 always supports 2 pools : short=MV_DEF_256, long=MV_DEF_2K. Param defines option to have additional pool, jumbo=MV_DEF_10K.	
+	u8 first_sw_thread; // The index of the first PPv2.2 sub-address space for this NET_INSTANCE.	
+	u8 cell_index; // The cell_index of the PPv22 (could be 0,1, set according to dtsi)
+	enum queue_distribution_mode queue_mode;
+};
+
+
+/* Shared Packet Processor resources */
+struct mvpp2 {
+	
+	enum mvppv2_version pp2_version; //Redundant, consider to delete. (prevents extra pointer lookup from mvpp2x_platform_data)
+
+	struct	mvpp2_hw hw;
+	const struct mvpp2x_platform_data *pp2xdata;
+
+	u8 cpu_map;
+
+	struct mvpp2_param_config pp2_cfg;
 
 	/* List of pointers to port structures */
 	struct mvpp2_port **port_list;
@@ -205,14 +277,6 @@ struct mvpp2 {
 
 	/* BM pools */
 	struct mvpp2_bm_pool *bm_pools;
-
-	/* PRS shadow table */
-	struct mvpp2_prs_shadow *prs_shadow;
-	/* PRS auxiliary table for double vlan entries control */
-	bool *prs_double_vlans;
-
-	/* Tclk value */
-	u32 tclk;
 };
 
 struct mvpp2_pcpu_stats {
@@ -230,6 +294,23 @@ struct mvpp2_port_pcpu {
 	/* Tasklet for egress finalization */
 	struct tasklet_struct tx_done_tasklet;
 };
+struct queue_vector {
+	int irq;
+	struct napi_struct napi;
+	enum mvpp2_queue_vector_type qv_type;
+	u16 sw_thread_id;
+/* ppv22: for qv_type=shared, this is the shared sw_thr_id.
+               for qv_type=private, this is the cpu’s private sw_thr_id. 
+    ppv21: sw_thread_id=0.*/
+	u16 sw_thread_mask;
+/* ppv22: sw_thread_mask = (1<<sw_thread_id).
+    ppv21: sw_thread_mask = for_each_present_cpu(); */
+	u8 first_rx_queue;
+	u8 num_rx_queues;
+	u32 pending_cause_rx; /* mask is in absolute queues, not relative queues, 
+	                                       (unlike Ethernet Occupied Interrupt Cause (EthOccIC)) */
+	struct mvpp2_port * parent_port;
+};
 
 
 struct mvpp2_port {
@@ -242,11 +323,11 @@ struct mvpp2_port {
 	/* Per-port registers' base address */
 	void __iomem *base;
 
-	struct mvpp2_rx_queue **rxqs;
+	struct mvpp2_rx_queue **rxqs; //Each Port has up tp 32 rxq_queues.
 	struct mvpp2_tx_queue **txqs;
 	struct net_device *dev;
 
-	int pkt_size;
+	int pkt_size; //pkt_size determines which is pool_long: jumbo_pool or regular long_pool.
 
 	u32 pending_cause_rx;
 	struct napi_struct napi;
@@ -268,24 +349,18 @@ struct mvpp2_port {
 	unsigned int duplex;
 	unsigned int speed;
 
-	struct mvpp2_bm_pool *pool_long;
-	struct mvpp2_bm_pool *pool_short;
+	struct mvpp2_bm_pool *pool_long; //Pointer to the pool_id (long or jumbo)
+	struct mvpp2_bm_pool *pool_short; //Pointer to the short pool_id
 
 	/* Index of first port's physical RXQ */
 	u8 first_rxq;
+
+
+	/* First MAX_CPUs are for private_queues, last MAX_SHARED are for shared , if exist.
+	    q_vector is the parameter that will be passed to mv_pp2_isr(int irq, void *dev_id=q_vector)  */ 
+	struct queue_vector q_vector[MVPP2_MAX_CPUS+MVPP2_MAX_SHARED]; 
 };
 
-
-
-
-/* BM constants */
-#define MVPP2_BM_POOLS_NUM		8
-#define MVPP2_BM_LONG_BUF_NUM		1024
-#define MVPP2_BM_SHORT_BUF_NUM		2048
-#define MVPP2_BM_POOL_SIZE_MAX		(16*1024 - MVPP2_BM_POOL_PTR_ALIGN/4)
-#define MVPP2_BM_POOL_PTR_ALIGN		128
-#define MVPP2_BM_SWF_LONG_POOL(port)	((port > 2) ? 2 : port)
-#define MVPP2_BM_SWF_SHORT_POOL		3
 
 
 int mvpp2_check_ringparam_valid(struct net_device *dev,
