@@ -33,14 +33,14 @@
 #include <linux/platform_device.h>
 
 
-static inline void mvpp2_write(struct mvpp2 *priv, u32 offset, u32 data)
+static inline void mvpp2_write(struct mvpp2_hw *hw, u32 offset, u32 data)
 {
-	writel(data, priv->base + offset);
+	writel(data, hw->base + offset);
 }
 
-static inline u32 mvpp2_read(struct mvpp2 *priv, u32 offset)
+static inline u32 mvpp2_read(struct mvpp2_hw *hw, u32 offset)
 {
-	return readl(priv->base + offset);
+	return readl(hw->base + offset);
 }
 
 #if 0
@@ -75,7 +75,7 @@ static inline int mvpp2_txq_phys(int port, int txq)
 /* Get number of Rx descriptors occupied by received packets */
 static inline int mvpp2_rxq_received(struct mvpp2_port *port, int rxq_id)
 {
-	u32 val = mvpp2_read(port->priv, MVPP2_RXQ_STATUS_REG(rxq_id));
+	u32 val = mvpp2_read(&(port->priv->hw), MVPP2_RXQ_STATUS_REG(rxq_id));
 
 	return val & MVPP2_RXQ_OCCUPIED_MASK;
 }
@@ -91,7 +91,7 @@ static inline void mvpp2_rxq_status_update(struct mvpp2_port *port,
 	 */
 	u32 val = used_count | (free_count << MVPP2_RXQ_NUM_NEW_OFFSET);
 
-	mvpp2_write(port->priv, MVPP2_RXQ_STATUS_UPDATE_REG(rxq_id), val);
+	mvpp2_write(&(port->priv->hw), MVPP2_RXQ_STATUS_UPDATE_REG(rxq_id), val);
 }
 
 /* Get pointer to next RX descriptor to be processed by SW */
@@ -110,7 +110,7 @@ static inline void mvpp2_interrupts_mask(void *arg)
 {
 	struct mvpp2_port *port = arg;
 
-	mvpp2_write(port->priv, MVPP2_ISR_RX_TX_MASK_REG(port->id), 0);
+	mvpp2_write(&(port->priv->hw), MVPP2_ISR_RX_TX_MASK_REG(port->id), 0);
 }
 
 /* Unmask the current CPU's Rx/Tx interrupts */
@@ -118,7 +118,7 @@ static inline void mvpp2_interrupts_unmask(void *arg)
 {
 	struct mvpp2_port *port = arg;
 
-	mvpp2_write(port->priv, MVPP2_ISR_RX_TX_MASK_REG(port->id),
+	mvpp2_write(&(port->priv->hw), MVPP2_ISR_RX_TX_MASK_REG(port->id),
 		    (MVPP21_CAUSE_MISC_SUM_MASK |
 		     MVPP21_CAUSE_TXQ_OCCUP_DESC_ALL_MASK |
 		     MVPP21_CAUSE_RXQ_OCCUP_DESC_ALL_MASK));
@@ -160,43 +160,43 @@ static inline int mvpp2_bm_cookie_pool_get(u32 cookie)
 #endif
 
 
-static inline struct sk_buff *mvpp2_bm_virt_addr_get(struct mvpp2 *priv, 
+static inline struct sk_buff *mvpp2_bm_virt_addr_get(struct mvpp2_hw *hw, 
 						u32 pool) 
 {
 	uintptr_t val = 0;
 	
-	mvpp2_read(priv, MVPP2_BM_PHY_ALLOC_REG(pool));
+	mvpp2_read(hw, MVPP2_BM_PHY_ALLOC_REG(pool));
 #ifdef CONFIG_PHYS_ADDR_T_64BIT //TODO: Validate this is  correct CONFIG_XXX for (sk_buff *),   it is a kmem_cache address (YuvalC).
-	val = mvpp2_read(priv, MVPP22_BM_PHY_VIRT_HIGH_ALLOC_REG);
+	val = mvpp2_read(hw, MVPP22_BM_PHY_VIRT_HIGH_ALLOC_REG);
 	val &= MVPP22_BM_VIRT_HIGH_ALLOC_MASK;
 	val <<= (32 - MVPP22_BM_VIRT_HIGH_ALLOC_OFFSET);
 #endif
-	val |= mvpp2_read(priv, MVPP2_BM_VIRT_ALLOC_REG);	
+	val |= mvpp2_read(hw, MVPP2_BM_VIRT_ALLOC_REG);	
 	return((struct sk_buff *)val);
 }
 
 
-static inline void mvpp2_bm_hw_pool_create(struct mvpp2 *priv, 
+static inline void mvpp2_bm_hw_pool_create(struct mvpp2_hw *hw, 
 			u32 pool, dma_addr_t pool_addr, int size) 
 {
 	u32 val;
 
-	mvpp2_write(priv, MVPP2_BM_POOL_BASE_ADDR_REG(pool), lower_32_bits(pool_addr));
+	mvpp2_write(hw, MVPP2_BM_POOL_BASE_ADDR_REG(pool), lower_32_bits(pool_addr));
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-	mvpp2_write(priv, MVPP22_BM_POOL_BASE_ADDR_HIGH_REG, 
+	mvpp2_write(hw, MVPP22_BM_POOL_BASE_ADDR_HIGH_REG, 
 	(upper_32_bits(pool_addr)& MVPP22_ADDR_HIGH_MASK);
 #endif
-	mvpp2_write(priv, MVPP2_BM_POOL_SIZE_REG(pool), size);
+	mvpp2_write(hw, MVPP2_BM_POOL_SIZE_REG(pool), size);
 
-	val = mvpp2_read(priv, MVPP2_BM_POOL_CTRL_REG(pool));
+	val = mvpp2_read(hw, MVPP2_BM_POOL_CTRL_REG(pool));
 	val |= MVPP2_BM_START_MASK;
-	mvpp2_write(priv, MVPP2_BM_POOL_CTRL_REG(pool), val);
+	mvpp2_write(hw, MVPP2_BM_POOL_CTRL_REG(pool), val);
 }
 
 
 
 /* Release buffer to BM */
-static inline void mvpp2_bm_pool_put(struct mvpp2 *priv, u32 pool,
+static inline void mvpp2_bm_pool_put(struct mvpp2_hw *hw, u32 pool,
 				     dma_addr_t buf_phys_addr, struct sk_buff *buf_virt_addr)
 {
 
@@ -207,11 +207,11 @@ static inline void mvpp2_bm_pool_put(struct mvpp2 *priv, u32 pool,
 	val |= (upper_32_bits(buf_phys_addr) && MVPP22_ADDR_HIGH_MASK) << MVPP22_BM_PHY_HIGH_RLS_OFFSET;
 	
 #endif
-	mvpp2_write(priv, MVPP22_BM_PHY_VIRT_HIGH_RLS_REG, val);
+	mvpp2_write(hw, MVPP22_BM_PHY_VIRT_HIGH_RLS_REG, val);
 #endif
 
-	mvpp2_write(priv, MVPP2_BM_VIRT_RLS_REG, lower_32_bits((uintptr_t)buf_virt_addr));
-	mvpp2_write(priv, MVPP2_BM_PHY_RLS_REG(pool), lower_32_bits(buf_phys_addr));
+	mvpp2_write(hw, MVPP2_BM_VIRT_RLS_REG, lower_32_bits((uintptr_t)buf_virt_addr));
+	mvpp2_write(hw, MVPP2_BM_PHY_RLS_REG(pool), lower_32_bits(buf_phys_addr));
 
 }
 
@@ -223,9 +223,9 @@ static inline void mvpp2_bm_pool_mc_put(struct mvpp2_port *port, int pool,
 	u32 val = 0;
 
 	val |= (mc_id & MVPP21_BM_MC_ID_MASK);
-	mvpp2_write(port->priv, MVPP21_BM_MC_RLS_REG, val);
+	mvpp2_write(&(port->priv->hw), MVPP21_BM_MC_RLS_REG, val);
 	//TODO : YuvalC, this is just workaround to compile. Need to handle mvpp2_buff_hdr_rx().
-	mvpp2_bm_pool_put(port->priv, pool,
+	mvpp2_bm_pool_put(&(port->priv->hw), pool,
 			  (dma_addr_t)(buf_phys_addr | MVPP2_BM_PHY_RLS_MC_BUFF_MASK),
 			  (struct sk_buff *)(buf_virt_addr));
 }
@@ -236,7 +236,7 @@ static inline void mvpp2_interrupts_enable(struct mvpp2_port *port)
 
 	for_each_present_cpu(cpu)
 		cpu_mask |= 1 << cpu;
-	mvpp2_write(port->priv, MVPP2_ISR_ENABLE_REG(port->id),
+	mvpp2_write(&(port->priv->hw), MVPP2_ISR_ENABLE_REG(port->id),
 		    MVPP2_ISR_ENABLE_INTERRUPT(cpu_mask));
 }
 
@@ -247,7 +247,7 @@ static inline void mvpp2_interrupts_disable(struct mvpp2_port *port)
 
 	for_each_present_cpu(cpu)
 		cpu_mask |= 1 << cpu;
-	mvpp2_write(port->priv, MVPP2_ISR_ENABLE_REG(port->id),
+	mvpp2_write(&(port->priv->hw), MVPP2_ISR_ENABLE_REG(port->id),
 		    MVPP2_ISR_DISABLE_INTERRUPT(cpu_mask));
 }
 
@@ -258,7 +258,7 @@ static inline int mvpp2_txq_sent_desc_proc(struct mvpp2_port *port,
 	u32 val;
 
 	/* Reading status reg resets transmitted descriptor counter */
-	val = mvpp2_read(port->priv, MVPP21_TXQ_SENT_REG(txq->id));
+	val = mvpp2_read(&(port->priv->hw), MVPP21_TXQ_SENT_REG(txq->id));
 
 	return (val & MVPP21_TRANSMITTED_COUNT_MASK) >>
 		MVPP21_TRANSMITTED_COUNT_OFFSET;
@@ -281,7 +281,7 @@ static inline void mvpp2_txq_sent_counter_clear(void *arg)
 	for (queue = 0; queue < mvpp2_txq_number; queue++) {
 		int id = port->txqs[queue]->id;
 
-		mvpp2_read(port->priv, MVPP21_TXQ_SENT_REG(id));
+		mvpp2_read(&(port->priv->hw), MVPP21_TXQ_SENT_REG(id));
 	}
 }
 
@@ -363,18 +363,18 @@ static inline void mvpp2x_txdesc_phys_addr_set(enum mvppv2_version pp2_ver,
 
 
 int mvpp2_prs_default_init(struct platform_device *pdev,
-				  struct mvpp2 *priv);
-void mvpp2_prs_mac_promisc_set(struct mvpp2 *priv, int port, bool add);
-void mvpp2_prs_mac_multi_set(struct mvpp2 *priv, int port, int index,
+				  struct mvpp2_hw *hw);
+void mvpp2_prs_mac_promisc_set(struct mvpp2_hw *hw, int port, bool add);
+void mvpp2_prs_mac_multi_set(struct mvpp2_hw *hw, int port, int index,
 				    bool add);
-int mvpp2_prs_mac_da_accept(struct mvpp2 *priv, int port,
+int mvpp2_prs_mac_da_accept(struct mvpp2_hw *hw, int port,
 				   const u8 *da, bool add);
 int mvpp2_prs_def_flow(struct mvpp2_port *port);
-void mvpp2_prs_mcast_del_all(struct mvpp2 *priv, int port);
-int mvpp2_prs_tag_mode_set(struct mvpp2 *priv, int port, int type);
+void mvpp2_prs_mcast_del_all(struct mvpp2_hw *hw, int port);
+int mvpp2_prs_tag_mode_set(struct mvpp2_hw *hw, int port, int type);
 int mvpp2_prs_update_mac_da(struct net_device *dev, const u8 *da);
 
-void mvpp2_cls_init(struct mvpp2 *priv);
+void mvpp2_cls_init(struct mvpp2_hw *hw);
 void mvpp2_cls_port_config(struct mvpp2_port *port);
 void mvpp2_cls_oversize_rxq_set(struct mvpp2_port *port);
 
@@ -393,7 +393,7 @@ int mvpp2_aggr_desc_num_check(struct mvpp2 *priv,
 				     struct mvpp2_aggr_tx_queue *aggr_txq, int num);
 void mvpp2_rxq_offset_set(struct mvpp2_port *port,
 				 int prxq, int offset);
-void mvpp2_bm_pool_bufsize_set(struct mvpp2 *priv,
+void mvpp2_bm_pool_bufsize_set(struct mvpp2_hw *hw,
 				      struct mvpp2_bm_pool *bm_pool,
 				      int buf_size);
 void mvpp2_pool_refill(struct mvpp2 *priv, u32 pool,
