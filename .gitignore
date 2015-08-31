@@ -6,6 +6,12 @@ _private*/
 *pcap
 *.prev
 *Kconfig*
+*.symvers
+*.order
+*.o
+*.ko
+*.mod*
+.*
 
 ~*
 
