@@ -2344,7 +2344,7 @@ void mvpp2_cls_oversize_rxq_set(struct mvpp2_port *port)
 {
 	u32 val;
 	struct mvpp2_hw *hw = &(port->priv->hw);
-	
+
 	mvpp2_write(hw, MVPP2_CLS_OVERSIZE_RXQ_LOW_REG(port->id),
 		    port->first_rxq & MVPP2_CLS_OVERSIZE_RXQ_LOW_MASK);
 
@@ -2486,7 +2486,7 @@ void mvpp2_txp_max_tx_size_set(struct mvpp2_port *port)
 	u32	val, size, mtu;
 	int	txq, tx_port_num;
 	struct mvpp2_hw *hw = &(port->priv->hw);
-	
+
 
 	mtu = port->pkt_size * 8;
 	if (mtu > MVPP2_TXP_MTU_MAX)
@@ -2782,15 +2782,10 @@ void mvpp2_bm_pool_bufsize_set(struct mvpp2_hw *hw,
 
 
 /* Attach long pool to rxq */
-void mvpp2_rxq_long_pool_set(struct mvpp2_port *port,
-				    int lrxq, int long_pool)
+void mvpp21_rxq_long_pool_set(struct mvpp2_hw *hw,
+				     int prxq, int long_pool)
 {
 	u32 val;
-	int prxq;
-	struct mvpp2_hw *hw = &(port->priv->hw);
-
-	/* Get queue physical ID */
-	prxq = port->rxqs[lrxq]->id;
 
 	val = mvpp2_read(hw, MVPP21_RXQ_CONFIG_REG(prxq));
 	val &= ~MVPP21_RXQ_POOL_LONG_MASK;
@@ -2801,15 +2796,10 @@ void mvpp2_rxq_long_pool_set(struct mvpp2_port *port,
 }
 
 /* Attach short pool to rxq */
-void mvpp2_rxq_short_pool_set(struct mvpp2_port *port,
-				     int lrxq, int short_pool)
+void mvpp21_rxq_short_pool_set(struct mvpp2_hw *hw,
+				     int prxq, int short_pool)
 {
 	u32 val;
-	int prxq;
-	struct mvpp2_hw *hw = &(port->priv->hw);
-
-	/* Get queue physical ID */
-	prxq = port->rxqs[lrxq]->id;
 
 	val = mvpp2_read(hw, MVPP21_RXQ_CONFIG_REG(prxq));
 	val &= ~MVPP21_RXQ_POOL_SHORT_MASK;
@@ -2818,6 +2808,36 @@ void mvpp2_rxq_short_pool_set(struct mvpp2_port *port,
 
 	mvpp2_write(hw, MVPP21_RXQ_CONFIG_REG(prxq), val);
 }
+
+
+/* Attach long pool to rxq */
+void mvpp22_rxq_long_pool_set(struct mvpp2_hw *hw,
+				     int prxq, int long_pool)
+{
+	u32 val;
+
+	val = mvpp2_read(hw, MVPP22_RXQ_CONFIG_REG(prxq));
+	val &= ~MVPP22_RXQ_POOL_LONG_MASK;
+	val |= ((long_pool << MVPP22_RXQ_POOL_LONG_OFFS) &
+		    MVPP22_RXQ_POOL_LONG_MASK);
+
+	mvpp2_write(hw, MVPP22_RXQ_CONFIG_REG(prxq), val);
+}
+
+/* Attach short pool to rxq */
+void mvpp22_rxq_short_pool_set(struct mvpp2_hw *hw,
+				     int prxq, int short_pool)
+{
+	u32 val;
+
+	val = mvpp2_read(hw, MVPP21_RXQ_CONFIG_REG(prxq));
+	val &= ~MVPP22_RXQ_POOL_SHORT_MASK;
+	val |= ((short_pool << MVPP22_RXQ_POOL_SHORT_OFFS) &
+		    MVPP22_RXQ_POOL_SHORT_MASK);
+
+	mvpp2_write(hw, MVPP22_RXQ_CONFIG_REG(prxq), val);
+}
+
 
 
 /* Enable/disable receiving packets */
@@ -2854,7 +2874,7 @@ void mvpp2_egress_enable(struct mvpp2_port *port)
 	u32 qmap;
 	int queue;
 	int tx_port_num = mvpp2_egress_port(port);
-	struct mvpp2_hw *hw = &(port->priv->hw);	
+	struct mvpp2_hw *hw = &(port->priv->hw);
 
 	/* Enable all initialized TXs. */
 	qmap = 0;

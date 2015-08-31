@@ -83,7 +83,7 @@ static inline int mvpp2_rxq_received(struct mvpp2_port *port, int rxq_id)
 /* Update Rx queue status with the number of occupied and available
  * Rx descriptor slots.
  */
-static inline void mvpp2_rxq_status_update(struct mvpp2_port *port, 
+static inline void mvpp2_rxq_status_update(struct mvpp2_port *port,
 				int rxq_id, int used_count, int free_count)
 {
 	/* Decrement the number of used descriptors and increment count
@@ -95,7 +95,7 @@ static inline void mvpp2_rxq_status_update(struct mvpp2_port *port,
 }
 
 /* Get pointer to next RX descriptor to be processed by SW */
-static inline struct mvpp2_rx_desc * 
+static inline struct mvpp2_rx_desc *
 mvpp2_rxq_next_desc_get(struct mvpp2_rx_queue *rxq)
 {
 	int rx_desc = rxq->next_desc_to_proc;
@@ -144,7 +144,7 @@ static inline struct mvpp2_rx_queue *mvpp2_get_rx_queue(struct mvpp2_port *port,
 	return port->rxqs[queue];
 }
 
-static inline struct mvpp2_tx_queue *mvpp2_get_tx_queue(struct mvpp2_port *port, 
+static inline struct mvpp2_tx_queue *mvpp2_get_tx_queue(struct mvpp2_port *port,
 	u32 cause)
 {
 	int queue = fls(cause >> 16) - 1;
@@ -160,30 +160,30 @@ static inline int mvpp2_bm_cookie_pool_get(u32 cookie)
 #endif
 
 
-static inline struct sk_buff *mvpp2_bm_virt_addr_get(struct mvpp2_hw *hw, 
-						u32 pool) 
+static inline struct sk_buff *mvpp2_bm_virt_addr_get(struct mvpp2_hw *hw,
+						u32 pool)
 {
 	uintptr_t val = 0;
-	
+
 	mvpp2_read(hw, MVPP2_BM_PHY_ALLOC_REG(pool));
 #ifdef CONFIG_PHYS_ADDR_T_64BIT //TODO: Validate this is  correct CONFIG_XXX for (sk_buff *),   it is a kmem_cache address (YuvalC).
 	val = mvpp2_read(hw, MVPP22_BM_PHY_VIRT_HIGH_ALLOC_REG);
 	val &= MVPP22_BM_VIRT_HIGH_ALLOC_MASK;
 	val <<= (32 - MVPP22_BM_VIRT_HIGH_ALLOC_OFFSET);
 #endif
-	val |= mvpp2_read(hw, MVPP2_BM_VIRT_ALLOC_REG);	
+	val |= mvpp2_read(hw, MVPP2_BM_VIRT_ALLOC_REG);
 	return((struct sk_buff *)val);
 }
 
 
-static inline void mvpp2_bm_hw_pool_create(struct mvpp2_hw *hw, 
-			u32 pool, dma_addr_t pool_addr, int size) 
+static inline void mvpp2_bm_hw_pool_create(struct mvpp2_hw *hw,
+			u32 pool, dma_addr_t pool_addr, int size)
 {
 	u32 val;
 
 	mvpp2_write(hw, MVPP2_BM_POOL_BASE_ADDR_REG(pool), lower_32_bits(pool_addr));
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-	mvpp2_write(hw, MVPP22_BM_POOL_BASE_ADDR_HIGH_REG, 
+	mvpp2_write(hw, MVPP22_BM_POOL_BASE_ADDR_HIGH_REG,
 	(upper_32_bits(pool_addr)& MVPP22_ADDR_HIGH_MASK);
 #endif
 	mvpp2_write(hw, MVPP2_BM_POOL_SIZE_REG(pool), size);
@@ -205,7 +205,7 @@ static inline void mvpp2_bm_pool_put(struct mvpp2_hw *hw, u32 pool,
 	val = (upper_32_bits((uintptr_t)buf_virt_addr) && MVPP22_ADDR_HIGH_MASK) << MVPP22_BM_VIRT_HIGH_RLS_OFFST;
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 	val |= (upper_32_bits(buf_phys_addr) && MVPP22_ADDR_HIGH_MASK) << MVPP22_BM_PHY_HIGH_RLS_OFFSET;
-	
+
 #endif
 	mvpp2_write(hw, MVPP22_BM_PHY_VIRT_HIGH_RLS_REG, val);
 #endif
@@ -286,11 +286,11 @@ static inline void mvpp2_txq_sent_counter_clear(void *arg)
 }
 
 static inline struct sk_buff* mvpp21_rxdesc_cookie_get(struct mvpp2_rx_desc *rx_desc) {
-	return((struct sk_buff*)((uintptr_t)rx_desc->u.pp21.buf_cookie));	
+	return((struct sk_buff*)((uintptr_t)rx_desc->u.pp21.buf_cookie));
 }
 
 static inline dma_addr_t mvpp21_rxdesc_phys_addr_get(struct mvpp2_rx_desc *rx_desc) {
-	return((dma_addr_t)rx_desc->u.pp21.buf_phys_addr);	
+	return((dma_addr_t)rx_desc->u.pp21.buf_phys_addr);
 }
 
 /*YuvalC: Below functions are intended to support both aarch64 & aarch32 */
@@ -301,15 +301,15 @@ static inline struct sk_buff* mvpp22_rxdesc_cookie_get(struct mvpp2_rx_desc *rx_
 
 static inline dma_addr_t mvpp22_rxdesc_phys_addr_get(struct mvpp2_rx_desc *rx_desc) {
 	return((dma_addr_t)
-		(rx_desc->u.pp22.buf_phys_addr_key_hash & DMA_BIT_MASK(40)));	
+		(rx_desc->u.pp22.buf_phys_addr_key_hash & DMA_BIT_MASK(40)));
 }
 
 static inline struct sk_buff* mvpp21_txdesc_cookie_get(struct mvpp2_tx_desc *tx_desc) {
-	return((struct sk_buff*)((uintptr_t)tx_desc->u.pp21.buf_cookie));	
+	return((struct sk_buff*)((uintptr_t)tx_desc->u.pp21.buf_cookie));
 }
 
 static inline dma_addr_t mvpp21_txdesc_phys_addr_get(struct mvpp2_tx_desc *tx_desc) {
-	return((dma_addr_t)tx_desc->u.pp21.buf_phys_addr);	
+	return((dma_addr_t)tx_desc->u.pp21.buf_phys_addr);
 }
 
 static inline struct sk_buff* mvpp22_txdesc_cookie_get(struct mvpp2_tx_desc *tx_desc) {
@@ -319,29 +319,29 @@ static inline struct sk_buff* mvpp22_txdesc_cookie_get(struct mvpp2_tx_desc *tx_
 
 static inline dma_addr_t mvpp22_txdesc_phys_addr_get(struct mvpp2_tx_desc *tx_desc) {
 	return((dma_addr_t)
-		(tx_desc->u.pp22.buf_phys_addr_hw_cmd2 & DMA_BIT_MASK(40)));	
+		(tx_desc->u.pp22.buf_phys_addr_hw_cmd2 & DMA_BIT_MASK(40)));
 }
 
 static inline dma_addr_t mvpp2x_txdesc_phys_addr_get(
 	enum mvppv2_version pp2_ver, struct mvpp2_tx_desc *tx_desc) {
-	
-	if (pp2_ver == PPV21) {			
+
+	if (pp2_ver == PPV21) {
 		return(mvpp21_txdesc_phys_addr_get(tx_desc));
-	} 
-	return(mvpp22_txdesc_phys_addr_get(tx_desc));	
+	}
+	return(mvpp22_txdesc_phys_addr_get(tx_desc));
 }
 
 
-static inline void mvpp21_txdesc_phys_addr_set(dma_addr_t phys_addr, 
+static inline void mvpp21_txdesc_phys_addr_set(dma_addr_t phys_addr,
 	struct mvpp2_tx_desc *tx_desc) {
-	tx_desc->u.pp21.buf_phys_addr = phys_addr;	
+	tx_desc->u.pp21.buf_phys_addr = phys_addr;
 }
 
-static inline void mvpp22_txdesc_phys_addr_set(dma_addr_t phys_addr, 
+static inline void mvpp22_txdesc_phys_addr_set(dma_addr_t phys_addr,
 	struct mvpp2_tx_desc *tx_desc) {
-	
+
 	u64 *buf_phys_addr_p = &tx_desc->u.pp22.buf_phys_addr_hw_cmd2;
-	
+
 #ifdef 	CONFIG_ARCH_DMA_ADDR_T_64BIT
 	*buf_phys_addr_p &= ~(DMA_BIT_MASK(40));
 	*buf_phys_addr_p |= phys_addr & DMA_BIT_MASK(40);
@@ -351,13 +351,13 @@ static inline void mvpp22_txdesc_phys_addr_set(dma_addr_t phys_addr,
 #endif
 }
 
-static inline void mvpp2x_txdesc_phys_addr_set(enum mvppv2_version pp2_ver, 
+static inline void mvpp2x_txdesc_phys_addr_set(enum mvppv2_version pp2_ver,
 	dma_addr_t phys_addr, struct mvpp2_tx_desc *tx_desc) {
-	
-	if (pp2_ver == PPV21) {			
+
+	if (pp2_ver == PPV21) {
 		mvpp21_txdesc_phys_addr_set(phys_addr, tx_desc);
-	}  else {	
-		mvpp22_txdesc_phys_addr_set(phys_addr, tx_desc);	
+	}  else {
+		mvpp22_txdesc_phys_addr_set(phys_addr, tx_desc);
 	}
 }
 
@@ -399,10 +399,16 @@ void mvpp2_bm_pool_bufsize_set(struct mvpp2_hw *hw,
 void mvpp2_pool_refill(struct mvpp2 *priv, u32 pool,
 			      dma_addr_t phys_addr, struct sk_buff *cookie);
 
-void mvpp2_rxq_long_pool_set(struct mvpp2_port *port,
-				    int lrxq, int long_pool);
-void mvpp2_rxq_short_pool_set(struct mvpp2_port *port,
-				     int lrxq, int short_pool);
+void mvpp21_rxq_long_pool_set(struct mvpp2_hw *hw,
+				     int prxq, int long_pool);
+void mvpp21_rxq_short_pool_set(struct mvpp2_hw *hw,
+				     int prxq, int short_pool);
+
+void mvpp22_rxq_long_pool_set(struct mvpp2_hw *hw,
+				     int prxq, int long_pool);
+void mvpp22_rxq_short_pool_set(struct mvpp2_hw *hw,
+				     int prxq, int short_pool);
+
 
 void mvpp2_port_mii_set(struct mvpp2_port *port);
 void mvpp2_port_fc_adv_enable(struct mvpp2_port *port);
