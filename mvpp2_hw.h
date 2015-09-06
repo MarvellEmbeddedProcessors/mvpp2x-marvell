@@ -35,26 +35,46 @@
 
 static inline void mvpp2_write(struct mvpp2_hw *hw, u32 offset, u32 data)
 {
-	writel(data, hw->base + offset);
+	writel(data, hw->cpu_base[smp_processor_id()] + offset);
 }
 
 static inline u32 mvpp2_read(struct mvpp2_hw *hw, u32 offset)
 {
-	return readl(hw->base + offset);
+	return readl(hw->cpu_base[smp_processor_id()] + offset);
 }
 
-#if 0
-/* Obtain BM cookie information from descriptor */
-static inline u32 mvpp2_bm_cookie_build(struct mvpp2_rx_desc *rx_desc)
+static inline void mvpp22_thread_write(struct mvpp2_hw *hw, u32 sw_thread,
+	u32 offset, u32 data)
 {
-	int pool = (rx_desc->status & MVPP2_RXD_BM_POOL_ID_MASK) >>
-		   MVPP2_RXD_BM_POOL_ID_OFFS;
-	int cpu = smp_processor_id();
-
-	return ((pool & 0xFF) << MVPP2_BM_COOKIE_POOL_OFFS) |
-	       ((cpu & 0xFF) << MVPP2_BM_COOKIE_CPU_OFFS);
+	writel(data, hw->base + sw_thread*MVPP2_ADDR_SPACE_SIZE + offset);
 }
-#endif
+
+static inline u32 mvpp22_thread_read(struct mvpp2_hw *hw, u32 sw_thread,
+	u32 offset)
+{
+	return readl(hw->base + sw_thread*MVPP2_ADDR_SPACE_SIZE + offset);
+}
+
+
+static inline void mvpp21_isr_rx_group_write(struct mvpp2_hw *hw, int port,
+		int num_rx_queues)
+{
+	mvpp2_write(hw, MVPP21_ISR_RXQ_GROUP_REG(port), num_rx_queues);
+}
+
+
+static inline void mvpp22_isr_rx_group_write(struct mvpp2_hw *hw, int port,
+		int sub_group, int start_queue, int num_rx_queues)
+{
+
+	int val;
+
+	val = (port << MVPP22_ISR_RXQ_GROUP_INDEX_GROUP_OFFSET) | sub_group;
+	mvpp2_write(hw, MVPP22_ISR_RXQ_GROUP_INDEX_REG, val);
+	val = (num_rx_queues << MVPP22_ISR_RXQ_SUB_GROUP_SIZE_OFFSET) | start_queue;
+	mvpp2_write(hw, MVPP22_ISR_RXQ_SUB_GROUP_CONFIG_REG, val);
+
+}
 
 
 /* Get number of physical egress port */
@@ -119,36 +139,55 @@ static inline void mvpp2_interrupts_unmask(void *arg)
 	struct mvpp2_port *port = arg;
 
 	mvpp2_write(&(port->priv->hw), MVPP2_ISR_RX_TX_MASK_REG(port->id),
-		    (MVPP21_CAUSE_MISC_SUM_MASK |
-		     MVPP21_CAUSE_TXQ_OCCUP_DESC_ALL_MASK |
-		     MVPP21_CAUSE_RXQ_OCCUP_DESC_ALL_MASK));
+		    (MVPP2_CAUSE_MISC_SUM_MASK |
+		     MVPP2_CAUSE_TXQ_OCCUP_DESC_ALL_MASK |
+		     MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK));
 }
 
-#if 0
-/* Set pool number in a BM cookie */
-static inline u32 mvpp2_bm_cookie_pool_set(u32 cookie, int pool)
+static inline void mvpp2_shared_thread_interrupts_mask(struct mvpp2_port *port)
 {
-	u32 bm;
+	struct queue_vector *q_vec = &port->q_vector[0];
+	int i;
 
-	bm = cookie & ~(0xFF << MVPP2_BM_COOKIE_POOL_OFFS);
-	bm |= ((pool & 0xFF) << MVPP2_BM_COOKIE_POOL_OFFS);
+	if (port->priv->pp2xdata->multi_addr_space == false)
+		return;
 
-	return bm;
+	for (i=0;i<port->num_qvector;i++) {
+		if (q_vec[i].qv_type == MVPP2_SHARED)
+			mvpp22_thread_write(&port->priv->hw, q_vec[i].sw_thread_id,
+			MVPP2_ISR_RX_TX_MASK_REG(port->id), 0);
+	}
 }
-#endif
+
+/* Unmask the shared CPU's Rx interrupts */
+static inline void mvpp2_shared_thread_interrupts_unmask(struct mvpp2_port *port)
+{
+	struct queue_vector *q_vec = &port->q_vector[0];
+	int i;
+
+	if (port->priv->pp2xdata->multi_addr_space == false)
+		return;
+
+	for (i=0;i<port->num_qvector;i++) {
+		if (q_vec[i].qv_type == MVPP2_SHARED)
+			mvpp22_thread_write(&port->priv->hw, q_vec[i].sw_thread_id,
+			MVPP2_ISR_RX_TX_MASK_REG(port->id), MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK);
+	}
+}
+
 
 static inline struct mvpp2_rx_queue *mvpp2_get_rx_queue(struct mvpp2_port *port,
 							u32 cause)
 {
-	int queue = fls(cause) - 1;
-	return port->rxqs[queue];
+	int rx_queue = fls(cause) - 1;
+	return port->rxqs[rx_queue];
 }
 
 static inline struct mvpp2_tx_queue *mvpp2_get_tx_queue(struct mvpp2_port *port,
 	u32 cause)
 {
-	int queue = fls(cause >> 16) - 1;
-	return port->txqs[queue];
+	int tx_queue = fls(cause >> 16) - 1;
+	return port->txqs[tx_queue];
 }
 
 #if 0
@@ -166,7 +205,8 @@ static inline struct sk_buff *mvpp2_bm_virt_addr_get(struct mvpp2_hw *hw,
 	uintptr_t val = 0;
 
 	mvpp2_read(hw, MVPP2_BM_PHY_ALLOC_REG(pool));
-#ifdef CONFIG_PHYS_ADDR_T_64BIT //TODO: Validate this is  correct CONFIG_XXX for (sk_buff *),   it is a kmem_cache address (YuvalC).
+/*TODO: Validate this is  correct CONFIG_XXX for (sk_buff *),   it is a kmem_cache address (YuvalC).*/
+#ifdef CONFIG_PHYS_ADDR_T_64BIT
 	val = mvpp2_read(hw, MVPP22_BM_PHY_VIRT_HIGH_ALLOC_REG);
 	val &= MVPP22_BM_VIRT_HIGH_ALLOC_MASK;
 	val <<= (32 - MVPP22_BM_VIRT_HIGH_ALLOC_OFFSET);
@@ -200,7 +240,8 @@ static inline void mvpp2_bm_pool_put(struct mvpp2_hw *hw, u32 pool,
 				     dma_addr_t buf_phys_addr, struct sk_buff *buf_virt_addr)
 {
 
-#ifdef CONFIG_PHYS_ADDR_T_64BIT //TODO: Validate this is  correct CONFIG_XXX for (sk_buff *),   it is a kmem_cache address (YuvalC).
+/*TODO: Validate this is  correct CONFIG_XXX for (sk_buff *),   it is a kmem_cache address (YuvalC).*/
+#ifdef CONFIG_PHYS_ADDR_T_64BIT
 	u32 val = 0;
 	val = (upper_32_bits((uintptr_t)buf_virt_addr) && MVPP22_ADDR_HIGH_MASK) << MVPP22_BM_VIRT_HIGH_RLS_OFFST;
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
@@ -224,33 +265,53 @@ static inline void mvpp2_bm_pool_mc_put(struct mvpp2_port *port, int pool,
 
 	val |= (mc_id & MVPP21_BM_MC_ID_MASK);
 	mvpp2_write(&(port->priv->hw), MVPP21_BM_MC_RLS_REG, val);
-	//TODO : YuvalC, this is just workaround to compile. Need to handle mvpp2_buff_hdr_rx().
+	/*TODO : YuvalC, this is just workaround to compile. Need to handle mvpp2_buff_hdr_rx().*/
 	mvpp2_bm_pool_put(&(port->priv->hw), pool,
 			  (dma_addr_t)(buf_phys_addr | MVPP2_BM_PHY_RLS_MC_BUFF_MASK),
 			  (struct sk_buff *)(buf_virt_addr));
 }
 
-static inline void mvpp2_interrupts_enable(struct mvpp2_port *port)
+static inline void mvpp2_port_interrupts_enable(struct mvpp2_port *port)
 {
-	int cpu, cpu_mask = 0;
+	int sw_thread_mask=0, i;
+	struct queue_vector *q_vec = &port->q_vector[0];
 
-	for_each_present_cpu(cpu)
-		cpu_mask |= 1 << cpu;
-	mvpp2_write(&(port->priv->hw), MVPP2_ISR_ENABLE_REG(port->id),
-		    MVPP2_ISR_ENABLE_INTERRUPT(cpu_mask));
+	for (i=0;i<port->num_qvector;i++)
+		sw_thread_mask |= q_vec[i].sw_thread_mask;
+
+	mvpp2_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
+		    MVPP2_ISR_ENABLE_INTERRUPT(sw_thread_mask));
+}
+
+static inline void mvpp2_port_interrupts_disable(struct mvpp2_port *port)
+{
+	int sw_thread_mask=0, i;
+	struct queue_vector *q_vec = &port->q_vector[0];
+
+	for (i=0;i<port->num_qvector;i++)
+		sw_thread_mask |= q_vec[i].sw_thread_mask;
+
+	mvpp2_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
+		    MVPP2_ISR_DISABLE_INTERRUPT(sw_thread_mask));
 }
 
 
-static inline void mvpp2_interrupts_disable(struct mvpp2_port *port)
+static inline void mvpp2_qvector_interrupt_enable(struct queue_vector *q_vec)
 {
-	int cpu, cpu_mask = 0;
+	struct mvpp2_port *port = q_vec->parent;
 
-	for_each_present_cpu(cpu)
-		cpu_mask |= 1 << cpu;
-	mvpp2_write(&(port->priv->hw), MVPP2_ISR_ENABLE_REG(port->id),
-		    MVPP2_ISR_DISABLE_INTERRUPT(cpu_mask));
+	mvpp2_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
+		    MVPP2_ISR_ENABLE_INTERRUPT(q_vec->sw_thread_mask));
 }
 
+static inline void mvpp2_qvector_interrupt_disable(struct queue_vector *q_vec)
+{
+	struct mvpp2_port *port = q_vec->parent;
+
+	mvpp2_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
+		    MVPP2_ISR_DISABLE_INTERRUPT(q_vec->sw_thread_mask));
+
+}
 
 static inline int mvpp2_txq_sent_desc_proc(struct mvpp2_port *port,
 					   struct mvpp2_tx_queue *txq)
@@ -278,10 +339,12 @@ static inline void mvpp2_txq_sent_counter_clear(void *arg)
 	struct mvpp2_port *port = arg;
 	int queue;
 
-	for (queue = 0; queue < mvpp2_txq_number; queue++) {
+	for (queue = 0; queue < port->num_tx_queues; queue++) {
 		int id = port->txqs[queue]->id;
-
-		mvpp2_read(&(port->priv->hw), MVPP21_TXQ_SENT_REG(id));
+		if (port->priv->pp2_version == PPV21)
+			mvpp2_read(&(port->priv->hw), MVPP21_TXQ_SENT_REG(id));
+		else
+			mvpp2_read(&(port->priv->hw), MVPP22_TXQ_SENT_REG(id));
 	}
 }
 
@@ -347,7 +410,7 @@ static inline void mvpp22_txdesc_phys_addr_set(dma_addr_t phys_addr,
 	*buf_phys_addr_p |= phys_addr & DMA_BIT_MASK(40);
 #else
 	*((dma_addr_t *)buf_phys_addr_p) = phys_addr;
-	*((u8 *)buf_phys_addr_p + sizeof(dma_addr_t)) = 0; //5th byte
+	*((u8 *)buf_phys_addr_p + sizeof(dma_addr_t)) = 0; /*5th byte*/
 #endif
 }
 
@@ -379,6 +442,7 @@ void mvpp2_cls_port_config(struct mvpp2_port *port);
 void mvpp2_cls_oversize_rxq_set(struct mvpp2_port *port);
 
 void mvpp2_txp_max_tx_size_set(struct mvpp2_port *port);
+void mvpp2_tx_done_time_coal_set(struct mvpp2_port *port, u32 usec);
 void mvpp2_gmac_max_rx_size_set(struct mvpp2_port *port);
 
 int mvpp2_txq_pend_desc_num_get(struct mvpp2_port *port,

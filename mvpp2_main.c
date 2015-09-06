@@ -55,26 +55,26 @@
 
 
 /* Declaractions */
-u8 mvpp2_num_cos_queues;
-static bool queue_mode = 0;
-static bool rss_mode = 1;
+u8 mvpp2_num_cos_queues = 4;
+static bool mvpp2_queue_mode = 0;
+static bool rss_mode = 0;
 static u8 default_cpu = 0;
-static bool cos_classifer;
-static u32 pri_map;
-static u8 default_cos;
-static bool jumbo_pool;
-static u16 rx_queue_size;
-static u16 tx_queue_size;
-static u16 buffer_scaling;
-static u8 first_bm_pool;
-static u8 first_address_space_index;
-static u8  first_log_rxq_queue;
+static bool cos_classifer = 0;
+static u32 pri_map = 0x0;
+static u8 default_cos = 0;
+static bool jumbo_pool = false;
+static u16 rx_queue_size = MVPP2_MAX_RXD;
+static u16 tx_queue_size = MVPP2_MAX_TXD;
+static u16 buffer_scaling = 100;
+static u8 first_bm_pool = 0;
+static u8 first_addr_space = 0;
+static u8 first_log_rxq_queue = 0;
 
 
 module_param_named(num_cos_queues, mvpp2_num_cos_queues, byte, S_IRUGO);
 MODULE_PARM_DESC(num_cos_queues,"Set number of cos_queues (1-8), def=4");
 
-module_param(queue_mode, bool, S_IRUGO);
+module_param_named(queue_mode, mvpp2_queue_mode, bool, S_IRUGO);
 MODULE_PARM_DESC(queue_mode, "Set queue_mode (single=0, multi=1)");
 
 module_param(rss_mode, bool, S_IRUGO);
@@ -109,8 +109,8 @@ MODULE_PARM_DESC(buffer_scaling, "Buffer scaling (TBD)");
 module_param(first_bm_pool, byte, S_IRUGO);
 MODULE_PARM_DESC(first_bm_pool, "First used buffer pool (0-11)");
 
-module_param(first_address_space_index, byte, S_IRUGO);
-MODULE_PARM_DESC(first_address_space_index, "First used PPV22 address space (0-8)");
+module_param(first_addr_space, byte, S_IRUGO);
+MODULE_PARM_DESC(first_addr_space, "First used PPV22 address space (0-8)");
 
 module_param(first_log_rxq_queue, byte, S_IRUGO);
 MODULE_PARM_DESC(first_log_rxq_queue, "First logical rx_queue (0-31)");
@@ -118,9 +118,9 @@ MODULE_PARM_DESC(first_log_rxq_queue, "First logical rx_queue (0-31)");
 
 
 /* Number of RXQs used by single port */
-int mvpp2_rxq_number;
+static int mvpp2_rxq_number;
 /* Number of TXQs used by single port */
-int mvpp2_txq_number;
+static int mvpp2_txq_number;
 
 
 struct mvpp2_pool_attributes {
@@ -130,7 +130,7 @@ struct mvpp2_pool_attributes {
 };
 
 
-static  struct mvpp2_pool_attributes  mvpp2_pools[] = {
+static struct mvpp2_pool_attributes mvpp2_pools[] = {
 	{
 		.description =  "short",
 		/*.pkt_size    = 	MVPP2_BM_SHORT_PKT_SIZE, */
@@ -145,8 +145,7 @@ static  struct mvpp2_pool_attributes  mvpp2_pools[] = {
 		.description =	"jumbo",
 		/*.pkt_size    =	MVPP2_BM_JUMBO_PKT_SIZE, */
 		.buf_num     =  MVPP2_BM_JUMBO_BUF_NUM,
-	},
-	{ /* end */ }
+	}
 };
 
 static void mvpp2_txq_inc_get(struct mvpp2_txq_pcpu *txq_pcpu)
@@ -205,6 +204,7 @@ static inline void mvpp2_pool_port_map_set_locked (
 
 
 
+
 /* Buffer Manager configuration routines */
 
 /* Create pool */
@@ -219,7 +219,7 @@ static int mvpp2_bm_pool_create(struct platform_device *pdev,
 	if (!IS_ALIGNED(size, (1<<MVPP21_BM_POOL_SIZE_OFFSET)))
 		return -EINVAL;
 
-	size_bytes = 2 * sizeof(uintptr_t) * size; //YuvalC: Two pointers per buffer, existing bug fixed.
+	size_bytes = 2 * sizeof(uintptr_t) * size; /*YuvalC: Two pointers per buffer, existing bug fixed. */
 	bm_pool->virt_addr = dma_alloc_coherent(&pdev->dev, size_bytes,
 						&bm_pool->phys_addr,
 						GFP_KERNEL);
@@ -509,7 +509,7 @@ static int mvpp2_swf_bm_pool_init(struct mvpp2_port *port)
 		mvpp2_pool_port_map_set_locked(port->pool_long,
 			port->pool_long->port_map |(1 << port->id));
 
-		for (rxq = 0; rxq < mvpp2_rxq_number; rxq++) {
+		for (rxq = 0; rxq < port->num_rx_queues; rxq++) {
 			port->priv->pp2xdata->mvpp2x_rxq_long_pool_set(hw,
 				port->rxqs[rxq]->id, port->pool_long->id);
 		}
@@ -524,7 +524,7 @@ static int mvpp2_swf_bm_pool_init(struct mvpp2_port *port)
 		mvpp2_pool_port_map_set_locked(port->pool_short,
 			port->pool_short->port_map |(1 << port->id));
 
-		for (rxq = 0; rxq < mvpp2_rxq_number; rxq++)
+		for (rxq = 0; rxq < port->num_rx_queues; rxq++)
 			port->priv->pp2xdata->mvpp2x_rxq_short_pool_set(hw,
 			port->rxqs[rxq]->id, port->pool_short->id);
 	}
@@ -553,7 +553,7 @@ static int mvpp2_bm_update_mtu(struct net_device *dev, int mtu)
 			return -ENOMEM;
 		mvpp2_pool_port_map_set_locked(port->pool_long,
 			port->pool_long->port_map |(1 << port->id));
-		for (rxq = 0; rxq < mvpp2_rxq_number; rxq++)
+		for (rxq = 0; rxq < port->num_rx_queues; rxq++)
 			port->priv->pp2xdata->mvpp2x_rxq_long_pool_set(hw,
 			port->rxqs[rxq]->id, port->pool_long->id);
 
@@ -620,16 +620,16 @@ static void mvpp2_defaults_set(struct mvpp2_port *port)
 		    MVPP2_RX_LOW_LATENCY_PKT_SIZE(256));
 
 	/* Enable Rx cache snoop */
-	for (lrxq = 0; lrxq < mvpp2_rxq_number; lrxq++) {
+	for (lrxq = 0; lrxq < port->num_rx_queues; lrxq++) {
 		queue = port->rxqs[lrxq]->id;
-		val = mvpp2_read(hw, MVPP21_RXQ_CONFIG_REG(queue));
-		val |= MVPP21_SNOOP_PKT_SIZE_MASK |
-			   MVPP21_SNOOP_BUF_HDR_MASK;
-		mvpp2_write(hw, MVPP21_RXQ_CONFIG_REG(queue), val);
+		val = mvpp2_read(hw, MVPP2_RXQ_CONFIG_REG(queue));
+		val |= MVPP2_SNOOP_PKT_SIZE_MASK |
+			   MVPP2_SNOOP_BUF_HDR_MASK;
+		mvpp2_write(hw, MVPP2_RXQ_CONFIG_REG(queue), val);
 	}
 
 	/* At default, mask all interrupts to all present cpus */
-	mvpp2_interrupts_disable(port);
+	mvpp2_port_interrupts_disable(port);
 }
 
 
@@ -1050,7 +1050,7 @@ void mvpp2_cleanup_txqs(struct mvpp2_port *port)
 	val |= MVPP2_TX_PORT_FLUSH_MASK(port->id);
 	mvpp2_write(hw, MVPP2_TX_PORT_FLUSH_REG, val);
 
-	for (queue = 0; queue < mvpp2_txq_number; queue++) {
+	for (queue = 0; queue < port->num_tx_queues; queue++) {
 		txq = port->txqs[queue];
 		mvpp2_txq_clean(port, txq);
 		mvpp2_txq_deinit(port, txq);
@@ -1067,7 +1067,7 @@ void mvpp2_cleanup_rxqs(struct mvpp2_port *port)
 {
 	int queue;
 
-	for (queue = 0; queue < mvpp2_rxq_number; queue++)
+	for (queue = 0; queue < port->num_rx_queues; queue++)
 		mvpp2_rxq_deinit(port, port->rxqs[queue]);
 }
 
@@ -1076,7 +1076,7 @@ int mvpp2_setup_rxqs(struct mvpp2_port *port)
 {
 	int queue, err;
 
-	for (queue = 0; queue < mvpp2_rxq_number; queue++) {
+	for (queue = 0; queue < port->num_rx_queues; queue++) {
 		err = mvpp2_rxq_init(port, port->rxqs[queue]);
 		if (err)
 			goto err_cleanup;
@@ -1094,13 +1094,13 @@ int mvpp2_setup_txqs(struct mvpp2_port *port)
 	struct mvpp2_tx_queue *txq;
 	int queue, err;
 
-	for (queue = 0; queue < mvpp2_txq_number; queue++) {
+	for (queue = 0; queue < port->num_tx_queues; queue++) {
 		txq = port->txqs[queue];
 		err = mvpp2_txq_init(port, txq);
 		if (err)
 			goto err_cleanup;
 	}
-
+	mvpp2_tx_done_time_coal_set(port, port->time_coal);
 	on_each_cpu(mvpp2_tx_done_pkts_coal_set, port, 1);
 	on_each_cpu(mvpp2_txq_sent_counter_clear, port, 1);
 	return 0;
@@ -1110,17 +1110,48 @@ err_cleanup:
 	return err;
 }
 
-/* The callback for per-port interrupt */
+
+void mvpp2_cleanup_irqs(struct mvpp2_port *port)
+{
+	int qvec;
+	/*YuvalC TODO: Check, according to free_irq(), it is safe to free a non-requested irq */
+	for (qvec=0;qvec<port->num_qvector;qvec++) {
+		free_irq(port->q_vector[qvec].irq, &port->q_vector[qvec]);
+	}
+}
+
+
+/* The callback for per-q_vector interrupt */
 static irqreturn_t mvpp2_isr(int irq, void *dev_id)
 {
-	struct mvpp2_port *port = (struct mvpp2_port *)dev_id;
+	struct queue_vector *q_vec = (struct queue_vector *)dev_id;
 
-	mvpp2_interrupts_disable(port);
-
-	napi_schedule(&port->napi);
+	mvpp2_qvector_interrupt_disable(q_vec);
+	napi_schedule(&q_vec->napi);
 
 	return IRQ_HANDLED;
 }
+
+int mvpp2_setup_irqs(struct net_device * dev, struct mvpp2_port *port)
+{
+	int qvec, err;
+	char temp_buf[32];
+	for (qvec=0;qvec<port->num_qvector;qvec++) {
+		sprintf(temp_buf, "%s.q_vec[%d]", dev->name, qvec);
+		err = request_irq(port->q_vector[qvec].irq, mvpp2_isr, 0,
+			temp_buf, &port->q_vector[qvec]);
+		if (err) {
+			netdev_err(port->dev, "cannot request IRQ %d\n",
+				port->q_vector[qvec].irq);
+			goto err_cleanup;
+		}
+	}
+	return(0);
+err_cleanup:
+	mvpp2_cleanup_irqs(port);
+	return(err);
+}
+
 
 /* Adjust link */
 static void mvpp2_link_event(struct net_device *dev)
@@ -1254,7 +1285,7 @@ static void mvpp2_buff_hdr_rx(struct mvpp2_port *port,
 
 	pool_id = (rx_status & MVPP2_RXD_BM_POOL_ID_MASK) >>
 		   MVPP2_RXD_BM_POOL_ID_OFFS;
-//TODO : YuvalC, this is just workaround to compile. Need to handle mvpp2_buff_hdr_rx().
+/*TODO : YuvalC, this is just workaround to compile. Need to handle mvpp2_buff_hdr_rx().*/
 	buff_phys_addr = rx_desc->u.pp21.buf_phys_addr;
 	buff_virt_addr = rx_desc->u.pp21.buf_cookie;
 
@@ -1278,8 +1309,8 @@ static void mvpp2_buff_hdr_rx(struct mvpp2_port *port,
 }
 
 /* Main rx processing */
-static int mvpp2_rx(struct mvpp2_port *port, int rx_todo,
-		    struct mvpp2_rx_queue *rxq)
+static int mvpp2_rx(struct mvpp2_port *port, struct napi_struct *napi,
+			int rx_todo, struct mvpp2_rx_queue *rxq)
 {
 	struct net_device *dev = port->dev;
 	int rx_received, rx_filled, i;
@@ -1343,7 +1374,7 @@ static int mvpp2_rx(struct mvpp2_port *port, int rx_todo,
 		skb->protocol = eth_type_trans(skb, dev);
 		mvpp2_rx_csum(port, rx_status, skb);
 
-		napi_gro_receive(&port->napi, skb);
+		napi_gro_receive(napi, skb);
 
 		err = mvpp2_rx_refill(port, bm_pool, pool, 0);
 		if (err) {
@@ -1528,9 +1559,65 @@ out:
 	return NETDEV_TX_OK;
 }
 
+static inline void mvpp2_cause_misc_handle(struct mvpp2_port *port,
+	struct mvpp2_hw *hw, u32 cause_rx_tx, u32 cause_misc)
+{
+	mvpp2_cause_error(port->dev, cause_misc);
+
+	/* Clear the cause register */
+	mvpp2_write(hw, MVPP2_ISR_MISC_CAUSE_REG, 0);
+	mvpp2_write(hw, MVPP2_ISR_RX_TX_CAUSE_REG(port->id),
+		    cause_rx_tx & ~MVPP2_CAUSE_MISC_SUM_MASK);
+
+}
+
+static inline void mvpp2_cause_tx_handle(struct mvpp2_port *port,
+		u32 cause_tx)
+{
+	struct mvpp2_tx_queue *txq = mvpp2_get_tx_queue(port, cause_tx);
+	struct mvpp2_txq_pcpu *txq_pcpu = this_cpu_ptr(txq->pcpu);
+
+	if (txq_pcpu->count)
+		mvpp2_txq_done(port, txq, txq_pcpu);
+}
+
+static inline int mvpp2_cause_rx_handle(struct mvpp2_port *port,
+		struct queue_vector *q_vec, struct napi_struct *napi,
+		int budget, u32 cause_rx)
+{
+	int rx_done = 0, count = 0;
+	struct mvpp2_rx_queue *rxq;
+
+	while (cause_rx && budget > 0) {
+		rxq = mvpp2_get_rx_queue(port, cause_rx);
+		if (!rxq)
+			break;
+
+		count = mvpp2_rx(port, &q_vec->napi, budget, rxq);
+		rx_done += count;
+		budget -= count;
+		if (budget > 0) {
+			/* Clear the bit associated to this Rx queue
+			 * so that next iteration will continue from
+			 * the next Rx queue.
+			 */
+			cause_rx &= ~(1 << rxq->log_id);
+		}
+	}
+	if (budget > 0) {
+		cause_rx = 0;
+		napi_complete(napi);
+		mvpp2_qvector_interrupt_enable(q_vec);
+	}
+	q_vec->pending_cause_rx = cause_rx;
+
+	return(rx_done);
+}
 
 
-static void mvpp2_txq_done_percpu(void *arg)
+
+
+static void mvpp21_txq_done_percpu(void *arg)
 {
 	struct mvpp2_port *port = arg;
 	u32 cause_rx_tx, cause_tx, cause_misc;
@@ -1546,73 +1633,113 @@ static void mvpp2_txq_done_percpu(void *arg)
 	 *
 	 * Each CPU has its own Rx/Tx cause register
 	 */
-	cause_rx_tx = mvpp2_read(hw,
-				 MVPP21_ISR_RX_TX_CAUSE_REG(port->id));
-	cause_tx = cause_rx_tx & MVPP21_CAUSE_TXQ_OCCUP_DESC_ALL_MASK;
-	cause_misc = cause_rx_tx & MVPP21_CAUSE_MISC_SUM_MASK;
+	cause_rx_tx = mvpp2_read(hw, MVPP2_ISR_RX_TX_CAUSE_REG(port->id));
+	cause_tx = cause_rx_tx & MVPP2_CAUSE_TXQ_OCCUP_DESC_ALL_MASK;
+	cause_misc = cause_rx_tx & MVPP2_CAUSE_MISC_SUM_MASK;
 
-	if (cause_misc) {
-		mvpp2_cause_error(port->dev, cause_misc);
-
-		/* Clear the cause register */
-		mvpp2_write(hw, MVPP2_ISR_MISC_CAUSE_REG, 0);
-		mvpp2_write(hw, MVPP21_ISR_RX_TX_CAUSE_REG(port->id),
-			    cause_rx_tx & ~MVPP21_CAUSE_MISC_SUM_MASK);
-	}
+	if (cause_misc)
+		mvpp2_cause_misc_handle(port, hw, cause_rx_tx, cause_misc);
 
 	/* Release TX descriptors */
-	if (cause_tx) {
-		struct mvpp2_tx_queue *txq = mvpp2_get_tx_queue(port, cause_tx);
-		struct mvpp2_txq_pcpu *txq_pcpu = this_cpu_ptr(txq->pcpu);
-
-		if (txq_pcpu->count)
-			mvpp2_txq_done(port, txq, txq_pcpu);
-	}
+	if (cause_tx)
+		mvpp2_cause_tx_handle(port, cause_tx);
 }
 
-static int mvpp2_poll(struct napi_struct *napi, int budget)
+static inline void mvpp22_txq_done(struct mvpp2_port *port, struct mvpp2_hw *hw,
+	u32 cause_rx_tx)
+{
+	u32 cause_tx, cause_misc;
+
+	/* Rx/Tx cause register
+	 *
+	 * Each CPU has its own Tx cause register
+	 */
+	cause_tx = cause_rx_tx & MVPP2_CAUSE_TXQ_OCCUP_DESC_ALL_MASK;
+	cause_misc = cause_rx_tx & MVPP2_CAUSE_MISC_SUM_MASK;
+
+	if (cause_misc)
+		mvpp2_cause_misc_handle(port, hw, cause_rx_tx, cause_misc);
+
+	/* Release TX descriptors */
+	if (cause_tx)
+		mvpp2_cause_tx_handle(port, cause_tx);
+}
+
+static int mvpp21_poll(struct napi_struct *napi, int budget)
 {
 	u32 cause_rx_tx, cause_rx;
 	int rx_done = 0;
 	struct mvpp2_port *port = netdev_priv(napi->dev);
+	struct mvpp2_hw *hw = &port->priv->hw;
+ 	struct queue_vector *q_vec = container_of(napi, struct queue_vector, napi);
 
-	on_each_cpu(mvpp2_txq_done_percpu, port, 1);
-
-	cause_rx_tx = mvpp2_read(&(port->priv->hw),
-				 MVPP21_ISR_RX_TX_CAUSE_REG(port->id));
-	cause_rx = cause_rx_tx & MVPP21_CAUSE_RXQ_OCCUP_DESC_ALL_MASK;
+	/* Process TX Done */
+	on_each_cpu(mvpp21_txq_done_percpu, port, 1);
 
 	/* Process RX packets */
-	cause_rx |= port->pending_cause_rx;
-	while (cause_rx && budget > 0) {
-		int count;
-		struct mvpp2_rx_queue *rxq;
+	cause_rx_tx = mvpp2_read(hw, MVPP2_ISR_RX_TX_CAUSE_REG(port->id));
 
-		rxq = mvpp2_get_rx_queue(port, cause_rx);
-		if (!rxq)
-			break;
+	cause_rx = cause_rx_tx & MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK;
+	cause_rx |= q_vec->pending_cause_rx;
 
-		count = mvpp2_rx(port, budget, rxq);
-		rx_done += count;
-		budget -= count;
-		if (budget > 0) {
-			/* Clear the bit associated to this Rx queue
-			 * so that next iteration will continue from
-			 * the next Rx queue.
-			 */
-			cause_rx &= ~(1 << rxq->log_id);
-		}
-	}
+	rx_done = mvpp2_cause_rx_handle(port, q_vec, napi, budget, cause_rx);
 
-	if (budget > 0) {
-		cause_rx = 0;
-		napi_complete(napi);
-
-		mvpp2_interrupts_enable(port);
-	}
-	port->pending_cause_rx = cause_rx;
 	return rx_done;
 }
+
+
+
+static int mvpp22_poll(struct napi_struct *napi, int budget)
+{
+	u32 cause_rx_tx, cause_rx;
+	int rx_done = 0;
+	struct mvpp2_port *port = netdev_priv(napi->dev);
+	struct mvpp2_hw *hw = &port->priv->hw;
+	struct queue_vector *q_vec = container_of(napi, struct queue_vector, napi);
+
+	/*The read is in the q_vector's sw_thread_id  address_space */
+	cause_rx_tx = mvpp22_thread_read(hw, q_vec->sw_thread_id,
+			MVPP2_ISR_RX_TX_CAUSE_REG(port->id));
+
+	/* Process tx_done */
+	mvpp22_txq_done(port, hw, cause_rx_tx);
+
+
+	/* Process RX packets */
+	cause_rx = cause_rx_tx & MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK;
+	cause_rx <<= q_vec->first_rx_queue; /*Convert queues from subgroup-relative to port-relative */
+	cause_rx |= q_vec->pending_cause_rx;
+
+	rx_done = mvpp2_cause_rx_handle(port, q_vec, napi, budget, cause_rx);
+
+	return rx_done;
+}
+
+void mvpp2_port_napi_enable(struct mvpp2_port *port)
+{
+	int i;
+
+	for (i=0;i<port->num_qvector;i++) {
+		napi_enable(&port->q_vector[i].napi);
+	}
+}
+
+void mvpp2_port_napi_disable(struct mvpp2_port *port)
+{
+	int i;
+
+	for (i=0;i<port->num_qvector;i++) {
+		napi_disable(&port->q_vector[i].napi);
+	}
+}
+
+static inline void mvpp2_port_irqs_dispose_mapping(struct mvpp2_port *port)
+{
+	int i;
+	for (i=0;i<port->num_irqs;i++)
+		irq_dispose_mapping(port->of_irqs[i]);
+}
+
 
 /* Set hw internals when starting port */
 void mvpp2_start_dev(struct mvpp2_port *port)
@@ -1620,10 +1747,10 @@ void mvpp2_start_dev(struct mvpp2_port *port)
 	mvpp2_gmac_max_rx_size_set(port);
 	mvpp2_txp_max_tx_size_set(port);
 
-	napi_enable(&port->napi);
+	mvpp2_port_napi_enable(port);
 
 	/* Enable interrupts on all CPUs */
-	mvpp2_interrupts_enable(port);
+	mvpp2_port_interrupts_enable(port);
 
 	mvpp2_port_enable(port);
 	phy_start(port->phy_dev);
@@ -1639,9 +1766,9 @@ void mvpp2_stop_dev(struct mvpp2_port *port)
 	mdelay(10);
 
 	/* Disable interrupts on all CPUs */
-	mvpp2_interrupts_disable(port);
+	mvpp2_port_interrupts_disable(port);
 
-	napi_disable(&port->napi);
+	mvpp2_port_napi_disable(port);
 
 	netif_carrier_off(port->dev);
 	netif_tx_stop_all_queues(port->dev);
@@ -1789,9 +1916,9 @@ static int mvpp2_open(struct net_device *dev)
 		goto err_cleanup_rxqs;
 	}
 
-	err = request_irq(port->irq, mvpp2_isr, 0, dev->name, port);
+	err = mvpp2_setup_irqs(dev, port);
 	if (err) {
-		netdev_err(port->dev, "cannot request IRQ %d\n", port->irq);
+		netdev_err(port->dev, "cannot allocate irq's \n");
 		goto err_cleanup_txqs;
 	}
 
@@ -1805,12 +1932,16 @@ static int mvpp2_open(struct net_device *dev)
 	/* Unmask interrupts on all CPUs */
 	on_each_cpu(mvpp2_interrupts_unmask, port, 1);
 
+	/* Unmask shared interrupts */
+	mvpp2_shared_thread_interrupts_unmask(port);
+
+
 	mvpp2_start_dev(port);
 
 	return 0;
 
 err_free_irq:
-	free_irq(port->irq, port);
+	mvpp2_cleanup_irqs(port);
 err_cleanup_txqs:
 	mvpp2_cleanup_txqs(port);
 err_cleanup_rxqs:
@@ -1828,7 +1959,10 @@ static int mvpp2_stop(struct net_device *dev)
 	/* Mask interrupts on all CPUs */
 	on_each_cpu(mvpp2_interrupts_mask, port, 1);
 
-	free_irq(port->irq, port);
+	/* Mask shared interrupts */
+	mvpp2_shared_thread_interrupts_mask(port);
+
+	mvpp2_cleanup_irqs(port);
 	mvpp2_cleanup_rxqs(port);
 	mvpp2_cleanup_txqs(port);
 
@@ -2023,28 +2157,14 @@ static void mvpp2_port_power_up(struct mvpp2_port *port)
 	mvpp2_port_reset(port);
 }
 
-/* Initialize port HW */
-static int mvpp2_port_init(struct mvpp2_port *port)
+static int  mvpp2_port_txqs_init(struct device *dev, struct mvpp2_port *port)
 {
-	struct device *dev = port->dev->dev.parent;
-	struct mvpp2 *priv = port->priv;
+	int queue, cpu;
 	struct mvpp2_txq_pcpu *txq_pcpu;
-	int queue, cpu, err;
 
+	port->time_coal = MVPP2_TXDONE_COAL_USEC;
 
-	/* Disable port */
-	mvpp2_egress_disable(port);
-	mvpp2_port_disable(port);
-
-	port->txqs = devm_kcalloc(dev, mvpp2_txq_number, sizeof(*port->txqs),
-				  GFP_KERNEL);
-	if (!port->txqs)
-		return -ENOMEM;
-
-	/* Associate physical Tx queues to this port and initialize.
-	 * The mapping is predefined.
-	 */
-	for (queue = 0; queue < mvpp2_txq_number; queue++) {
+	for (queue = 0; queue < port->num_tx_queues; queue++) {
 		int queue_phy_id = mvpp2_txq_phys(port->id, queue);
 		struct mvpp2_tx_queue *txq;
 
@@ -2054,13 +2174,13 @@ static int mvpp2_port_init(struct mvpp2_port *port)
 
 		txq->pcpu = alloc_percpu(struct mvpp2_txq_pcpu);
 		if (!txq->pcpu) {
-			err = -ENOMEM;
-			goto err_free_percpu;
+			return(-ENOMEM);
 		}
 
 		txq->id = queue_phy_id;
 		txq->log_id = queue;
-		txq->pkts_coal = MVPP2_TXDONE_COAL_PKTS_THRESH;
+		txq->pkts_coal = MVPP2_TXDONE_COAL_PKTS;
+
 		for_each_present_cpu(cpu) {
 			txq_pcpu = per_cpu_ptr(txq->pcpu, cpu);
 			txq_pcpu->cpu = cpu;
@@ -2069,21 +2189,21 @@ static int mvpp2_port_init(struct mvpp2_port *port)
 		port->txqs[queue] = txq;
 	}
 
-	port->rxqs = devm_kcalloc(dev, mvpp2_rxq_number, sizeof(*port->rxqs),
-				  GFP_KERNEL);
-	if (!port->rxqs) {
-		err = -ENOMEM;
-		goto err_free_percpu;
-	}
+	return(0);
+}
+
+static int  mvpp2_port_rxqs_init(struct device *dev, struct mvpp2_port *port)
+{
+	int queue;
 
 	/* Allocate and initialize Rx queue for this port */
-	for (queue = 0; queue < mvpp2_rxq_number; queue++) {
+	for (queue = 0; queue < port->num_rx_queues; queue++) {
 		struct mvpp2_rx_queue *rxq;
 
 		/* Map physical Rx queue to port's logical Rx queue */
 		rxq = devm_kzalloc(dev, sizeof(*rxq), GFP_KERNEL);
 		if (!rxq)
-			goto err_free_percpu;
+			return(-ENOMEM);
 		/* Map this Rx queue to a physical queue */
 		rxq->id = port->first_rxq + queue;
 		rxq->port = port->id;
@@ -2092,11 +2212,147 @@ static int mvpp2_port_init(struct mvpp2_port *port)
 		port->rxqs[queue] = rxq;
 	}
 
+	return(0);
+}
+
+static void mvpp21_port_queue_vectors_init(struct mvpp2_port *port)
+{
+	struct queue_vector *q_vec = &port->q_vector[0];
+
+	q_vec[0].first_rx_queue = 0;
+	q_vec[0].num_rx_queues = port->num_rx_queues;
+	q_vec[0].parent = port;
+	q_vec[0].pending_cause_rx = 0;
+	q_vec[0].qv_type = MVPP2_SHARED;
+	q_vec[0].sw_thread_id = 0;
+	q_vec[0].sw_thread_mask = port->priv->cpu_map;
+	q_vec[0].irq = port->of_irqs[0];
+	netif_napi_add(port->dev, &q_vec[0].napi, mvpp21_poll,
+		NAPI_POLL_WEIGHT);
+
+	port->num_qvector = 1;
+}
+
+static void mvpp22_port_queue_vectors_init(struct mvpp2_port *port)
+{
+	int cpu;
+	struct queue_vector *q_vec = &port->q_vector[0];
+
+
+	/* Each cpu has zero private rx_queues */
+	for (cpu = 0;cpu < num_present_cpus();cpu++) {
+		q_vec[cpu].parent = port;
+		q_vec[cpu].qv_type = MVPP2_PRIVATE;
+		q_vec[cpu].sw_thread_id = first_addr_space+cpu;
+		q_vec[cpu].sw_thread_mask = (1<<q_vec[cpu].sw_thread_id);
+		q_vec[cpu].irq = port->of_irqs[first_addr_space+cpu];
+		netif_napi_add(port->dev, &q_vec[cpu].napi, mvpp22_poll,
+			NAPI_POLL_WEIGHT);
+		if (mvpp2_queue_mode == MVPP2_QDIST_SINGLE_MODE) {
+			q_vec[cpu].first_rx_queue = 0;
+			q_vec[cpu].num_rx_queues = 0;
+		} else {
+			q_vec[cpu].num_rx_queues = mvpp2_num_cos_queues;
+			q_vec[cpu].first_rx_queue = cpu*mvpp2_num_cos_queues;
+		}
+		port->num_qvector++;
+	}
+	/*Additional queue_vector for Shared RX */
+	if (mvpp2_queue_mode == MVPP2_QDIST_SINGLE_MODE) {
+		q_vec[cpu].parent = port;
+		q_vec[cpu].qv_type = MVPP2_SHARED;
+		q_vec[cpu].sw_thread_id = first_addr_space+cpu;
+		q_vec[cpu].sw_thread_mask = (1<<q_vec[cpu].sw_thread_id);
+		q_vec[cpu].irq = port->of_irqs[first_addr_space+cpu];
+		netif_napi_add(port->dev, &q_vec[cpu].napi, mvpp22_poll,
+			NAPI_POLL_WEIGHT);
+		q_vec[cpu].first_rx_queue = 0;
+		q_vec[cpu].num_rx_queues = port->num_rx_queues;
+
+		port->num_qvector++;
+	}
+
+}
+
+static void mvpp21x_port_isr_rx_group_cfg(struct mvpp2_port *port)
+{
+	mvpp21_isr_rx_group_write(&port->priv->hw, port->id, port->num_rx_queues);
+}
+
+static void mvpp22_port_isr_rx_group_cfg(struct mvpp2_port *port)
+{
+	int cpu;
+	u8 cur_rx_queue;
+	struct mvpp2_hw *hw = &port->priv->hw;
+
+	if (mvpp2_queue_mode == MVPP2_QDIST_SINGLE_MODE) {
+		/* Each cpu has zero private rx_queues */
+		for (cpu = 0;cpu < num_present_cpus();cpu++) {
+			mvpp22_isr_rx_group_write(hw, port->id,
+				first_addr_space+cpu, 0, 0);
+		}
+		/* Additional shared group */
+		mvpp22_isr_rx_group_write(hw, port->id,
+			first_addr_space+cpu, first_log_rxq_queue,
+			port->num_rx_queues);
+	} else {
+		/* Each cpu has num_cos_queues private rx_queues */
+		cur_rx_queue = first_log_rxq_queue;
+		for (cpu = 0;cpu < num_present_cpus();cpu++) {
+			mvpp22_isr_rx_group_write(hw, port->id,
+				first_addr_space+cpu,cur_rx_queue,
+				mvpp2_num_cos_queues);
+			cur_rx_queue += mvpp2_num_cos_queues;
+		}
+	}
+}
+
+
+
+
+/* Initialize port HW */
+static int mvpp2_port_init(struct mvpp2_port *port)
+{
+	struct device *dev = port->dev->dev.parent;
+	struct mvpp2 *priv = port->priv;
+	int queue, err;
+
+
+	/* Disable port */
+	mvpp2_egress_disable(port);
+	mvpp2_port_disable(port);
+
+	/* Allocate queues */
+	port->txqs = devm_kcalloc(dev, port->num_tx_queues, sizeof(*port->txqs),
+				  GFP_KERNEL);
+	if (!port->txqs)
+		return -ENOMEM;
+
+	port->rxqs = devm_kcalloc(dev, port->num_rx_queues, sizeof(*port->rxqs),
+				  GFP_KERNEL);
+	if (!port->rxqs) {
+		return -ENOMEM;
+	}
+
+	/* Associate physical Tx queues to port and initialize.  */
+	err = mvpp2_port_txqs_init(dev, port);
+	if (err)
+		goto err_free_percpu;
+
+	/* Associate physical Rx queues to port and initialize.  */
+	err = mvpp2_port_rxqs_init(dev, port);
+	if (err)
+		goto err_free_percpu;
+
+	/* Configure queue_vectors */
+	priv->pp2xdata->mvpp2x_port_queue_vectors_init(port);
+
 	/* Configure Rx queue group interrupt for this port */
-	mvpp2_write(&priv->hw, MVPP21_ISR_RXQ_GROUP_REG(port->id), mvpp2_rxq_number);
+	priv->pp2xdata->mvpp2x_port_isr_rx_group_cfg(port);
+
 
 	/* Create Rx descriptor rings */
-	for (queue = 0; queue < mvpp2_rxq_number; queue++) {
+	for (queue = 0; queue < port->num_rx_queues; queue++) {
 		struct mvpp2_rx_queue *rxq = port->rxqs[queue];
 
 		rxq->size = port->rx_ring_size;
@@ -2124,7 +2380,7 @@ static int mvpp2_port_init(struct mvpp2_port *port)
 	return 0;
 
 err_free_percpu:
-	for (queue = 0; queue < mvpp2_txq_number; queue++) {
+	for (queue = 0; queue < port->num_tx_queues; queue++) {
 		if (!port->txqs[queue])
 			continue;
 		free_percpu(port->txqs[queue]->pcpu);
@@ -2135,8 +2391,7 @@ err_free_percpu:
 /* Ports initialization */
 static int mvpp2_port_probe(struct platform_device *pdev,
 			    struct device_node *port_node,
-			    struct mvpp2 *priv,
-			    int *next_first_rxq)
+			    struct mvpp2 *priv)
 {
 	struct device_node *phy_node;
 	struct mvpp2_port *port;
@@ -2146,10 +2401,9 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	const char *mac_from;
 	char hw_mac_addr[ETH_ALEN];
 	u32 id;
-	int features;
-	int phy_mode;
+	unsigned int * port_irqs;
+	int features, phy_mode, err=0, i, port_num_irq;
 	int priv_common_regs_num = 2;
-	int err, i;
 
 	dev = alloc_etherdev_mqs(sizeof(struct mvpp2_port), mvpp2_txq_number,
 				 mvpp2_rxq_number);
@@ -2183,10 +2437,21 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 
 	port = netdev_priv(dev);
 
-	port->irq = irq_of_parse_and_map(port_node, 0);
-	if (port->irq <= 0) {
-		err = -EINVAL;
+	port_num_irq = of_irq_count(port_node);
+	if (port_num_irq != priv->pp2xdata->num_port_irq) {
 		goto err_free_netdev;
+	}
+	port_irqs = devm_kcalloc(&pdev->dev, port_num_irq, sizeof(u32), GFP_KERNEL);
+	port->of_irqs = port_irqs;
+	port->num_irqs = 0;
+
+	for (i=0;i<port_num_irq;i++) {
+		port_irqs[i] = irq_of_parse_and_map(port_node, i);
+		if (port_irqs[i] == 0) {
+			err = -EINVAL;
+			goto err_free_irq;
+		}
+		port->num_irqs++;
 	}
 
 	if (of_property_read_bool(port_node, "marvell,loopback"))
@@ -2194,7 +2459,12 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 
 	port->priv = priv;
 	port->id = id;
-	port->first_rxq = *next_first_rxq;
+	port->num_tx_queues = mvpp2_txq_number;
+	port->num_rx_queues = mvpp2_rxq_number;
+
+	/*YuvalC: Port first_rxq relative to port->id, not dependent on board topology, i.e. not dynamically allocated */
+	port->first_rxq = (port->id)*(priv->pp2xdata->pp2x_max_port_rxqs) +
+		first_log_rxq_queue;
 	port->phy_node = phy_node;
 	port->phy_interface = phy_mode;
 
@@ -2228,8 +2498,8 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 		}
 	}
 
-	port->tx_ring_size = MVPP2_MAX_TXD;
-	port->rx_ring_size = MVPP2_MAX_RXD;
+	port->tx_ring_size = rx_queue_size;
+	port->rx_ring_size = tx_queue_size;
 	port->dev = dev;
 	SET_NETDEV_DEV(dev, &pdev->dev);
 
@@ -2240,7 +2510,7 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	}
 	mvpp2_port_power_up(port);
 
-	netif_napi_add(dev, &port->napi, mvpp2_poll, NAPI_POLL_WEIGHT);
+
 	features = NETIF_F_SG | NETIF_F_IP_CSUM;
 	dev->features = features | NETIF_F_RXCSUM;
 	dev->hw_features |= features | NETIF_F_RXCSUM | NETIF_F_GRO;
@@ -2253,8 +2523,6 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	}
 	netdev_info(dev, "Using %s mac address %pM\n", mac_from, dev->dev_addr);
 
-	/* Increment the first Rx queue number to be used by the next port */
-	*next_first_rxq +=  priv->pp2xdata->pp2x_max_port_rxqs;
 	priv->port_list[id] = port;
 	return 0;
 
@@ -2264,7 +2532,7 @@ err_free_txq_pcpu:
 err_free_stats:
 	free_percpu(port->stats);
 err_free_irq:
-	irq_dispose_mapping(port->irq);
+	mvpp2_port_irqs_dispose_mapping(port);
 err_free_netdev:
 	free_netdev(dev);
 	return err;
@@ -2277,9 +2545,9 @@ static void mvpp2_port_remove(struct mvpp2_port *port)
 
 	unregister_netdev(port->dev);
 	free_percpu(port->stats);
-	for (i = 0; i < mvpp2_txq_number; i++)
+	for (i = 0; i < port->num_tx_queues; i++)
 		free_percpu(port->txqs[i]->pcpu);
-	irq_dispose_mapping(port->irq);
+	mvpp2_port_irqs_dispose_mapping(port);
 	free_netdev(port->dev);
 }
 
@@ -2337,15 +2605,27 @@ static void mvpp2_rx_fifo_init(struct mvpp2_hw *hw)
 /* Initialize network controller common part HW */
 static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 {
-	const struct mbus_dram_target_info *dram_target_info;
 	int err, i;
+	int last_log_rx_queue;
 	u32 val;
+	const struct mbus_dram_target_info *dram_target_info;
+	u8 pp2_ver = priv->pp2xdata->pp2x_ver;
 	struct mvpp2_hw *hw = &priv->hw;
 
 	/* Checks for hardware constraints */
-	if (mvpp2_rxq_number % 4 || (mvpp2_rxq_number > MVPP2_MAX_RXQ) ||
-	    (mvpp2_txq_number > MVPP2_MAX_TXQ)) {
-		dev_err(&pdev->dev, "invalid queue size parameter\n");
+	last_log_rx_queue = first_log_rxq_queue + mvpp2_rxq_number;
+	if (last_log_rx_queue > priv->pp2xdata->pp2x_max_port_rxqs) {
+		dev_err(&pdev->dev, "too high num_cos_queue parameter\n");
+		return -EINVAL;
+	}
+	/*TODO: YuvalC, replace this with a per-pp2x validation function. */
+	if ((pp2_ver == PPV21) && (mvpp2_rxq_number % 4)) {
+		dev_err(&pdev->dev, "invalid num_cos_queue parameter\n");
+		return -EINVAL;
+	}
+
+	if (mvpp2_txq_number > MVPP2_MAX_TXQ) {
+		dev_err(&pdev->dev, "invalid num_cos_queue parameter\n");
 		return -EINVAL;
 	}
 
@@ -2365,7 +2645,7 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 				       GFP_KERNEL);
 	if (!priv->aggr_txqs)
 		return -ENOMEM;
-
+	/*TODO: FIXME: See num_present_cpus() above , below will OOPS for cpu_present_mask = cpu0|cpu3 */
 	for_each_present_cpu(i) {
 		priv->aggr_txqs[i].id = i;
 		priv->aggr_txqs[i].size = MVPP2_AGGR_TXQ_SIZE;
@@ -2378,9 +2658,6 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 	/* Rx Fifo Init */
 	mvpp2_rx_fifo_init(hw);
 
-	/* Reset Rx queue group interrupt configuration */
-	for (i = 0; i < MVPP2_MAX_PORTS; i++)
-		mvpp2_write(hw, MVPP21_ISR_RXQ_GROUP_REG(i), mvpp2_rxq_number);
 
 	writel(MVPP2_EXT_GLOBAL_CTRL_DEFAULT,
 	       hw->lms_base + MVPP2_MNG_EXTENDED_GLOBAL_CTRL_REG);
@@ -2410,6 +2687,10 @@ static const struct mvpp2x_platform_data pp21_pdata = {
 	.pp2x_max_port_rxqs = 8,
 	.mvpp2x_rxq_short_pool_set = mvpp21_rxq_short_pool_set,
 	.mvpp2x_rxq_long_pool_set = mvpp21_rxq_long_pool_set,
+	.multi_addr_space = false,
+	.mvpp2x_port_queue_vectors_init = mvpp21_port_queue_vectors_init,
+	.mvpp2x_port_isr_rx_group_cfg = mvpp21x_port_isr_rx_group_cfg,
+	.num_port_irq = 1,
 };
 
 static const struct mvpp2x_platform_data pp22_pdata = {
@@ -2417,6 +2698,10 @@ static const struct mvpp2x_platform_data pp22_pdata = {
 	.pp2x_max_port_rxqs = 32,
 	.mvpp2x_rxq_short_pool_set = mvpp22_rxq_short_pool_set,
 	.mvpp2x_rxq_long_pool_set = mvpp22_rxq_long_pool_set,
+	.multi_addr_space = true,
+	.mvpp2x_port_queue_vectors_init = mvpp22_port_queue_vectors_init,
+	.mvpp2x_port_isr_rx_group_cfg = mvpp22_port_isr_rx_group_cfg,
+	.num_port_irq = 9,
 };
 
 
@@ -2429,8 +2714,7 @@ static const struct of_device_id mvpp2_match_tbl[] = {
         {
                 .compatible = "marvell,pp22",
                 .data = &pp22_pdata,
-        },
-        { /* end */ }
+        }
 };
 
 
@@ -2442,8 +2726,9 @@ static int mvpp2_probe(struct platform_device *pdev)
 	struct mvpp2_hw *hw;
 	struct resource *res;
 	const struct of_device_id *match;
-	int port_count, first_rxq;
-	int err;
+	int port_count, cpu;
+	int i, err;
+	u16 cpu_map;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(struct mvpp2), GFP_KERNEL);
 	if (!priv)
@@ -2460,14 +2745,25 @@ static int mvpp2_probe(struct platform_device *pdev)
 	priv->pp2xdata = (const struct mvpp2x_platform_data *) match->data;
 	priv->pp2_version = priv->pp2xdata->pp2x_ver;
 
-	if (first_log_rxq_queue + mvpp2_rxq_number > priv->pp2xdata->pp2x_max_port_rxqs)
-		return -EINVAL;
+	/*Save cpu_present_mask */
+	cpu_map = 0;
+	i = 0;
+	for_each_present_cpu(cpu) {
+		cpu_map |= (1<<cpu);
+		i++;
+		priv->hw.cpu_base[cpu] = priv->hw.base;
+		if (priv->pp2xdata->multi_addr_space)
+			priv->hw.cpu_base[cpu] += (first_addr_space + i)*MVPP2_ADDR_SPACE_SIZE;
+	}
+	priv->cpu_map = cpu_map;
 
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	hw->base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(hw->base))
 		return PTR_ERR(hw->base);
+
+
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	hw->lms_base = devm_ioremap_resource(&pdev->dev, res);
@@ -2516,9 +2812,8 @@ static int mvpp2_probe(struct platform_device *pdev)
 	}
 
 	/* Initialize ports */
-	first_rxq = first_log_rxq_queue;
 	for_each_available_child_of_node(dn, port_node) {
-		err = mvpp2_port_probe(pdev, port_node, priv, &first_rxq);
+		err = mvpp2_port_probe(pdev, port_node, priv);
 		if (err < 0)
 			goto err_gop_clk;
 	}
@@ -2547,7 +2842,7 @@ static int mvpp2_remove(struct platform_device *pdev)
 		i++;
 	}
 
-	for (i = 0; i < MVPP2_BM_POOLS_NUM; i++) {
+	for (i = 0; i < mvpp2_num_pools_get(priv); i++) {
 		struct mvpp2_bm_pool *bm_pool = &priv->bm_pools[i];
 
 		mvpp2_bm_pool_destroy(pdev, hw, bm_pool);
@@ -2582,38 +2877,44 @@ static struct platform_driver mvpp2_driver = {
 	},
 };
 
-static u8 mvpp2_rxq_number_get(void) {
-	/*TODO: Function depends on num_cpu's, QUEUE_MODE, etc.  */
-	return mvpp2_num_cos_queues;
+static int mvpp2_rxq_number_get(void) {
+
+	int rx_queue_num;
+
+	if (mvpp2_queue_mode == MVPP2_QDIST_SINGLE_MODE)
+		rx_queue_num = mvpp2_num_cos_queues;
+	else
+		rx_queue_num = mvpp2_num_cos_queues * num_present_cpus();
+
+	return (rx_queue_num);
 }
 
-static int __init mpp2_init(void)
+static int __init mpp2_module_init(void)
 {
 	int ret;
 
 	mvpp2_rxq_number = mvpp2_rxq_number_get();
 	mvpp2_txq_number = mvpp2_num_cos_queues;
+
+	/* Compiler does not allow below Init in structure definition */
 	mvpp2_pools[MVPP2_BM_SWF_SHORT_POOL].pkt_size = MVPP2_BM_SHORT_PKT_SIZE;
 	mvpp2_pools[MVPP2_BM_SWF_LONG_POOL].pkt_size = MVPP2_BM_LONG_PKT_SIZE;
 	mvpp2_pools[MVPP2_BM_SWF_JUMBO_POOL].pkt_size = MVPP2_BM_JUMBO_PKT_SIZE;
-
 
 	ret = platform_driver_register(&mvpp2_driver);
 
 	return ret;
 }
 
-static void __exit mpp2_exit(void)
+static void __exit mpp2_module_exit(void)
 {
 	platform_driver_unregister(&mvpp2_driver);
 
 }
 
-module_init(mpp2_init);
-module_exit(mpp2_exit);
+module_init(mpp2_module_init);
+module_exit(mpp2_module_exit);
 
-
-//module_platform_driver(mvpp2_driver);
 
 MODULE_DESCRIPTION("Marvell PPv2 Ethernet Driver - www.marvell.com");
 MODULE_AUTHOR("Marcin Wojtas <mw@semihalf.com>");
