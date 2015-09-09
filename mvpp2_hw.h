@@ -352,12 +352,12 @@ int mvpp2_txq_pend_desc_num_get(struct mvpp2_port *port,
 				       struct mvpp2_tx_queue *txq);
 u32 mvpp2_txq_desc_csum(int l3_offs, int l3_proto,
 			       int ip_hdr_len, int l4_proto);
-struct mvpp2_tx_desc * mvpp2_txq_next_desc_get(struct mvpp2_tx_queue *txq);
+struct mvpp2_tx_desc * mvpp2_txq_next_desc_get(struct mvpp2_aggr_tx_queue *aggr_txq);
 int mvpp2_txq_alloc_reserved_desc(struct mvpp2 *priv,
 					 struct mvpp2_tx_queue *txq, int num);
 void mvpp2_aggr_txq_pend_desc_add(struct mvpp2_port *port, int pending);
 int mvpp2_aggr_desc_num_check(struct mvpp2 *priv,
-				     struct mvpp2_tx_queue *aggr_txq, int num);
+				     struct mvpp2_aggr_tx_queue *aggr_txq, int num);
 void mvpp2_rxq_offset_set(struct mvpp2_port *port,
 				 int prxq, int offset);
 void mvpp2_bm_bufs_free(struct mvpp2 *priv, struct mvpp2_bm_pool *bm_pool);

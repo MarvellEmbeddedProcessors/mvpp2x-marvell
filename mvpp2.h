@@ -107,16 +107,11 @@ struct mvpp2_tx_queue {
 	/* Number of Tx DMA descriptors in the descriptor ring */
 	int size;
 
-	/* Number of currently used Tx DMA descriptor in the descriptor ring */
-	int count;
-
 	/* Per-CPU control of physical Tx queues */
 	struct mvpp2_txq_pcpu __percpu *pcpu;
 
-	/* Array of transmitted skb */
-	struct sk_buff **tx_skb;
-
-	u32 done_pkts_coal;
+	u32 pkts_coal;
+	u32 time_coal;	
 
 	/* Virtual address of thex Tx DMA descriptors array */
 	struct mvpp2_tx_desc *descs;
@@ -131,9 +126,37 @@ struct mvpp2_tx_queue {
 	int next_desc_to_proc;
 };
 
+
+struct mvpp2_aggr_tx_queue {
+	/* Physical number of this Tx queue */
+	u8 id;
+
+	/* Number of Tx DMA descriptors in the descriptor ring */
+	int size;
+
+	/* Number of currently used Tx DMA descriptor in the descriptor ring */
+	int count;
+
+	/* Virtual address of thex Tx DMA descriptors array */
+	struct mvpp2_tx_desc *descs;
+
+	/* DMA address of the Tx DMA descriptors array */
+	dma_addr_t descs_phys;
+
+	/* Index of the last Tx DMA descriptor */
+	int last_desc;
+
+	/* Index of the next Tx DMA descriptor to process */
+	int next_desc_to_proc;
+};
+
+
 struct mvpp2_rx_queue {
 	/* RX queue number, in the range 0-31 for physical RXQs */
 	u8 id;
+
+	/* Port's logic RXQ number to which physical RXQ is mapped */
+	int log_id;	
 
 	/* Num of rx descriptors in the rx descriptor ring */
 	int size;
@@ -156,8 +179,6 @@ struct mvpp2_rx_queue {
 	/* ID of port to which physical RXQ is mapped */
 	int port;
 
-	/* Port's logic RXQ number to which physical RXQ is mapped */
-	int logic_rxq;
 };
 
 
@@ -180,7 +201,7 @@ struct mvpp2 {
 	struct mvpp2_port **port_list;
 
 	/* Aggregated TXQs */
-	struct mvpp2_tx_queue *aggr_txqs;
+	struct mvpp2_aggr_tx_queue *aggr_txqs;
 
 	/* BM pools */
 	struct mvpp2_bm_pool *bm_pools;
