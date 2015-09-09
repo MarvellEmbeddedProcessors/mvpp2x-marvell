@@ -97,7 +97,6 @@ static int mvpp2_ethtool_set_coalesce(struct net_device *dev,
 		txq->done_pkts_coal = c->tx_max_coalesced_frames;
 	}
 
-	on_each_cpu(mvpp2_tx_done_pkts_coal_set, port, 1);
 	return 0;
 }
 

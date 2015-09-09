@@ -51,6 +51,7 @@ extern int mvpp2_txq_number;
 
 /* Coalescing */
 #define MVPP2_TXDONE_COAL_PKTS_THRESH	15
+#define MVPP2_TXDONE_HRTIMER_PERIOD_NS	1000000UL
 #define MVPP2_RX_COAL_PKTS		32
 #define MVPP2_RX_COAL_USEC		100
 
@@ -188,6 +189,15 @@ struct mvpp2_pcpu_stats {
 	u64	tx_bytes;
 };
 
+/* Per-CPU port control */
+struct mvpp2_port_pcpu {
+	struct hrtimer tx_done_timer;
+	bool timer_scheduled;
+	/* Tasklet for egress finalization */
+	struct tasklet_struct tx_done_tasklet;
+};
+
+
 struct mvpp2_port {
 	u8 id;
 
@@ -206,6 +216,9 @@ struct mvpp2_port {
 
 	u32 pending_cause_rx;
 	struct napi_struct napi;
+
+	/* Per-CPU port control */
+	struct mvpp2_port_pcpu __percpu *pcpu;
 
 	/* Flags */
 	unsigned long flags;

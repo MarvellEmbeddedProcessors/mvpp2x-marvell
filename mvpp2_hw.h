@@ -118,7 +118,6 @@ static inline void mvpp2_interrupts_unmask(void *arg)
 
 	mvpp2_write(port->priv, MVPP2_ISR_RX_TX_MASK_REG(port->id),
 		    (MVPP2_CAUSE_MISC_SUM_MASK |
-		     MVPP2_CAUSE_TXQ_OCCUP_DESC_ALL_MASK |
 		     MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK));
 }
 
@@ -145,7 +144,8 @@ static inline struct mvpp2_rx_queue *mvpp2_get_rx_queue(struct mvpp2_port *port,
 static inline struct mvpp2_tx_queue *mvpp2_get_tx_queue(struct mvpp2_port *port,
 							u32 cause)
 {
-	int queue = fls(cause >> 16) - 1;
+	int queue = fls(cause) - 1;
+
 
 	return port->txqs[queue];
 }

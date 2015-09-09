@@ -42,6 +42,8 @@
 #include <linux/of_address.h>
 #include <linux/phy.h>
 #include <linux/clk.h>
+#include <linux/hrtimer.h>
+#include <linux/ktime.h>
 #include <uapi/linux/ppp_defs.h>
 #include <net/ip.h>
 #include <net/ipv6.h>
@@ -555,6 +557,31 @@ static void mvpp2_txq_done(struct mvpp2_port *port, struct mvpp2_tx_queue *txq,
 			netif_tx_wake_queue(nq);
 }
 
+
+static unsigned int mvpp2_tx_done(struct mvpp2_port *port, u32 cause)
+{
+	struct mvpp2_tx_queue *txq;
+	struct mvpp2_txq_pcpu *txq_pcpu;
+	unsigned int tx_todo = 0;
+
+	while (cause) {
+		txq = mvpp2_get_tx_queue(port, cause);
+		if (!txq)
+			break;
+
+		txq_pcpu = this_cpu_ptr(txq->pcpu);
+
+		if (txq_pcpu->count) {
+			mvpp2_txq_done(port, txq, txq_pcpu);
+			tx_todo += txq_pcpu->count;
+		}
+
+		cause &= ~(1 << txq->log_id);
+	}
+	return tx_todo;
+}
+
+
 /* Rx/Tx queue initialization/cleanup methods */
 
 /* Allocate and initialize descriptors for aggr TXQ */
@@ -915,7 +942,6 @@ int mvpp2_setup_txqs(struct mvpp2_port *port)
 			goto err_cleanup;
 	}
 
-	on_each_cpu(mvpp2_tx_done_pkts_coal_set, port, 1);
 	on_each_cpu(mvpp2_txq_sent_counter_clear, port, 1);
 	return 0;
 
@@ -996,6 +1022,52 @@ static void mvpp2_link_event(struct net_device *dev)
 		phy_print_status(phydev);
 	}
 }
+
+static void mvpp2_timer_set(struct mvpp2_port_pcpu *port_pcpu)
+{
+	ktime_t interval;
+
+	if (!port_pcpu->timer_scheduled) {
+		port_pcpu->timer_scheduled = true;
+		interval = ktime_set(0, MVPP2_TXDONE_HRTIMER_PERIOD_NS);
+		hrtimer_start(&port_pcpu->tx_done_timer, interval,
+			      HRTIMER_MODE_REL_PINNED);
+	}
+}
+
+static void mvpp2_tx_proc_cb(unsigned long data)
+{
+	struct net_device *dev = (struct net_device *)data;
+	struct mvpp2_port *port = netdev_priv(dev);
+	struct mvpp2_port_pcpu *port_pcpu = this_cpu_ptr(port->pcpu);
+	unsigned int tx_todo, cause;
+
+	if (!netif_running(dev))
+		return;
+	port_pcpu->timer_scheduled = false;
+
+	/* Process all the Tx queues */
+	cause = (1 << mvpp2_txq_number) - 1;
+	tx_todo = mvpp2_tx_done(port, cause);
+
+	/* Set the timer in case not all the packets were processed */
+	if (tx_todo)
+		mvpp2_timer_set(port_pcpu);
+}
+
+static enum hrtimer_restart mvpp2_hr_timer_cb(struct hrtimer *timer)
+{
+	struct mvpp2_port_pcpu *port_pcpu = container_of(timer,
+							 struct mvpp2_port_pcpu,
+							 tx_done_timer);
+
+	tasklet_schedule(&port_pcpu->tx_done_tasklet);
+
+	return HRTIMER_NORESTART;
+}
+
+
+
 
 /* Main RX/TX processing routines */
 
@@ -1325,15 +1397,25 @@ out:
 		dev_kfree_skb_any(skb);
 	}
 
+	/* Finalize TX processing */
+	if (txq_pcpu->count >= txq->done_pkts_coal)
+		mvpp2_txq_done(port, txq, txq_pcpu);
+
+	/* Set the timer in case not all frags were processed */
+	if (txq_pcpu->count <= frags && txq_pcpu->count > 0) {
+		struct mvpp2_port_pcpu *port_pcpu = this_cpu_ptr(port->pcpu);
+
+		mvpp2_timer_set(port_pcpu);
+	}
+
 	return NETDEV_TX_OK;
 }
 
-
-
-static void mvpp2_txq_done_percpu(void *arg)
+static int mvpp2_poll(struct napi_struct *napi, int budget)
 {
-	struct mvpp2_port *port = arg;
-	u32 cause_rx_tx, cause_tx, cause_misc;
+	u32 cause_rx_tx, cause_rx, cause_misc;
+	int rx_done = 0;
+	struct mvpp2_port *port = netdev_priv(napi->dev);
 
 	/* Rx/Tx cause register
 	 *
@@ -1347,7 +1429,7 @@ static void mvpp2_txq_done_percpu(void *arg)
 	 */
 	cause_rx_tx = mvpp2_read(port->priv,
 				 MVPP2_ISR_RX_TX_CAUSE_REG(port->id));
-	cause_tx = cause_rx_tx & MVPP2_CAUSE_TXQ_OCCUP_DESC_ALL_MASK;
+	cause_rx_tx &= ~MVPP2_CAUSE_TXQ_OCCUP_DESC_ALL_MASK;
 	cause_misc = cause_rx_tx & MVPP2_CAUSE_MISC_SUM_MASK;
 
 	if (cause_misc) {
@@ -1359,26 +1441,6 @@ static void mvpp2_txq_done_percpu(void *arg)
 			    cause_rx_tx & ~MVPP2_CAUSE_MISC_SUM_MASK);
 	}
 
-	/* Release TX descriptors */
-	if (cause_tx) {
-		struct mvpp2_tx_queue *txq = mvpp2_get_tx_queue(port, cause_tx);
-		struct mvpp2_txq_pcpu *txq_pcpu = this_cpu_ptr(txq->pcpu);
-
-		if (txq_pcpu->count)
-			mvpp2_txq_done(port, txq, txq_pcpu);
-	}
-}
-
-static int mvpp2_poll(struct napi_struct *napi, int budget)
-{
-	u32 cause_rx_tx, cause_rx;
-	int rx_done = 0;
-	struct mvpp2_port *port = netdev_priv(napi->dev);
-
-	on_each_cpu(mvpp2_txq_done_percpu, port, 1);
-
-	cause_rx_tx = mvpp2_read(port->priv,
-				 MVPP2_ISR_RX_TX_CAUSE_REG(port->id));
 	cause_rx = cause_rx_tx & MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK;
 
 	/* Process RX packets */
@@ -1610,6 +1672,9 @@ err_cleanup_rxqs:
 static int mvpp2_stop(struct net_device *dev)
 {
 	struct mvpp2_port *port = netdev_priv(dev);
+	struct mvpp2_port_pcpu *port_pcpu;
+	int cpu;
+
 
 	mvpp2_stop_dev(port);
 	mvpp2_phy_disconnect(port);
@@ -1618,6 +1683,13 @@ static int mvpp2_stop(struct net_device *dev)
 	on_each_cpu(mvpp2_interrupts_mask, port, 1);
 
 	free_irq(port->irq, port);
+	for_each_present_cpu(cpu) {
+		port_pcpu = per_cpu_ptr(port->pcpu, cpu);
+
+		hrtimer_cancel(&port_pcpu->tx_done_timer);
+		port_pcpu->timer_scheduled = false;
+		tasklet_kill(&port_pcpu->tx_done_tasklet);
+	}
 	mvpp2_cleanup_rxqs(port);
 	mvpp2_cleanup_txqs(port);
 
@@ -1931,6 +2003,7 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 {
 	struct device_node *phy_node;
 	struct mvpp2_port *port;
+	struct mvpp2_port_pcpu *port_pcpu;
 	struct net_device *dev;
 	struct resource *res;
 	const char *dt_mac_addr;
@@ -1940,7 +2013,7 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	int features;
 	int phy_mode;
 	int priv_common_regs_num = 2;
-	int err, i;
+	int err, i, cpu;
 
 	dev = alloc_etherdev_mqs(sizeof(struct mvpp2_port), mvpp2_txq_number,
 				 mvpp2_rxq_number);
@@ -2031,6 +2104,24 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	}
 	mvpp2_port_power_up(port);
 
+	port->pcpu = alloc_percpu(struct mvpp2_port_pcpu);
+	if (!port->pcpu) {
+		err = -ENOMEM;
+		goto err_free_txq_pcpu;
+	}
+
+	for_each_present_cpu(cpu) {
+		port_pcpu = per_cpu_ptr(port->pcpu, cpu);
+
+		hrtimer_init(&port_pcpu->tx_done_timer, CLOCK_MONOTONIC,
+			     HRTIMER_MODE_REL_PINNED);
+		port_pcpu->tx_done_timer.function = mvpp2_hr_timer_cb;
+		port_pcpu->timer_scheduled = false;
+
+		tasklet_init(&port_pcpu->tx_done_tasklet, mvpp2_tx_proc_cb,
+			     (unsigned long)dev);
+	}
+
 	netif_napi_add(dev, &port->napi, mvpp2_poll, NAPI_POLL_WEIGHT);
 	features = NETIF_F_SG | NETIF_F_IP_CSUM;
 	dev->features = features | NETIF_F_RXCSUM;
@@ -2040,7 +2131,7 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	err = register_netdev(dev);
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to register netdev\n");
-		goto err_free_txq_pcpu;
+		goto err_free_port_pcpu;
 	}
 	netdev_info(dev, "Using %s mac address %pM\n", mac_from, dev->dev_addr);
 
@@ -2049,6 +2140,8 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	priv->port_list[id] = port;
 	return 0;
 
+err_free_port_pcpu:
+	free_percpu(port->pcpu);
 err_free_txq_pcpu:
 	for (i = 0; i < mvpp2_txq_number; i++)
 		free_percpu(port->txqs[i]->pcpu);
@@ -2067,6 +2160,7 @@ static void mvpp2_port_remove(struct mvpp2_port *port)
 	int i;
 
 	unregister_netdev(port->dev);
+	free_percpu(port->pcpu);
 	free_percpu(port->stats);
 	for (i = 0; i < mvpp2_txq_number; i++)
 		free_percpu(port->txqs[i]->pcpu);
