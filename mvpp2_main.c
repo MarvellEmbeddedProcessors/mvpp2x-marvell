@@ -108,9 +108,9 @@ static int mvpp2_bm_pool_create(struct platform_device *pdev,
 		return -ENOMEM;
 	}
 
-	mvpp2_write(priv, MVPP2_BM_POOL_BASE_REG(bm_pool->id),
+	mvpp2_write(priv, MVPP21_BM_POOL_BASE_ADDR_REG(bm_pool->id),
 		    bm_pool->phys_addr);
-	mvpp2_write(priv, MVPP2_BM_POOL_SIZE_REG(bm_pool->id), size);
+	mvpp2_write(priv, MVPP21_BM_POOL_SIZE_REG(bm_pool->id), size);
 
 	val = mvpp2_read(priv, MVPP2_BM_POOL_CTRL_REG(bm_pool->id));
 	val |= MVPP2_BM_START_MASK;
@@ -443,10 +443,10 @@ static void mvpp2_defaults_set(struct mvpp2_port *port)
 	/* Enable Rx cache snoop */
 	for (lrxq = 0; lrxq < mvpp2_rxq_number; lrxq++) {
 		queue = port->rxqs[lrxq]->id;
-		val = mvpp2_read(port->priv, MVPP2_RXQ_CONFIG_REG(queue));
-		val |= MVPP2_SNOOP_PKT_SIZE_MASK |
-			   MVPP2_SNOOP_BUF_HDR_MASK;
-		mvpp2_write(port->priv, MVPP2_RXQ_CONFIG_REG(queue), val);
+		val = mvpp2_read(port->priv, MVPP21_RXQ_CONFIG_REG(queue));
+		val |= MVPP21_SNOOP_PKT_SIZE_MASK |
+			   MVPP21_SNOOP_BUF_HDR_MASK;
+		mvpp2_write(port->priv, MVPP21_RXQ_CONFIG_REG(queue), val);
 	}
 
 	/* At default, mask all interrupts to all present cpus */
@@ -609,7 +609,7 @@ static int mvpp2_aggr_txq_init(struct platform_device *pdev,
 
 	/* Set Tx descriptors queue starting address */
 	/* indirect access */
-	mvpp2_write(priv, MVPP2_AGGR_TXQ_DESC_ADDR_REG(cpu),
+	mvpp2_write(priv, MVPP21_AGGR_TXQ_DESC_ADDR_REG(cpu),
 		    aggr_txq->descs_phys);
 	mvpp2_write(priv, MVPP2_AGGR_TXQ_DESC_SIZE_REG(cpu), desc_num);
 
@@ -640,7 +640,7 @@ static int mvpp2_rxq_init(struct mvpp2_port *port,
 
 	/* Set Rx descriptors queue starting address - indirect access */
 	mvpp2_write(port->priv, MVPP2_RXQ_NUM_REG, rxq->id);
-	mvpp2_write(port->priv, MVPP2_RXQ_DESC_ADDR_REG, rxq->descs_phys);
+	mvpp2_write(port->priv, MVPP21_RXQ_DESC_ADDR_REG, rxq->descs_phys);
 	mvpp2_write(port->priv, MVPP2_RXQ_DESC_SIZE_REG, rxq->size);
 	mvpp2_write(port->priv, MVPP2_RXQ_INDEX_REG, 0);
 
@@ -699,7 +699,7 @@ static void mvpp2_rxq_deinit(struct mvpp2_port *port,
 	 */
 	mvpp2_write(port->priv, MVPP2_RXQ_STATUS_REG(rxq->id), 0);
 	mvpp2_write(port->priv, MVPP2_RXQ_NUM_REG, rxq->id);
-	mvpp2_write(port->priv, MVPP2_RXQ_DESC_ADDR_REG, 0);
+	mvpp2_write(port->priv, MVPP21_RXQ_DESC_ADDR_REG, 0);
 	mvpp2_write(port->priv, MVPP2_RXQ_DESC_SIZE_REG, 0);
 }
 
@@ -728,7 +728,7 @@ static int mvpp2_txq_init(struct mvpp2_port *port,
 
 	/* Set Tx descriptors queue starting address - indirect access */
 	mvpp2_write(port->priv, MVPP2_TXQ_NUM_REG, txq->id);
-	mvpp2_write(port->priv, MVPP2_TXQ_DESC_ADDR_REG, txq->descs_phys);
+	mvpp2_write(port->priv, MVPP2_TXQ_DESC_ADDR_LOW_REG, txq->descs_phys);
 	mvpp2_write(port->priv, MVPP2_TXQ_DESC_SIZE_REG, txq->size &
 					     MVPP2_TXQ_DESC_SIZE_MASK);
 	mvpp2_write(port->priv, MVPP2_TXQ_INDEX_REG, 0);
@@ -829,7 +829,7 @@ static void mvpp2_txq_deinit(struct mvpp2_port *port,
 
 	/* Set Tx descriptors queue starting address and size */
 	mvpp2_write(port->priv, MVPP2_TXQ_NUM_REG, txq->id);
-	mvpp2_write(port->priv, MVPP2_TXQ_DESC_ADDR_REG, 0);
+	mvpp2_write(port->priv, MVPP2_TXQ_DESC_ADDR_LOW_REG, 0);
 	mvpp2_write(port->priv, MVPP2_TXQ_DESC_SIZE_REG, 0);
 }
 
@@ -1428,20 +1428,20 @@ static int mvpp2_poll(struct napi_struct *napi, int budget)
 	 * Each CPU has its own Rx/Tx cause register
 	 */
 	cause_rx_tx = mvpp2_read(port->priv,
-				 MVPP2_ISR_RX_TX_CAUSE_REG(port->id));
-	cause_rx_tx &= ~MVPP2_CAUSE_TXQ_OCCUP_DESC_ALL_MASK;
-	cause_misc = cause_rx_tx & MVPP2_CAUSE_MISC_SUM_MASK;
+				 MVPP21_ISR_RX_TX_CAUSE_REG(port->id));
+	cause_rx_tx &= ~MVPP21_CAUSE_TXQ_OCCUP_DESC_ALL_MASK;
+	cause_misc = cause_rx_tx & MVPP21_CAUSE_MISC_SUM_MASK;
 
 	if (cause_misc) {
 		mvpp2_cause_error(port->dev, cause_misc);
 
 		/* Clear the cause register */
 		mvpp2_write(port->priv, MVPP2_ISR_MISC_CAUSE_REG, 0);
-		mvpp2_write(port->priv, MVPP2_ISR_RX_TX_CAUSE_REG(port->id),
-			    cause_rx_tx & ~MVPP2_CAUSE_MISC_SUM_MASK);
+		mvpp2_write(port->priv, MVPP21_ISR_RX_TX_CAUSE_REG(port->id),
+			    cause_rx_tx & ~MVPP21_CAUSE_MISC_SUM_MASK);
 	}
 
-	cause_rx = cause_rx_tx & MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK;
+	cause_rx = cause_rx_tx & MVPP21_CAUSE_RXQ_OCCUP_DESC_ALL_MASK;
 
 	/* Process RX packets */
 	cause_rx |= port->pending_cause_rx;
@@ -1956,7 +1956,7 @@ static int mvpp2_port_init(struct mvpp2_port *port)
 	}
 
 	/* Configure Rx queue group interrupt for this port */
-	mvpp2_write(priv, MVPP2_ISR_RXQ_GROUP_REG(port->id), mvpp2_rxq_number);
+	mvpp2_write(priv, MVPP21_ISR_RXQ_GROUP_REG(port->id), mvpp2_rxq_number);
 
 	/* Create Rx descriptor rings */
 	for (queue = 0; queue < mvpp2_rxq_number; queue++) {
@@ -2264,13 +2264,13 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 
 	/* Reset Rx queue group interrupt configuration */
 	for (i = 0; i < MVPP2_MAX_PORTS; i++)
-		mvpp2_write(priv, MVPP2_ISR_RXQ_GROUP_REG(i), mvpp2_rxq_number);
+		mvpp2_write(priv, MVPP21_ISR_RXQ_GROUP_REG(i), mvpp2_rxq_number);
 
 	writel(MVPP2_EXT_GLOBAL_CTRL_DEFAULT,
 	       priv->lms_base + MVPP2_MNG_EXTENDED_GLOBAL_CTRL_REG);
 
 	/* Allow cache snoop when transmiting packets */
-	mvpp2_write(priv, MVPP2_TX_SNOOP_REG, 0x1);
+	mvpp2_write(priv, MVPP21_TX_SNOOP_REG, 0x1);
 
 	/* Buffer Manager initialization */
 	err = mvpp2_bm_init(pdev, priv);
