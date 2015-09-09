@@ -94,8 +94,12 @@ static int mvpp2_bm_pool_create(struct platform_device *pdev,
 				struct mvpp2_bm_pool *bm_pool, int size)
 {
 	int size_bytes;
-	u32 val;
 
+	/* Driver enforces size= x16 both for PPv21 and for PPv22, even though 
+	    PPv22 HW allows size= x8 */
+	if (!IS_ALIGNED(size, (1<<MVPP21_BM_POOL_SIZE_OFFSET)))
+		return -EINVAL;
+		
 	size_bytes = 2 * sizeof(uintptr_t) * size; //YuvalC: Two pointers per buffer, bugfix.
 	bm_pool->virt_addr = dma_alloc_coherent(&pdev->dev, size_bytes,
 						&bm_pool->phys_addr,
@@ -111,13 +115,7 @@ static int mvpp2_bm_pool_create(struct platform_device *pdev,
 		return -ENOMEM;
 	}
 
-	mvpp2_write(priv, MVPP21_BM_POOL_BASE_ADDR_REG(bm_pool->id),
-		    bm_pool->phys_addr);
-	mvpp2_write(priv, MVPP21_BM_POOL_SIZE_REG(bm_pool->id), size);
-
-	val = mvpp2_read(priv, MVPP2_BM_POOL_CTRL_REG(bm_pool->id));
-	val |= MVPP2_BM_START_MASK;
-	mvpp2_write(priv, MVPP2_BM_POOL_CTRL_REG(bm_pool->id), val);
+	mvpp2_bm_hw_pool_create(priv, bm_pool->id, bm_pool->phys_addr, size);
 
 	bm_pool->type = MVPP2_BM_FREE;
 	bm_pool->size = size;
@@ -127,6 +125,23 @@ static int mvpp2_bm_pool_create(struct platform_device *pdev,
 	return 0;
 }
 
+void mvpp2_bm_bufs_free(struct mvpp2 *priv, struct mvpp2_bm_pool *bm_pool)
+{
+	int i;
+
+	for (i = 0; i < bm_pool->buf_num; i++) {
+		struct sk_buff *vaddr;
+
+		/* Get buffer virtual adress (indirect access) */
+		vaddr = mvpp2_bm_virt_addr_get(priv, bm_pool->id);
+		if (!vaddr)
+			break;	
+		dev_kfree_skb_any(vaddr);
+	}
+
+	/* Update BM driver with number of buffers removed from pool */
+	bm_pool->buf_num -= i;
+}
 
 
 /* Cleanup pool */
@@ -271,6 +286,9 @@ static int mvpp2_bm_bufs_add(struct mvpp2_port *port,
 		   bm_pool->id, i, buf_num);
 	return i;
 }
+
+
+
 
 /* Notify the driver that BM pool is being used as specific type and return the
  * pool pointer on success
