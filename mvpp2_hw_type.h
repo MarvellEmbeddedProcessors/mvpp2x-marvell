@@ -781,8 +781,9 @@ enum mvpp2_prs_l3_cast {
 
 enum mvpp2_bm_type {
 	MVPP2_BM_FREE,
+	MVPP2_BM_SWF_SHORT,
 	MVPP2_BM_SWF_LONG,
-	MVPP2_BM_SWF_SHORT
+	MVPP2_BM_SWF_JUMBO
 };
 
 
@@ -970,7 +971,7 @@ struct mvpp2_bm_pool {
 	int pkt_size;
 
 	/* BPPE virtual base address */
-	u32 *virt_addr;
+	void *virt_addr;
 	/* BPPE physical base address */
 	dma_addr_t phys_addr;
 

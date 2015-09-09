@@ -96,14 +96,14 @@ static int mvpp2_bm_pool_create(struct platform_device *pdev,
 	int size_bytes;
 	u32 val;
 
-	size_bytes = sizeof(u32) * size;
+	size_bytes = 2 * sizeof(uintptr_t) * size; //YuvalC: Two pointers per buffer, bugfix.
 	bm_pool->virt_addr = dma_alloc_coherent(&pdev->dev, size_bytes,
 						&bm_pool->phys_addr,
 						GFP_KERNEL);
 	if (!bm_pool->virt_addr)
 		return -ENOMEM;
 
-	if (!IS_ALIGNED((u32)bm_pool->virt_addr, MVPP2_BM_POOL_PTR_ALIGN)) {
+	if (!IS_ALIGNED((uintptr_t)bm_pool->virt_addr, MVPP2_BM_POOL_PTR_ALIGN)) {
 		dma_free_coherent(&pdev->dev, size_bytes, bm_pool->virt_addr,
 				  bm_pool->phys_addr);
 		dev_err(&pdev->dev, "BM pool %d is not %d bytes aligned\n",
@@ -146,7 +146,7 @@ static int mvpp2_bm_pool_destroy(struct platform_device *pdev,
 	val |= MVPP2_BM_STOP_MASK;
 	mvpp2_write(priv, MVPP2_BM_POOL_CTRL_REG(bm_pool->id), val);
 
-	dma_free_coherent(&pdev->dev, sizeof(u32) * bm_pool->size,
+	dma_free_coherent(&pdev->dev, 2 * sizeof(uintptr_t) * bm_pool->size,
 			  bm_pool->virt_addr,
 			  bm_pool->phys_addr);
 	return 0;
