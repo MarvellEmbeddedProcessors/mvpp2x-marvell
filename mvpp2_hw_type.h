@@ -32,6 +32,11 @@
 #include <linux/skbuff.h>
 
 
+/*All PPV22 Addresses are 40-bit */
+#define MVPP22_ADDR_HIGH_SIZE			8
+#define MVPP22_ADDR_HIGH_MASK			(1<<MVPP22_ADDR_HIGH_SIZE - 1)
+
+
 /*TODO*/
 /*AXI_BRIDGE*/
 /*AXI_CONTEXT*/
@@ -348,8 +353,10 @@
 #define MVPP21_BM_FORCE_RELEASE_MASK		BIT(12)
 
 #define MVPP22_BM_PHY_VIRT_HIGH_ALLOC_REG	0x64c4 /* Not a mixup */
-#define MVPP22_BM_PHY_HIGH_ALLOC_MASK		0xff
-#define MVPP22_BM_VIRT_HIGH_ALLOC_MASK		0xff00
+
+#define MVPP22_BM_PHY_HIGH_ALLOC_OFFSET		0
+#define MVPP22_BM_VIRT_HIGH_ALLOC_OFFST		8
+
 
 #define MVPP22_BM_MC_RLS_REG			0x64d4 /* Not a mixup */
 #define MVPP22_BM_MC_ID_MASK			0xfff
@@ -724,6 +731,7 @@ enum mvpp2_tag_type {
 #define MVPP2_PRS_EDSA			true
 #define MVPP2_PRS_DSA			false
 
+
 /* MAC entries, shadow udf */
 enum mvpp2_prs_udf {
 	MVPP2_PRS_UDF_MAC_DEF,
@@ -810,7 +818,39 @@ enum mvpp2_bm_type {
 #define MVPP2_RXD_L3_IP6		BIT(30)
 #define MVPP2_RXD_BUF_HDR		BIT(31)
 
+
+struct pp21_specific_tx_desc {
+	u32 buf_phys_addr;	/* physical addr of transmitted buffer	*/
+	u32 buf_cookie;	/* cookie for access to TX buffer in tx path */
+	u32 rsrvd_hw_cmd[3];	/* hw_cmd (for future use, BM, PON, PNC) */
+	u32 rsrvd1;		/* reserved (for future use)		*/
+};
+
+struct pp22_specific_tx_desc {
+	u64 rsrvd_hw_cmd1;	/* hw_cmd (BM, PON, PNC) */
+	u64 buf_phys_addr_hw_cmd2;	
+	u64 buf_cookie_bm_qset_hw_cmd3;	
+		/* cookie for access to RX buffer in rx path */
+		/* cookie for access to RX buffer in rx path */
+		/* bm_qset (for future use, BM)		*/
+		/* classify_info (for future use, PnC)	*/
+};
+
+union pp2x_specific_tx_desc {
+	struct pp21_specific_tx_desc pp21;
+	struct pp22_specific_tx_desc pp22;
+};
+
 struct mvpp2_tx_desc {
+	u32 command;		/* Options used by HW for packet xmitting */
+	u8  packet_offset;	/* the offset from the buffer beginning	*/
+	u8  phys_txq;		/* destination queue ID			*/
+	u16 data_size;		/* data size of transmitted packet in bytes */
+	union pp2x_specific_tx_desc u;
+};
+
+#if 0
+struct1 mvpp2_tx_desc {
 	u32 command;		/* Options used by HW for packet transmitting.*/
 	u8  packet_offset;	/* the offset from the buffer beginning	*/
 	u8  phys_txq;		/* destination queue ID			*/
@@ -820,7 +860,43 @@ struct mvpp2_tx_desc {
 	u32 reserved1[3];	/* hw_cmd (for future use, BM, PON, PNC) */
 	u32 reserved2;		/* reserved (for future use)		*/
 };
+#endif
 
+struct pp21_specific_rx_desc {
+	u32 buf_phys_addr;	/* physical address of the buffer	*/
+	u32 buf_cookie;	/* cookie for access to RX buffer in rx path */
+	u16 rsrvd_gem;		/* gem_port_id (for future use, PON)	*/
+	u16 rsrvd_l4csum;	/* csum_l4 (for future use, PnC)	*/
+	u8  rsrvd_bm_qset;	/* bm_qset (for future use, BM)		*/
+	u8  rsrvd1;
+	u16 rsrvd_cls_info;	/* classify_info (for future use, PnC)	*/
+	u32 rsrvd_flow_id;	/* flow_id (for future use, PnC) */
+	u32 rsrvd_abs;
+};
+struct pp22_specific_rx_desc {
+	u16 rsrvd_gem;		/* gem_port_id (for future use, PON)	*/
+	u16 rsrvd_l4csum;	/* csum_l4 (for future use, PnC)	*/
+	u32 rsrvd_timestamp;
+	u64 buf_phys_addr_key_hash;	
+	u64 buf_cookie_bm_qset_cls_info;	
+	/* cookie for access to RX buffer in rx path */
+	/* bm_qset (for future use, BM)		*/
+	/* classify_info (for future use, PnC)	*/
+};
+
+union pp2x_specific_rx_desc {
+	struct pp21_specific_rx_desc pp21;
+	struct pp22_specific_rx_desc pp22;
+};
+
+struct mvpp2_rx_desc {
+	u32 status;		/* info about received packet		*/
+	u16 rsrvd_parser;	/* parser_info (for future use, PnC)	*/
+	u16 data_size;		/* size of received packet in bytes	*/
+	union pp2x_specific_rx_desc u;
+};
+
+#if 0
 struct mvpp2_rx_desc {
 	u32 status;		/* info about received packet		*/
 	u16 reserved1;		/* parser_info (for future use, PnC)	*/
@@ -835,7 +911,7 @@ struct mvpp2_rx_desc {
 	u32 reserved7;		/* flow_id (for future use, PnC) */
 	u32 reserved8;
 };
-
+#endif
 
 union mvpp2_prs_tcam_entry {
 	u32 word[MVPP2_PRS_TCAM_WORDS];
@@ -922,6 +998,12 @@ struct mvpp2_buff_hdr {
 #define MVPP2_B_HDR_INFO_LAST_MASK	BIT(12)
 #define MVPP2_B_HDR_INFO_IS_LAST(info) \
 	   ((info & MVPP2_B_HDR_INFO_LAST_MASK) >> MVPP2_B_HDR_INFO_LAST_OFFS)
+
+
+/* Macroes */
+#define MVPP2_RX_DESC_POOL(rx_desc)	\
+	((rx_desc->status & MVPP2_RXD_BM_POOL_ID_MASK) >> MVPP2_RXD_BM_POOL_ID_OFFS)
+
 
 #endif /*_MVPP2_HW_TYPE_H_*/
 

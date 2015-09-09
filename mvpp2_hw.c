@@ -2753,18 +2753,16 @@ void mvpp2_port_reset(struct mvpp2_port *port)
 
 
 /* Refill BM pool */
-void mvpp2_pool_refill(struct mvpp2_port *port, u32 bm,
-			      u32 phys_addr, u32 cookie)
+void mvpp2_pool_refill(struct mvpp2 *priv, u32 pool,
+			      dma_addr_t phys_addr, struct sk_buff *cookie)
 {
-	int pool = mvpp2_bm_cookie_pool_get(bm);
 
-	mvpp2_bm_pool_put(port, pool, phys_addr, cookie);
+	mvpp2_bm_pool_put(priv, pool, phys_addr, cookie);
 }
 
 /* Set pool buffer size */
 void mvpp2_bm_pool_bufsize_set(struct mvpp2 *priv,
-				      struct mvpp2_bm_pool *bm_pool,
-				      int buf_size)
+				      struct mvpp2_bm_pool *bm_pool, int buf_size)
 {
 	u32 val;
 
