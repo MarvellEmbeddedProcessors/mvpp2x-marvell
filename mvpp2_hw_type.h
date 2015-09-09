@@ -735,7 +735,6 @@ struct mvpp2_bm_pool {
 	atomic_t in_use;
 	int in_use_thresh;
 
-	spinlock_t lock;
 };
 
 struct mvpp2_buff_hdr {

@@ -115,8 +115,6 @@ static int mvpp2_bm_pool_create(struct platform_device *pdev,
 	bm_pool->pkt_size = 0;
 	bm_pool->buf_num = 0;
 	atomic_set(&bm_pool->in_use, 0);
-	spin_lock_init(&bm_pool->lock);
-
 	return 0;
 }
 
@@ -273,7 +271,6 @@ static int mvpp2_bm_bufs_add(struct mvpp2_port *port,
 static struct mvpp2_bm_pool * mvpp2_bm_pool_use(struct mvpp2_port *port, int pool, enum mvpp2_bm_type type,
 		  int pkt_size)
 {
-	unsigned long flags = 0;
 	struct mvpp2_bm_pool *new_pool = &port->priv->bm_pools[pool];
 	int num;
 
@@ -281,8 +278,6 @@ static struct mvpp2_bm_pool * mvpp2_bm_pool_use(struct mvpp2_port *port, int poo
 		netdev_err(port->dev, "mixing pool types is forbidden\n");
 		return NULL;
 	}
-
-	spin_lock_irqsave(&new_pool->lock, flags);
 
 	if (new_pool->type == MVPP2_BM_FREE)
 		new_pool->type = type;
@@ -313,7 +308,6 @@ static struct mvpp2_bm_pool * mvpp2_bm_pool_use(struct mvpp2_port *port, int poo
 			WARN(1, "pool %d: %d of %d allocated\n",
 			     new_pool->id, num, pkts_num);
 			/* We need to undo the bufs_add() allocations */
-			spin_unlock_irqrestore(&new_pool->lock, flags);
 			return NULL;
 		}
 	}
@@ -321,7 +315,6 @@ static struct mvpp2_bm_pool * mvpp2_bm_pool_use(struct mvpp2_port *port, int poo
 	mvpp2_bm_pool_bufsize_set(port->priv, new_pool,
 				  MVPP2_RX_BUF_SIZE(new_pool->pkt_size));
 
-	spin_unlock_irqrestore(&new_pool->lock, flags);
 
 	return new_pool;
 }
@@ -329,7 +322,6 @@ static struct mvpp2_bm_pool * mvpp2_bm_pool_use(struct mvpp2_port *port, int poo
 /* Initialize pools for swf */
 static int mvpp2_swf_bm_pool_init(struct mvpp2_port *port)
 {
-	unsigned long flags = 0;
 	int rxq;
 
 	if (!port->pool_long) {
@@ -340,9 +332,7 @@ static int mvpp2_swf_bm_pool_init(struct mvpp2_port *port)
 		if (!port->pool_long)
 			return -ENOMEM;
 
-		spin_lock_irqsave(&port->pool_long->lock, flags);
 		port->pool_long->port_map |= (1 << port->id);
-		spin_unlock_irqrestore(&port->pool_long->lock, flags);
 
 		for (rxq = 0; rxq < mvpp2_rxq_number; rxq++)
 			mvpp2_rxq_long_pool_set(port, rxq, port->pool_long->id);
@@ -356,9 +346,7 @@ static int mvpp2_swf_bm_pool_init(struct mvpp2_port *port)
 		if (!port->pool_short)
 			return -ENOMEM;
 
-		spin_lock_irqsave(&port->pool_short->lock, flags);
 		port->pool_short->port_map |= (1 << port->id);
-		spin_unlock_irqrestore(&port->pool_short->lock, flags);
 
 		for (rxq = 0; rxq < mvpp2_rxq_number; rxq++)
 			mvpp2_rxq_short_pool_set(port, rxq,
