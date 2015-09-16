@@ -57,12 +57,99 @@
 
 
 /* Declaractions */
+u8 mvpp2_num_cos_queues = 4;
+static bool queue_mode = 0;
+static bool rss_mode = 1;
+static u8 default_cpu = 0;
+static bool cos_classifer;
+static u32 pri_map;
+static u8 default_cos;
+static bool jumbo_pool = false;
+static u16 rx_queue_size;
+static u16 tx_queue_size;
+static u16 buffer_scaling;
+static u8 first_bm_pool = 0;
+static u8 first_address_space_index;
+static u8  first_log_rxq_queue = 0;
+
+
+module_param_named(num_cos_queues, mvpp2_num_cos_queues, byte, S_IRUGO);
+MODULE_PARM_DESC(num_cos_queues,"Set number of cos_queues (1-8), def=4");
+
+module_param(queue_mode, bool, S_IRUGO);
+MODULE_PARM_DESC(queue_mode, "Set queue_mode (single=0, multi=1)");
+
+module_param(rss_mode, bool, S_IRUGO);
+MODULE_PARM_DESC(rss_mode, "Set rss_mode (UDP_2T=0, UDP_5T=1)");
+
+module_param(default_cpu, byte, S_IRUGO);
+MODULE_PARM_DESC(default_cpu, "Set default CPU for non RSS frames");
+
+module_param(cos_classifer, bool, S_IRUGO);
+MODULE_PARM_DESC(cos_classifer, "Cos Classifier (vlan_pri=0, dscp=1)");
+
+module_param(pri_map, uint, S_IRUGO);
+MODULE_PARM_DESC(pri_map, "Set priority_map, nibble for each cos.");
+
+module_param(default_cos, byte, S_IRUGO);
+MODULE_PARM_DESC(default_cos, "Set default cos (0-(num_cose_queues-1)).");
+
+module_param(jumbo_pool, bool, S_IRUGO);
+MODULE_PARM_DESC(jumbo_pool, "no_jumbo_support(0), jumbo_support(1)");
+
+module_param(rx_queue_size, ushort, S_IRUGO);
+MODULE_PARM_DESC(rx_queue_size, "Rx queue size");
+
+module_param(tx_queue_size, ushort, S_IRUGO);
+MODULE_PARM_DESC(tx_queue_size, "Tx queue size");
+
+module_param(buffer_scaling, ushort, S_IRUGO);
+MODULE_PARM_DESC(buffer_scaling, "Buffer scaling (TBD)");
+
+
+/*TODO:  Below module_params will not go to ML. Created for testing. */
+module_param(first_bm_pool, byte, S_IRUGO);
+MODULE_PARM_DESC(first_bm_pool, "First used buffer pool (0-11)");
+
+module_param(first_address_space_index, byte, S_IRUGO);
+MODULE_PARM_DESC(first_address_space_index, "First used PPV22 address space (0-8)");
+
+module_param(first_log_rxq_queue, byte, S_IRUGO);
+MODULE_PARM_DESC(first_log_rxq_queue, "First logical rx_queue (0-31)");
+
+
 
 /* Number of RXQs used by single port */
-int mvpp2_rxq_number = MVPP2_DEFAULT_RXQ;
+int mvpp2_rxq_number;
 /* Number of TXQs used by single port */
-int mvpp2_txq_number = MVPP2_MAX_TXQ;
+int mvpp2_txq_number;
 
+
+struct mvpp2_pool_attributes {
+	char description[32];
+	int pkt_size;
+	int buf_num;
+};
+
+
+static  struct mvpp2_pool_attributes  mvpp2_pools[] = {
+	{
+		.description =  "short",
+		/*.pkt_size    = 	MVPP2_BM_SHORT_PKT_SIZE, */
+		.buf_num     =  MVPP2_BM_SHORT_BUF_NUM,
+	},
+	{
+		.description =  "long",
+		/*.pkt_size    = 	MVPP2_BM_LONG_PKT_SIZE,*/
+		.buf_num     =  MVPP2_BM_LONG_BUF_NUM,
+	},
+	{
+		.description =	"jumbo",
+		/*.pkt_size    =	MVPP2_BM_JUMBO_PKT_SIZE, */
+		.buf_num     =  MVPP2_BM_JUMBO_BUF_NUM,
+	},
+	{ /* end */ }
+};
 
 static void mvpp2_txq_inc_get(struct mvpp2_txq_pcpu *txq_pcpu)
 {
@@ -85,6 +172,35 @@ static void mvpp2_txq_inc_put(enum mvppv2_version pp2_ver,
 		txq_pcpu->txq_put_index = 0;
 }
 
+static inline u8 mvpp2_first_pool_get(struct mvpp2 *priv) {
+	return(priv->pp2_cfg.first_bm_pool);
+}
+
+static inline u8 mvpp2_num_pools_get(struct mvpp2 *priv) {
+	return((priv->pp2_cfg.jumbo_pool == true)? 3:2);
+}
+
+static inline u8 mvpp2_last_pool_get(struct mvpp2 *priv) {
+	return(mvpp2_first_pool_get(priv) + mvpp2_num_pools_get(priv));
+}
+
+static inline int mvpp2_pool_pkt_size_get(enum mvpp2_bm_pool_log_num  log_id) {
+	return mvpp2_pools[log_id].pkt_size;
+
+}
+
+static inline int mvpp2_pool_buf_num_get(enum mvpp2_bm_pool_log_num  log_id) {
+	return mvpp2_pools[log_id].buf_num;
+
+}
+
+
+static inline const char * mvpp2_pool_description_get(enum mvpp2_bm_pool_log_num  log_id) {
+	return mvpp2_pools[log_id].description;
+
+}
+
+
 
 /* Buffer Manager configuration routines */
 
@@ -100,7 +216,7 @@ static int mvpp2_bm_pool_create(struct platform_device *pdev,
 	if (!IS_ALIGNED(size, (1<<MVPP21_BM_POOL_SIZE_OFFSET)))
 		return -EINVAL;
 
-	size_bytes = 2 * sizeof(uintptr_t) * size; //YuvalC: Two pointers per buffer, bugfix.
+	size_bytes = 2 * sizeof(uintptr_t) * size; //YuvalC: Two pointers per buffer, existing bug fixed.
 	bm_pool->virt_addr = dma_alloc_coherent(&pdev->dev, size_bytes,
 						&bm_pool->phys_addr,
 						GFP_KERNEL);
@@ -117,19 +233,27 @@ static int mvpp2_bm_pool_create(struct platform_device *pdev,
 
 	mvpp2_bm_hw_pool_create(hw, bm_pool->id, bm_pool->phys_addr, size);
 
-	bm_pool->type = MVPP2_BM_FREE;
 	bm_pool->size = size;
-	bm_pool->pkt_size = 0;
+	bm_pool->pkt_size = mvpp2_pool_pkt_size_get(bm_pool->log_id);
 	bm_pool->buf_num = 0;
+	mvpp2_bm_pool_bufsize_set(hw, bm_pool, MVPP2_RX_BUF_SIZE(bm_pool->pkt_size));
 	atomic_set(&bm_pool->in_use, 0);
+
 	return 0;
 }
 
-void mvpp2_bm_bufs_free(struct mvpp2_hw *hw, struct mvpp2_bm_pool *bm_pool)
+void mvpp2_bm_bufs_free(struct mvpp2_hw *hw, struct mvpp2_bm_pool *bm_pool,
+			int buf_num)
 {
 	int i;
 
-	for (i = 0; i < bm_pool->buf_num; i++) {
+	if (buf_num > bm_pool->buf_num) {
+		WARN(1, "Pool does not have so many bufs pool(%d) bufs(%d)\n",
+			bm_pool->id, buf_num);
+		buf_num = bm_pool->buf_num;
+
+	}
+	for (i = 0; i < buf_num; i++) {
 		struct sk_buff *vaddr;
 
 		/* Get buffer virtual adress (indirect access) */
@@ -150,8 +274,9 @@ static int mvpp2_bm_pool_destroy(struct platform_device *pdev,
 				 struct mvpp2_bm_pool *bm_pool)
 {
 	u32 val;
+	int size_bytes;
 
-	mvpp2_bm_bufs_free(hw, bm_pool);
+	mvpp2_bm_bufs_free(hw, bm_pool, bm_pool->buf_num);
 	if (bm_pool->buf_num) {
 		WARN(1, "cannot free all buffers in pool %d\n", bm_pool->id);
 		return 0;
@@ -161,14 +286,15 @@ static int mvpp2_bm_pool_destroy(struct platform_device *pdev,
 	val |= MVPP2_BM_STOP_MASK;
 	mvpp2_write(hw, MVPP2_BM_POOL_CTRL_REG(bm_pool->id), val);
 
-	dma_free_coherent(&pdev->dev, 2 * sizeof(uintptr_t) * bm_pool->size,
-			  bm_pool->virt_addr,
+	size_bytes = 2 * sizeof(uintptr_t) * bm_pool->size;
+	dma_free_coherent(&pdev->dev, size_bytes, bm_pool->virt_addr,
 			  bm_pool->phys_addr);
+	mvpp2_bm_pool_bufsize_set(hw, bm_pool,0);
 	return 0;
 }
 
 static int mvpp2_bm_pools_init(struct platform_device *pdev,
-			       struct mvpp2 *priv)
+			       struct mvpp2 *priv, u8 first_pool, u8 num_pools)
 {
 	int i, err, size;
 	struct mvpp2_bm_pool *bm_pool;
@@ -176,13 +302,13 @@ static int mvpp2_bm_pools_init(struct platform_device *pdev,
 
 	/* Create all pools with maximum size */
 	size = MVPP2_BM_POOL_SIZE_MAX;
-	for (i = 0; i < MVPP2_BM_POOLS_NUM; i++) {
+	for (i = 0; i < num_pools; i++) {
 		bm_pool = &priv->bm_pools[i];
-		bm_pool->id = i;
+		bm_pool->log_id = i;
+		bm_pool->id = first_pool + i;
 		err = mvpp2_bm_pool_create(pdev, hw, bm_pool, size);
 		if (err)
 			goto err_unroll_pools;
-		mvpp2_bm_pool_bufsize_set(hw, bm_pool, 0);
 	}
 	return 0;
 
@@ -190,14 +316,16 @@ err_unroll_pools:
 	dev_err(&pdev->dev, "failed to create BM pool %d, size %d\n", i, size);
 	for (i = i - 1; i >= 0; i--)
 		mvpp2_bm_pool_destroy(pdev, &priv->hw, &priv->bm_pools[i]);
-	return err;
+		return err;
 }
 
 static int mvpp2_bm_init(struct platform_device *pdev, struct mvpp2 *priv)
 {
 	int i, err;
+	u8 first_pool = mvpp2_first_pool_get(priv);
+	u8 num_pools = mvpp2_num_pools_get(priv);
 
-	for (i = 0; i < MVPP2_BM_POOLS_NUM; i++) {
+	for (i = first_pool; i < (first_pool+num_pools); i++) {
 		/* Mask BM all interrupts */
 		mvpp2_write(&priv->hw, MVPP2_BM_INTR_MASK_REG(i), 0);
 		/* Clear BM cause register */
@@ -205,12 +333,12 @@ static int mvpp2_bm_init(struct platform_device *pdev, struct mvpp2 *priv)
 	}
 
 	/* Allocate and initialize BM pools */
-	priv->bm_pools = devm_kcalloc(&pdev->dev, MVPP2_BM_POOLS_NUM,
+	priv->bm_pools = devm_kcalloc(&pdev->dev, num_pools,
 				     sizeof(struct mvpp2_bm_pool), GFP_KERNEL);
 	if (!priv->bm_pools)
 		return -ENOMEM;
 
-	err = mvpp2_bm_pools_init(pdev, priv);
+	err = mvpp2_bm_pools_init(pdev, priv, first_pool, num_pools);
 	if (err < 0)
 		return err;
 	return 0;
@@ -278,106 +406,113 @@ static int mvpp2_bm_bufs_add(struct mvpp2_port *port,
 
 	netdev_dbg(port->dev,
 		   "%s pool %d: pkt_size=%4d, buf_size=%4d, total_size=%4d\n",
-		   bm_pool->type == MVPP2_BM_SWF_SHORT ? "short" : " long",
+		   mvpp2_pool_description_get(bm_pool->log_id),
 		   bm_pool->id, bm_pool->pkt_size, buf_size, total_size);
 
 	netdev_dbg(port->dev,
 		   "%s pool %d: %d of %d buffers added\n",
-		   bm_pool->type == MVPP2_BM_SWF_SHORT ? "short" : " long",
+		   mvpp2_pool_description_get(bm_pool->log_id),
 		   bm_pool->id, i, buf_num);
 	return i;
 }
 
+static int mvpp2_bm_buf_calc(enum mvpp2_bm_pool_log_num log_pool, u32 port_map) {
+
+	/*TODO: Code algo based  on port_map/num_rx_queues/num_tx_queues/queue_sizes */
+	int num_ports = hweight_long(port_map);
+	return(num_ports*mvpp2_pool_buf_num_get(log_pool));
+}
 
 
 
 /* Notify the driver that BM pool is being used as specific type and return the
  * pool pointer on success
  */
-static struct mvpp2_bm_pool * mvpp2_bm_pool_use(struct mvpp2_port *port, int pool, enum mvpp2_bm_type type,
-		  int pkt_size)
-{
-	struct mvpp2_bm_pool *new_pool = &port->priv->bm_pools[pool];
-	struct mvpp2_hw *hw = &(port->priv->hw);
-	int num;
 
-	if (new_pool->type != MVPP2_BM_FREE && new_pool->type != type) {
-		netdev_err(port->dev, "mixing pool types is forbidden\n");
+static struct mvpp2_bm_pool * mvpp2_bm_pool_use_internal(
+		struct mvpp2_port *port, enum mvpp2_bm_pool_log_num log_pool,
+		bool add_port)
+{
+	int pkts_num, add_num, num;
+	struct mvpp2_bm_pool *pool = &port->priv->bm_pools[log_pool];
+	struct mvpp2_hw *hw = &(port->priv->hw);
+
+	if (log_pool < MVPP2_BM_SWF_SHORT_POOL || log_pool > MVPP2_BM_SWF_JUMBO_POOL) {
+		netdev_err(port->dev, "pool does not exist\n");
 		return NULL;
 	}
 
-	if (new_pool->type == MVPP2_BM_FREE)
-		new_pool->type = type;
+	if (add_port) {
+		pkts_num = mvpp2_bm_buf_calc(log_pool, pool->port_map |(1 << port->id));
+	}
+	else {
+		pkts_num = mvpp2_bm_buf_calc(log_pool, pool->port_map & ~(1 << port->id));
+	}
 
-	/* Allocate buffers in case BM pool is used as long pool, but packet
-	 * size doesn't match MTU or BM pool hasn't being used yet
-	 */
-	if (((type == MVPP2_BM_SWF_LONG) && (pkt_size > new_pool->pkt_size)) ||
-	    (new_pool->pkt_size == 0)) {
-		int pkts_num;
+	add_num = pkts_num - pool->buf_num;
 
-		/* Set default buffer number or free all the buffers in case
-		 * the pool is not empty
-		 */
-		pkts_num = new_pool->buf_num;
-		if (pkts_num == 0)
-			pkts_num = type == MVPP2_BM_SWF_LONG ?
-				   MVPP2_BM_LONG_BUF_NUM :
-				   MVPP2_BM_SHORT_BUF_NUM;
-		else
-			mvpp2_bm_bufs_free(hw, new_pool);
-
-		new_pool->pkt_size = pkt_size;
-
-		/* Allocate buffers for this pool */
-		num = mvpp2_bm_bufs_add(port, new_pool, pkts_num);
-		if (num != pkts_num) {
+	/* Allocate buffers for this pool */
+	if (add_num > 0) {
+		num = mvpp2_bm_bufs_add(port, pool, add_num);
+		if (num != add_num) {
 			WARN(1, "pool %d: %d of %d allocated\n",
-			     new_pool->id, num, pkts_num);
+			     pool->id, num, pkts_num);
 			/* We need to undo the bufs_add() allocations */
 			return NULL;
 		}
+	} else if (add_num < 0) {
+		mvpp2_bm_bufs_free(hw, pool, -add_num);
 	}
 
-	mvpp2_bm_pool_bufsize_set(hw, new_pool,
-				  MVPP2_RX_BUF_SIZE(new_pool->pkt_size));
-
-
-	return new_pool;
+	return pool;
 }
+
+
+
+static struct mvpp2_bm_pool * mvpp2_bm_pool_use(struct mvpp2_port *port,
+			enum mvpp2_bm_pool_log_num log_pool)
+{
+	return(mvpp2_bm_pool_use_internal(port, log_pool, true));
+}
+
+
+static struct mvpp2_bm_pool * mvpp2_bm_pool_stop_use(struct mvpp2_port *port,
+			enum mvpp2_bm_pool_log_num log_pool)
+{
+	return(mvpp2_bm_pool_use_internal(port, log_pool, false));
+}
+
 
 /* Initialize pools for swf */
 static int mvpp2_swf_bm_pool_init(struct mvpp2_port *port)
 {
 	int rxq;
+	struct mvpp2_hw *hw = &(port->priv->hw);
 
 	if (!port->pool_long) {
 		port->pool_long =
-		       mvpp2_bm_pool_use(port, MVPP2_BM_SWF_LONG_POOL(port->id),
-					 MVPP2_BM_SWF_LONG,
-					 port->pkt_size);
+		       mvpp2_bm_pool_use(port, MVPP2_BM_SWF_LONG_POOL);
 		if (!port->pool_long)
 			return -ENOMEM;
-
 		port->pool_long->port_map |= (1 << port->id);
 
-		for (rxq = 0; rxq < mvpp2_rxq_number; rxq++)
-			mvpp2_rxq_long_pool_set(port, rxq, port->pool_long->id);
+		for (rxq = 0; rxq < mvpp2_rxq_number; rxq++) {
+			port->priv->pp2xdata->mvpp2x_rxq_long_pool_set(hw,
+				port->rxqs[rxq]->id, port->pool_long->id);
+		}
 	}
 
 	if (!port->pool_short) {
 		port->pool_short =
-			mvpp2_bm_pool_use(port, MVPP2_BM_SWF_SHORT_POOL,
-					  MVPP2_BM_SWF_SHORT,
-					  MVPP2_BM_SHORT_PKT_SIZE);
+			mvpp2_bm_pool_use(port, MVPP2_BM_SWF_SHORT_POOL);
 		if (!port->pool_short)
 			return -ENOMEM;
 
 		port->pool_short->port_map |= (1 << port->id);
 
 		for (rxq = 0; rxq < mvpp2_rxq_number; rxq++)
-			mvpp2_rxq_short_pool_set(port, rxq,
-						 port->pool_short->id);
+			port->priv->pp2xdata->mvpp2x_rxq_short_pool_set(hw,
+			port->rxqs[rxq]->id, port->pool_short->id);
 	}
 
 	return 0;
@@ -386,28 +521,32 @@ static int mvpp2_swf_bm_pool_init(struct mvpp2_port *port)
 static int mvpp2_bm_update_mtu(struct net_device *dev, int mtu)
 {
 	struct mvpp2_port *port = netdev_priv(dev);
-	struct mvpp2_bm_pool *port_pool = port->pool_long;
+	struct mvpp2_bm_pool *old_port_pool = port->pool_long;
 	struct mvpp2_hw *hw = &(port->priv->hw);
-	int num, pkts_num = port_pool->buf_num;
+	enum mvpp2_bm_pool_log_num new_log_pool, old_log_pool = old_port_pool->log_id;
+	int rxq;
 	int pkt_size = MVPP2_RX_PKT_SIZE(mtu);
 
-	/* Update BM pool with new buffer size */
-	mvpp2_bm_bufs_free(hw, port_pool);
-	if (port_pool->buf_num) {
-		WARN(1, "cannot free all buffers in pool %d\n", port_pool->id);
-		return -EIO;
+	if (pkt_size > MVPP2_BM_LONG_PKT_SIZE)
+		new_log_pool = MVPP2_BM_SWF_JUMBO_POOL;
+	else
+		new_log_pool = MVPP2_BM_SWF_LONG_POOL;
+
+	if (new_log_pool != old_log_pool) {
+		/* Add port to new pool */
+		port->pool_long = mvpp2_bm_pool_use(port, new_log_pool);
+		if (!port->pool_long)
+			return -ENOMEM;
+		port->pool_long->port_map |= (1 << port->id);
+		for (rxq = 0; rxq < mvpp2_rxq_number; rxq++)
+			port->priv->pp2xdata->mvpp2x_rxq_long_pool_set(hw,
+			port->rxqs[rxq]->id, port->pool_long->id);
+
+		/* Remove port from old pool */
+		mvpp2_bm_pool_stop_use(port, old_log_pool);
+		old_port_pool->port_map &= ~(1 << port->id);
 	}
 
-	port_pool->pkt_size = pkt_size;
-	num = mvpp2_bm_bufs_add(port, port_pool, pkts_num);
-	if (num != pkts_num) {
-		WARN(1, "pool %d: %d of %d allocated\n",
-		     port_pool->id, num, pkts_num);
-		return -EIO;
-	}
-
-	mvpp2_bm_pool_bufsize_set(hw, port_pool,
-				  MVPP2_RX_BUF_SIZE(port_pool->pkt_size));
 	dev->mtu = mtu;
 	netdev_update_features(dev);
 	return 0;
@@ -1578,6 +1717,11 @@ static inline int mvpp2_check_mtu_valid(struct net_device *dev, int mtu)
 		netdev_err(dev, "cannot change mtu to less than 68\n");
 		return -EINVAL;
 	}
+	if (MVPP2_RX_PKT_SIZE(mtu) > MVPP2_BM_LONG_PKT_SIZE &&
+		jumbo_pool == false) {
+		netdev_err(dev, "jumbo packet not supported (%d)\n", mtu);
+		return -EINVAL;
+	}
 
 	/* 9676 == 9700 - 20 and rounding to 8 */
 	if (mtu > 9676) {
@@ -1585,11 +1729,15 @@ static inline int mvpp2_check_mtu_valid(struct net_device *dev, int mtu)
 		mtu = 9676;
 	}
 
+/*TOO: Below code is incorrect. Check if rounding to 8 is still relevant. */
+#if 0
+
 	if (!IS_ALIGNED(MVPP2_RX_PKT_SIZE(mtu), 8)) {
 		netdev_info(dev, "illegal MTU value %d, round to %d\n", mtu,
 			    ALIGN(MVPP2_RX_PKT_SIZE(mtu), 8));
 		mtu = ALIGN(MVPP2_RX_PKT_SIZE(mtu), 8);
 	}
+#endif
 
 	return mtu;
 }
@@ -1952,8 +2100,6 @@ static int mvpp2_port_init(struct mvpp2_port *port)
 	struct mvpp2_txq_pcpu *txq_pcpu;
 	int queue, cpu, err;
 
-	if (port->first_rxq + mvpp2_rxq_number > MVPP2_RXQ_TOTAL_NUM)
-		return -EINVAL;
 
 	/* Disable port */
 	mvpp2_egress_disable(port);
@@ -2196,7 +2342,7 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	netdev_info(dev, "Using %s mac address %pM\n", mac_from, dev->dev_addr);
 
 	/* Increment the first Rx queue number to be used by the next port */
-	*next_first_rxq += mvpp2_rxq_number;
+	*next_first_rxq +=  priv->pp2xdata->pp2x_max_port_rxqs;
 	priv->port_list[id] = port;
 	return 0;
 
@@ -2352,10 +2498,16 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 
 static const struct mvpp2x_platform_data pp21_pdata = {
 	.pp2x_ver = PPV21,
+	.pp2x_max_port_rxqs = 8,
+	.mvpp2x_rxq_short_pool_set = mvpp21_rxq_short_pool_set,
+	.mvpp2x_rxq_long_pool_set = mvpp21_rxq_long_pool_set,
 };
 
 static const struct mvpp2x_platform_data pp22_pdata = {
 	.pp2x_ver = PPV22,
+	.pp2x_max_port_rxqs = 32,
+	.mvpp2x_rxq_short_pool_set = mvpp22_rxq_short_pool_set,
+	.mvpp2x_rxq_long_pool_set = mvpp22_rxq_long_pool_set,
 };
 
 
@@ -2371,6 +2523,25 @@ static const struct of_device_id mvpp2_match_tbl[] = {
         },
         { /* end */ }
 };
+
+static void mvpp2_init_config(struct mvpp2_param_config *pp2_cfg)
+{
+	pp2_cfg->cell_index = 0; /*TODO : Take from dtsi */
+	pp2_cfg->first_bm_pool = first_bm_pool;
+	pp2_cfg->first_sw_thread = first_address_space_index;
+	pp2_cfg->jumbo_pool = jumbo_pool;
+	pp2_cfg->queue_mode = queue_mode;
+
+	pp2_cfg->cos_cfg.cos_classifier = cos_classifer;
+	pp2_cfg->cos_cfg.default_cos = default_cos;
+	pp2_cfg->cos_cfg.num_cos_queues = mvpp2_num_cos_queues;
+	pp2_cfg->cos_cfg.pri_map = pri_map;
+
+	pp2_cfg->rss_cfg.dflt_cpu = default_cpu;
+	pp2_cfg->rss_cfg.queue_mode = queue_mode; /*TODO : This param is redundant, reduce from rss */
+	pp2_cfg->rss_cfg.reserved = 0;
+	pp2_cfg->rss_cfg.rss_mode = rss_mode;
+}
 
 
 static int mvpp2_probe(struct platform_device *pdev)
@@ -2394,10 +2565,16 @@ static int mvpp2_probe(struct platform_device *pdev)
 
 	if (!match)
 		return -ENODEV;
+
+
 	priv->pp2xdata = (const struct mvpp2x_platform_data *) match->data;
 	priv->pp2_version = priv->pp2xdata->pp2x_ver;
 
 	dev_err(&pdev->dev, "pp2_ver(%d)\n", priv->pp2_version);
+	if (first_log_rxq_queue + mvpp2_rxq_number > priv->pp2xdata->pp2x_max_port_rxqs)
+		return -EINVAL;
+
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	hw->base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(hw->base))
@@ -2449,8 +2626,11 @@ static int mvpp2_probe(struct platform_device *pdev)
 		goto err_gop_clk;
 	}
 
+	/*Init PP2 Configuration */
+	mvpp2_init_config(&priv->pp2_cfg);
+
 	/* Initialize ports */
-	first_rxq = 0;
+	first_rxq = first_log_rxq_queue;
 	for_each_available_child_of_node(dn, port_node) {
 		err = mvpp2_port_probe(pdev, port_node, priv, &first_rxq);
 		if (err < 0)
@@ -2516,7 +2696,38 @@ static struct platform_driver mvpp2_driver = {
 	},
 };
 
-module_platform_driver(mvpp2_driver);
+static u8 mvpp2_rxq_number_get(void) {
+	/*TODO: Function depends on num_cpu's, QUEUE_MODE, etc.  */
+	return mvpp2_num_cos_queues;
+}
+
+static int __init mpp2_init(void)
+{
+	int ret;
+
+	mvpp2_rxq_number = mvpp2_rxq_number_get();
+	mvpp2_txq_number = mvpp2_num_cos_queues;
+	mvpp2_pools[MVPP2_BM_SWF_SHORT_POOL].pkt_size = MVPP2_BM_SHORT_PKT_SIZE;
+	mvpp2_pools[MVPP2_BM_SWF_LONG_POOL].pkt_size = MVPP2_BM_LONG_PKT_SIZE;
+	mvpp2_pools[MVPP2_BM_SWF_JUMBO_POOL].pkt_size = MVPP2_BM_JUMBO_PKT_SIZE;
+
+
+	ret = platform_driver_register(&mvpp2_driver);
+
+	return ret;
+}
+
+static void __exit mpp2_exit(void)
+{
+	platform_driver_unregister(&mvpp2_driver);
+
+}
+
+module_init(mpp2_init);
+module_exit(mpp2_exit);
+
+
+//module_platform_driver(mvpp2_driver);
 
 MODULE_DESCRIPTION("Marvell PPv2 Ethernet Driver - www.marvell.com");
 MODULE_AUTHOR("Marcin Wojtas <mw@semihalf.com>");

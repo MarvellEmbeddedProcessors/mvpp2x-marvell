@@ -301,7 +301,7 @@
 #define MVPP2_BM_POOL_SIZE_MASK			MVPP21_BM_POOL_SIZE_MASK
 #define MVPP2_BM_POOL_SIZE_OFFSET		MVPP21_BM_POOL_SIZE_OFFSET
 #undef  MVPP22_BM_POOL_SIZE_MASK
-#undef	MVPP22_BM_POOL_SIZE_OFFSET  
+#undef	MVPP22_BM_POOL_SIZE_OFFSET
 
 
 #define MVPP22_BM_POOL_READ_PTR_REG(pool)	(0x6080 + ((pool) * 4))
@@ -790,13 +790,17 @@ enum mvpp2_prs_l3_cast {
  * of bytes allocated for each buffer will be 512
  */
 #define MVPP2_BM_SHORT_PKT_SIZE		MVPP2_RX_MAX_PKT_SIZE(512)
+#define MVPP2_BM_LONG_PKT_SIZE		MVPP2_RX_MAX_PKT_SIZE(2048)
+#define MVPP2_BM_JUMBO_PKT_SIZE		9600
 
-enum mvpp2_bm_type {
-	MVPP2_BM_FREE,
-	MVPP2_BM_SWF_SHORT,
-	MVPP2_BM_SWF_LONG,
-	MVPP2_BM_SWF_JUMBO
+
+
+enum mvpp2_bm_pool_log_num {
+	MVPP2_BM_SWF_SHORT_POOL,
+	MVPP2_BM_SWF_LONG_POOL,
+	MVPP2_BM_SWF_JUMBO_POOL
 };
+
 
 
 /* The mvpp2_tx_desc and mvpp2_rx_desc structures describe the
@@ -841,8 +845,8 @@ struct pp21_specific_tx_desc {
 
 struct pp22_specific_tx_desc {
 	u64 rsrvd_hw_cmd1;	/* hw_cmd (BM, PON, PNC) */
-	u64 buf_phys_addr_hw_cmd2;	
-	u64 buf_cookie_bm_qset_hw_cmd3;	
+	u64 buf_phys_addr_hw_cmd2;
+	u64 buf_cookie_bm_qset_hw_cmd3;
 		/* cookie for access to RX buffer in rx path */
 		/* cookie for access to RX buffer in rx path */
 		/* bm_qset (for future use, BM)		*/
@@ -890,8 +894,8 @@ struct pp22_specific_rx_desc {
 	u16 rsrvd_gem;		/* gem_port_id (for future use, PON)	*/
 	u16 rsrvd_l4csum;	/* csum_l4 (for future use, PnC)	*/
 	u32 rsrvd_timestamp;
-	u64 buf_phys_addr_key_hash;	
-	u64 buf_cookie_bm_qset_cls_info;	
+	u64 buf_phys_addr_key_hash;
+	u64 buf_cookie_bm_qset_cls_info;
 	/* cookie for access to RX buffer in rx path */
 	/* bm_qset (for future use, BM)		*/
 	/* classify_info (for future use, PnC)	*/
@@ -971,7 +975,9 @@ struct mvpp2_cls_lookup_entry {
 struct mvpp2_bm_pool {
 	/* Pool number in the range 0-7 */
 	int id;
-	enum mvpp2_bm_type type;
+
+	/*Logical id, equals to index in parent priv */
+	enum mvpp2_bm_pool_log_num  log_id;
 
 	/* Buffer Pointers Pool External (BPPE) size */
 	int size;

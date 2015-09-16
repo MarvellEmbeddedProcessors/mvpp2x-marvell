@@ -143,7 +143,7 @@ static inline struct mvpp2_rx_queue *mvpp2_get_rx_queue(struct mvpp2_port *port,
 	return port->rxqs[queue];
 }
 
-static inline struct mvpp2_tx_queue *mvpp2_get_tx_queue(struct mvpp2_port *port, 
+static inline struct mvpp2_tx_queue *mvpp2_get_tx_queue(struct mvpp2_port *port,
 	u32 cause)
 {
 	int queue = fls(cause) - 1;
@@ -160,30 +160,30 @@ static inline int mvpp2_bm_cookie_pool_get(u32 cookie)
 #endif
 
 
-static inline struct sk_buff *mvpp2_bm_virt_addr_get(struct mvpp2_hw *hw, 
-						u32 pool) 
+static inline struct sk_buff *mvpp2_bm_virt_addr_get(struct mvpp2_hw *hw,
+						u32 pool)
 {
 	uintptr_t val = 0;
-	
+
 	mvpp2_read(hw, MVPP2_BM_PHY_ALLOC_REG(pool));
 #ifdef CONFIG_PHYS_ADDR_T_64BIT //TODO: Validate this is  correct CONFIG_XXX for (sk_buff *),   it is a kmem_cache address (YuvalC).
 	val = mvpp2_read(hw, MVPP22_BM_PHY_VIRT_HIGH_ALLOC_REG);
 	val &= MVPP22_BM_VIRT_HIGH_ALLOC_MASK;
 	val <<= (32 - MVPP22_BM_VIRT_HIGH_ALLOC_OFFSET);
 #endif
-	val |= mvpp2_read(hw, MVPP2_BM_VIRT_ALLOC_REG);	
+	val |= mvpp2_read(hw, MVPP2_BM_VIRT_ALLOC_REG);
 	return((struct sk_buff *)val);
 }
 
 
-static inline void mvpp2_bm_hw_pool_create(struct mvpp2_hw *hw, 
-			u32 pool, dma_addr_t pool_addr, int size) 
+static inline void mvpp2_bm_hw_pool_create(struct mvpp2_hw *hw,
+			u32 pool, dma_addr_t pool_addr, int size)
 {
 	u32 val;
 
 	mvpp2_write(hw, MVPP2_BM_POOL_BASE_ADDR_REG(pool), lower_32_bits(pool_addr));
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-	mvpp2_write(hw, MVPP22_BM_POOL_BASE_ADDR_HIGH_REG, 
+	mvpp2_write(hw, MVPP22_BM_POOL_BASE_ADDR_HIGH_REG,
 	(upper_32_bits(pool_addr)& MVPP22_ADDR_HIGH_MASK);
 #endif
 	mvpp2_write(hw, MVPP2_BM_POOL_SIZE_REG(pool), size);
@@ -400,10 +400,16 @@ void mvpp2_bm_pool_bufsize_set(struct mvpp2_hw *hw,
 void mvpp2_pool_refill(struct mvpp2 *priv, u32 pool,
 			      dma_addr_t phys_addr, struct sk_buff *cookie);
 
-void mvpp2_rxq_long_pool_set(struct mvpp2_port *port,
-				    int lrxq, int long_pool);
-void mvpp2_rxq_short_pool_set(struct mvpp2_port *port,
-				     int lrxq, int short_pool);
+void mvpp21_rxq_long_pool_set(struct mvpp2_hw *hw,
+				     int prxq, int long_pool);
+void mvpp21_rxq_short_pool_set(struct mvpp2_hw *hw,
+				     int prxq, int short_pool);
+
+void mvpp22_rxq_long_pool_set(struct mvpp2_hw *hw,
+				     int prxq, int long_pool);
+void mvpp22_rxq_short_pool_set(struct mvpp2_hw *hw,
+				     int prxq, int short_pool);
+
 
 void mvpp2_port_mii_set(struct mvpp2_port *port);
 void mvpp2_port_fc_adv_enable(struct mvpp2_port *port);
