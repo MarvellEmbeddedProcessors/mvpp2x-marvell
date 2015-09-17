@@ -2374,11 +2374,11 @@ void mvpp2_get_mac_address(struct mvpp2_port *port, unsigned char *addr)
 
 void mvpp2_cause_error(struct net_device *dev, int cause)
 {
-	if (cause & MVPP21_CAUSE_FCS_ERR_MASK)
+	if (cause & MVPP2_CAUSE_FCS_ERR_MASK)
 		netdev_err(dev, "FCS error\n");
-	if (cause & MVPP21_CAUSE_RX_FIFO_OVERRUN_MASK)
+	if (cause & MVPP2_CAUSE_RX_FIFO_OVERRUN_MASK)
 		netdev_err(dev, "rx fifo overrun error\n");
-	if (cause & MVPP21_CAUSE_TX_FIFO_UNDERRUN_MASK)
+	if (cause & MVPP2_CAUSE_TX_FIFO_UNDERRUN_MASK)
 		netdev_err(dev, "tx fifo underrun error\n");
 }
 
@@ -2446,8 +2446,6 @@ void mvpp2_rx_time_coal_set(struct mvpp2_port *port,
 
 	val = (port->priv->hw.tclk / USEC_PER_SEC) * usec;
 	mvpp2_write(&(port->priv->hw), MVPP2_ISR_RX_THRESHOLD_REG(rxq->id), val);
-
-	rxq->time_coal = usec;
 }
 
 /* Set threshold for TX_DONE pkts coalescing */
@@ -2457,7 +2455,7 @@ void mvpp2_tx_done_pkts_coal_set(void *arg)
 	int queue;
 	u32 val;
 
-	for (queue = 0; queue < mvpp2_txq_number; queue++) {
+	for (queue = 0; queue < port->num_tx_queues; queue++) {
 		struct mvpp2_tx_queue *txq = port->txqs[queue];
 
 		val = (txq->pkts_coal << MVPP2_TRANSMITTED_THRESH_OFFSET) &
@@ -2466,6 +2464,16 @@ void mvpp2_tx_done_pkts_coal_set(void *arg)
 		mvpp2_write(&(port->priv->hw), MVPP2_TXQ_THRESH_REG, val);
 	}
 }
+
+/* Set the time delay in usec before Rx interrupt */
+void mvpp2_tx_done_time_coal_set(struct mvpp2_port *port, u32 usec)
+{
+	u32 val;
+
+	val = (port->priv->hw.tclk / USEC_PER_SEC) * usec;
+	mvpp2_write(&(port->priv->hw), MVPP22_ISR_TX_THRESHOLD_REG(port->id), val);
+}
+
 
 /* Change maximum receive size of the port */
 void mvpp2_gmac_max_rx_size_set(struct mvpp2_port *port)
@@ -2515,7 +2523,7 @@ void mvpp2_txp_max_tx_size_set(struct mvpp2_port *port)
 		mvpp2_write(hw, MVPP2_TXP_SCHED_TOKEN_SIZE_REG, val);
 	}
 
-	for (txq = 0; txq < mvpp2_txq_number; txq++) {
+	for (txq = 0; txq < port->num_tx_queues; txq++) {
 		val = mvpp2_read(hw,
 				 MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq));
 		size = val & MVPP2_TXQ_TOKEN_SIZE_MAX;
@@ -2653,14 +2661,14 @@ void mvpp2_rxq_offset_set(struct mvpp2_port *port,
 	/* Convert offset from bytes to units of 32 bytes */
 	offset = offset >> 5;
 
-	val = mvpp2_read(hw, MVPP21_RXQ_CONFIG_REG(prxq));
-	val &= ~MVPP21_RXQ_PACKET_OFFSET_MASK;
+	val = mvpp2_read(hw, MVPP2_RXQ_CONFIG_REG(prxq));
+	val &= ~MVPP2_RXQ_PACKET_OFFSET_MASK;
 
 	/* Offset is in */
-	val |= ((offset << MVPP21_RXQ_PACKET_OFFSET_OFFS) &
-		MVPP21_RXQ_PACKET_OFFSET_MASK);
+	val |= ((offset << MVPP2_RXQ_PACKET_OFFSET_OFFS) &
+		MVPP2_RXQ_PACKET_OFFSET_MASK);
 
-	mvpp2_write(hw, MVPP21_RXQ_CONFIG_REG(prxq), val);
+	mvpp2_write(hw, MVPP2_RXQ_CONFIG_REG(prxq), val);
 }
 
 
@@ -2787,12 +2795,12 @@ void mvpp21_rxq_long_pool_set(struct mvpp2_hw *hw,
 {
 	u32 val;
 
-	val = mvpp2_read(hw, MVPP21_RXQ_CONFIG_REG(prxq));
+	val = mvpp2_read(hw, MVPP2_RXQ_CONFIG_REG(prxq));
 	val &= ~MVPP21_RXQ_POOL_LONG_MASK;
 	val |= ((long_pool << MVPP21_RXQ_POOL_LONG_OFFS) &
 		    MVPP21_RXQ_POOL_LONG_MASK);
 
-	mvpp2_write(hw, MVPP21_RXQ_CONFIG_REG(prxq), val);
+	mvpp2_write(hw, MVPP2_RXQ_CONFIG_REG(prxq), val);
 }
 
 /* Attach short pool to rxq */
@@ -2801,12 +2809,12 @@ void mvpp21_rxq_short_pool_set(struct mvpp2_hw *hw,
 {
 	u32 val;
 
-	val = mvpp2_read(hw, MVPP21_RXQ_CONFIG_REG(prxq));
+	val = mvpp2_read(hw, MVPP2_RXQ_CONFIG_REG(prxq));
 	val &= ~MVPP21_RXQ_POOL_SHORT_MASK;
 	val |= ((short_pool << MVPP21_RXQ_POOL_SHORT_OFFS) &
 		    MVPP21_RXQ_POOL_SHORT_MASK);
 
-	mvpp2_write(hw, MVPP21_RXQ_CONFIG_REG(prxq), val);
+	mvpp2_write(hw, MVPP2_RXQ_CONFIG_REG(prxq), val);
 }
 
 
@@ -2816,12 +2824,12 @@ void mvpp22_rxq_long_pool_set(struct mvpp2_hw *hw,
 {
 	u32 val;
 
-	val = mvpp2_read(hw, MVPP22_RXQ_CONFIG_REG(prxq));
+	val = mvpp2_read(hw, MVPP2_RXQ_CONFIG_REG(prxq));
 	val &= ~MVPP22_RXQ_POOL_LONG_MASK;
 	val |= ((long_pool << MVPP22_RXQ_POOL_LONG_OFFS) &
 		    MVPP22_RXQ_POOL_LONG_MASK);
 
-	mvpp2_write(hw, MVPP22_RXQ_CONFIG_REG(prxq), val);
+	mvpp2_write(hw, MVPP2_RXQ_CONFIG_REG(prxq), val);
 }
 
 /* Attach short pool to rxq */
@@ -2830,12 +2838,12 @@ void mvpp22_rxq_short_pool_set(struct mvpp2_hw *hw,
 {
 	u32 val;
 
-	val = mvpp2_read(hw, MVPP21_RXQ_CONFIG_REG(prxq));
+	val = mvpp2_read(hw, MVPP2_RXQ_CONFIG_REG(prxq));
 	val &= ~MVPP22_RXQ_POOL_SHORT_MASK;
 	val |= ((short_pool << MVPP22_RXQ_POOL_SHORT_OFFS) &
 		    MVPP22_RXQ_POOL_SHORT_MASK);
 
-	mvpp2_write(hw, MVPP22_RXQ_CONFIG_REG(prxq), val);
+	mvpp2_write(hw, MVPP2_RXQ_CONFIG_REG(prxq), val);
 }
 
 
@@ -2847,11 +2855,11 @@ void mvpp2_ingress_enable(struct mvpp2_port *port)
 	int lrxq, queue;
 	struct mvpp2_hw *hw = &(port->priv->hw);
 
-	for (lrxq = 0; lrxq < mvpp2_rxq_number; lrxq++) {
+	for (lrxq = 0; lrxq < port->num_rx_queues; lrxq++) {
 		queue = port->rxqs[lrxq]->id;
-		val = mvpp2_read(hw, MVPP21_RXQ_CONFIG_REG(queue));
-		val &= ~MVPP21_RXQ_DISABLE_MASK;
-		mvpp2_write(hw, MVPP21_RXQ_CONFIG_REG(queue), val);
+		val = mvpp2_read(hw, MVPP2_RXQ_CONFIG_REG(queue));
+		val &= ~MVPP2_RXQ_DISABLE_MASK;
+		mvpp2_write(hw, MVPP2_RXQ_CONFIG_REG(queue), val);
 	}
 }
 
@@ -2861,11 +2869,11 @@ void mvpp2_ingress_disable(struct mvpp2_port *port)
 	int lrxq, queue;
 	struct mvpp2_hw *hw = &(port->priv->hw);
 
-	for (lrxq = 0; lrxq < mvpp2_rxq_number; lrxq++) {
+	for (lrxq = 0; lrxq < port->num_rx_queues; lrxq++) {
 		queue = port->rxqs[lrxq]->id;
-		val = mvpp2_read(hw, MVPP21_RXQ_CONFIG_REG(queue));
-		val |= MVPP21_RXQ_DISABLE_MASK;
-		mvpp2_write(hw, MVPP21_RXQ_CONFIG_REG(queue), val);
+		val = mvpp2_read(hw, MVPP2_RXQ_CONFIG_REG(queue));
+		val |= MVPP2_RXQ_DISABLE_MASK;
+		mvpp2_write(hw, MVPP2_RXQ_CONFIG_REG(queue), val);
 	}
 }
 
@@ -2878,7 +2886,7 @@ void mvpp2_egress_enable(struct mvpp2_port *port)
 
 	/* Enable all initialized TXs. */
 	qmap = 0;
-	for (queue = 0; queue < mvpp2_txq_number; queue++) {
+	for (queue = 0; queue < port->num_tx_queues; queue++) {
 		struct mvpp2_tx_queue *txq = port->txqs[queue];
 
 		if (txq->descs != NULL)

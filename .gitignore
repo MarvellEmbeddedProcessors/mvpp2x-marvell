@@ -12,6 +12,7 @@ _private*/
 *.ko
 *.mod*
 .*
+temp/*
 
 ~*
 
@@ -19,3 +20,4 @@ _private*/
 .templates/bl_version.template
 .templates/default.txt
 .templates/makebaseline_mail.txt
+
