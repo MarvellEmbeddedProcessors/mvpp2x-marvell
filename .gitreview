@@ -1,0 +1,7 @@
+[gerrit]
+host=vgitil04.il.marvell.com
+port=29418
+project=syssw/mvpp2x
+defaultbranch=devel
+defaultremote=origin
+defaultrebase=0

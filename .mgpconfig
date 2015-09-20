@@ -1,0 +1,22 @@
+[project "mvpp2x"]
+  mode = write
+  branch = devel
+
+[plugin]
+  common = \\\\fileril109\\cc\\git\\config\\mgpmenu.config
+
+[variables]
+  set = bin_dir                 = \\\\fileril109.marvell.com\\cc\\git\\bin
+  set = perl_exe                = \\\\fileril109.marvell.com\\cc\\as\\perl\\bin\\perl.exe
+  set = version_file            = %project_root%\\version.txt
+  set = configuration_file      = %project_root%\\configuration.txt
+  set = bl_body                 = %project_root%\\.body.html
+  
+[trigger "makebaseline"]
+  pre =  %bin_dir%\\ConfigureProject.exe -tag %tag_name% -output %configuration_file%
+  pre =  %bin_dir%\\ReleaseSummary.exe -templates %project_root%\\.templates\\bl_version.template,%project_root%\\.templates\\bl_body.template -output %version_file%,%bl_body% -project_root %project_root% -rw_components %rw_components% -tag_name %tag_name% -no_cq
+  pre =  cd %project_root% & git add version.txt configuration.txt
+  pre =  %bin_dir%\\gerrit_submit.exe -project_root %project_root% -project_name %project_name% -rw_components %rw_components% -branch %branch% -gerrit_host %gerrit_host%
+
+  post = %bin_dir%\\SendMail.exe -mailing_list %project_root%\\.templates\\makebaseline_mail.txt -body %bl_body% -att %version_file% -att %configuration_file%
+  
