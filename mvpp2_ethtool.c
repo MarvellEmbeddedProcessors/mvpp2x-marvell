@@ -82,7 +82,7 @@ static int mvpp2_ethtool_set_coalesce(struct net_device *dev,
 	struct mvpp2_port *port = netdev_priv(dev);
 	int queue;
 
-	for (queue = 0; queue < port->num_rx_queues; queue++) {
+	for (queue = 0; queue < mvpp2_rxq_number; queue++) {
 		struct mvpp2_rx_queue *rxq = port->rxqs[queue];
 
 		rxq->time_coal = c->rx_coalesce_usecs;
@@ -91,10 +91,10 @@ static int mvpp2_ethtool_set_coalesce(struct net_device *dev,
 		mvpp2_rx_time_coal_set(port, rxq, rxq->time_coal);
 	}
 
-	for (queue = 0; queue < port->num_tx_queues; queue++) {
+	for (queue = 0; queue < mvpp2_txq_number; queue++) {
 		struct mvpp2_tx_queue *txq = port->txqs[queue];
 
-		txq->pkts_coal = c->tx_max_coalesced_frames;
+		txq->done_pkts_coal = c->tx_max_coalesced_frames;
 	}
 
 	on_each_cpu(mvpp2_tx_done_pkts_coal_set, port, 1);
@@ -109,7 +109,7 @@ static int mvpp2_ethtool_get_coalesce(struct net_device *dev,
 
 	c->rx_coalesce_usecs        = port->rxqs[0]->time_coal;
 	c->rx_max_coalesced_frames  = port->rxqs[0]->pkts_coal;
-	c->tx_max_coalesced_frames =  port->txqs[0]->pkts_coal;
+	c->tx_max_coalesced_frames =  port->txqs[0]->done_pkts_coal;
 	return 0;
 }
 
