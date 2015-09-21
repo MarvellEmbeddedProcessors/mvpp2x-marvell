@@ -329,7 +329,7 @@ struct mvpp2_port {
 	u16 tx_ring_size;
 	u16 rx_ring_size;
 
-	u32 time_coal;
+	u32 tx_time_coal;
 	struct mvpp2_pcpu_stats __percpu *stats;
 
 	struct phy_device *phy_dev;
@@ -360,6 +360,7 @@ struct mvpp2x_platform_data {
 	u8 pp2x_max_port_rxqs;
 	u8 num_port_irq;
 	bool multi_addr_space;
+	bool interrupt_tx_done;
 	void (*mvpp2x_rxq_short_pool_set)(struct mvpp2_hw *, int, int);
 	void (*mvpp2x_rxq_long_pool_set)(struct mvpp2_hw *, int, int);
 	void (*mvpp2x_port_queue_vectors_init)(struct mvpp2_port *);

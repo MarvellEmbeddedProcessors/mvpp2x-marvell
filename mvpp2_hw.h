@@ -137,10 +137,13 @@ static inline void mvpp2_interrupts_mask(void *arg)
 static inline void mvpp2_interrupts_unmask(void *arg)
 {
 	struct mvpp2_port *port = arg;
+	u32 val;
 
-	mvpp2_write(&(port->priv->hw), MVPP2_ISR_RX_TX_MASK_REG(port->id),
-		    (MVPP2_CAUSE_MISC_SUM_MASK |
-		     MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK));
+	val = MVPP2_CAUSE_MISC_SUM_MASK | MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK;
+	if (port->priv->pp2xdata->interrupt_tx_done == true)
+		val |= MVPP2_CAUSE_TXQ_OCCUP_DESC_ALL_MASK;
+
+	mvpp2_write(&(port->priv->hw), MVPP2_ISR_RX_TX_MASK_REG(port->id), val);
 }
 
 static inline void mvpp2_shared_thread_interrupts_mask(struct mvpp2_port *port)
@@ -188,14 +191,6 @@ static inline struct mvpp2_tx_queue *mvpp2_get_tx_queue(struct mvpp2_port *port,
 	int tx_queue = fls(cause) - 1;
 	return port->txqs[tx_queue];
 }
-
-#if 0
-/* Get pool number from a BM cookie */
-static inline int mvpp2_bm_cookie_pool_get(u32 cookie)
-{
-	return (cookie >> MVPP2_BM_COOKIE_POOL_OFFS) & 0xFF;
-}
-#endif
 
 
 static inline struct sk_buff *mvpp2_bm_virt_addr_get(struct mvpp2_hw *hw,
