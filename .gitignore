@@ -5,7 +5,6 @@ _private*/
 *_OLD*
 *pcap
 *.prev
-*Kconfig*
 *.symvers
 *.order
 *.o
@@ -21,5 +20,6 @@ Makefile
 .templates/bl_version.template
 .templates/default.txt
 .templates/makebaseline_mail.txt
+
 
 

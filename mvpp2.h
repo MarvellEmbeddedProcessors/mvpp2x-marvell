@@ -34,9 +34,30 @@
 
 
 
+
 #define MVPP2_DRIVER_NAME "mvpp2"
 #define MVPP2_DRIVER_VERSION "1.0"
 
+
+#define PFX			MVPP2_DRIVER_NAME ": "
+//#define CONFIG_MVPP2_DEBUG
+#ifdef CONFIG_MVPP2_DEBUG
+#define DEBUG	1
+#define VERBOSE	1
+#else
+#define DEBUG	0
+#define VERBOSE	0
+#endif /*CONFIG_MVPP2_DEBUG*/
+
+#if VERBOSE
+#define DBG_MSG(fmt, args...)	printk(KERN_CRIT PFX fmt, ## args)
+#else
+#if DEBUG
+#define DBG_MSG(fmt, args...)	printk(KERN_DEBUG PFX fmt, ## args)
+#else
+#define DBG_MSG(fmt, args...)	while (0) printk(fmt, ## args)
+#endif /*DEBUG*/
+#endif /*VERBOSE*/
 
 
 /* Descriptor ring Macros */
@@ -361,6 +382,7 @@ struct mvpp2x_platform_data {
 	u8 num_port_irq;
 	bool multi_addr_space;
 	bool interrupt_tx_done;
+	bool multi_hw_instance;
 	void (*mvpp2x_rxq_short_pool_set)(struct mvpp2_hw *, int, int);
 	void (*mvpp2x_rxq_long_pool_set)(struct mvpp2_hw *, int, int);
 	void (*mvpp2x_port_queue_vectors_init)(struct mvpp2_port *);

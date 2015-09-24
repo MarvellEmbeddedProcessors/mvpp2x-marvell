@@ -2785,6 +2785,7 @@ static const struct mvpp2x_platform_data pp21_pdata = {
 	.mvpp2x_rxq_long_pool_set = mvpp21_rxq_long_pool_set,
 	.multi_addr_space = false,
 	.interrupt_tx_done = false,
+	.multi_hw_instance = false,
 	.mvpp2x_port_queue_vectors_init = mvpp21_port_queue_vectors_init,
 	.mvpp2x_port_isr_rx_group_cfg = mvpp21x_port_isr_rx_group_cfg,
 	.num_port_irq = 1,
@@ -2797,6 +2798,7 @@ static const struct mvpp2x_platform_data pp22_pdata = {
 	.mvpp2x_rxq_long_pool_set = mvpp22_rxq_long_pool_set,
 	.multi_addr_space = true,
 	.interrupt_tx_done = true,
+	.multi_hw_instance = true,
 	.mvpp2x_port_queue_vectors_init = mvpp22_port_queue_vectors_init,
 	.mvpp2x_port_isr_rx_group_cfg = mvpp22_port_isr_rx_group_cfg,
 	.num_port_irq = 9,
@@ -2815,9 +2817,9 @@ static const struct of_device_id mvpp2_match_tbl[] = {
         }
 };
 
-static void mvpp2_init_config(struct mvpp2_param_config *pp2_cfg)
+static void mvpp2_init_config(struct mvpp2_param_config *pp2_cfg, u32 cell_index)
 {
-	pp2_cfg->cell_index = 0; /*TODO : Take from dtsi */
+	pp2_cfg->cell_index = cell_index;
 	pp2_cfg->first_bm_pool = first_bm_pool;
 	pp2_cfg->first_sw_thread = first_addr_space;
 	pp2_cfg->jumbo_pool = jumbo_pool;
@@ -2836,42 +2838,43 @@ static void mvpp2_init_config(struct mvpp2_param_config *pp2_cfg)
 
 static void mvpp2_pp2_basic_print(struct mvpp2 *priv)
 {
-	printk("pp2_ver(%d)\n", priv->pp2_version);
-	printk("cpu_map(%x)\n", priv->cpu_map);
-	printk("queue_mode(%d)\n", priv->pp2_cfg.queue_mode);
-	printk("first_bm_pool(%d)\n", priv->pp2_cfg.first_bm_pool);
-	printk("jumbo_pool(%d)\n", priv->pp2_cfg.jumbo_pool);
+	DBG_MSG("pp2_ver(%d)\n", priv->pp2_version);
+	DBG_MSG("cpu_map(%x)\n", priv->cpu_map);
+	DBG_MSG("queue_mode(%d)\n", priv->pp2_cfg.queue_mode);
+	DBG_MSG("first_bm_pool(%d)\n", priv->pp2_cfg.first_bm_pool);
+	DBG_MSG("jumbo_pool(%d)\n", priv->pp2_cfg.jumbo_pool);
+	DBG_MSG("cell_index(%d)\n", priv->pp2_cfg.cell_index);
 }
 
 static void mvpp2_pp2_port_print(struct mvpp2_port *port)
 {
 	int i;
 
-	printk("%s port_id(%d)\n",__func__, port->id);
-	printk("\t ifname(%s)\n", port->dev->name);
-	printk("\t first_rxq(%d)\n", port->first_rxq);
-	printk("\t num_irqs(%d)\n", port->num_irqs);
-	printk("\t pkt_size(%d)\n", port->pkt_size);
-	printk("\t flags(%lx)\n", port->flags);
-	printk("\t tx_ring_size(%d)\n", port->tx_ring_size);
-	printk("\t rx_ring_size(%d)\n", port->rx_ring_size);
-	printk("\t time_coal(%d)\n", port->tx_time_coal);
-	printk("\t pool_long(%p)\n", port->pool_long);
-	printk("\t pool_short(%p)\n", port->pool_short);
-	printk("\t first_rxq(%d)\n", port->first_rxq);
-	printk("\t num_rx_queues(%d)\n", port->num_rx_queues);
-	printk("\t num_tx_queues(%d)\n", port->num_tx_queues);
-	printk("\t num_qvector(%d)\n", port->num_qvector);
+	DBG_MSG("%s port_id(%d)\n",__func__, port->id);
+	DBG_MSG("\t ifname(%s)\n", port->dev->name);
+	DBG_MSG("\t first_rxq(%d)\n", port->first_rxq);
+	DBG_MSG("\t num_irqs(%d)\n", port->num_irqs);
+	DBG_MSG("\t pkt_size(%d)\n", port->pkt_size);
+	DBG_MSG("\t flags(%lx)\n", port->flags);
+	DBG_MSG("\t tx_ring_size(%d)\n", port->tx_ring_size);
+	DBG_MSG("\t rx_ring_size(%d)\n", port->rx_ring_size);
+	DBG_MSG("\t time_coal(%d)\n", port->tx_time_coal);
+	DBG_MSG("\t pool_long(%p)\n", port->pool_long);
+	DBG_MSG("\t pool_short(%p)\n", port->pool_short);
+	DBG_MSG("\t first_rxq(%d)\n", port->first_rxq);
+	DBG_MSG("\t num_rx_queues(%d)\n", port->num_rx_queues);
+	DBG_MSG("\t num_tx_queues(%d)\n", port->num_tx_queues);
+	DBG_MSG("\t num_qvector(%d)\n", port->num_qvector);
 
 	for (i=0;i<port->num_qvector;i++) {
-		printk("\t qvector_index(%d)\n", i);
-		printk("\t\t irq(%d)\n", port->q_vector[i].irq);
-		printk("\t\t qv_type(%d)\n", port->q_vector[i].qv_type);
-		printk("\t\t sw_thread_id	(%d)\n", port->q_vector[i].sw_thread_id);
-		printk("\t\t sw_thread_mask(%d)\n", port->q_vector[i].sw_thread_mask);
-		printk("\t\t first_rx_queue(%d)\n", port->q_vector[i].first_rx_queue);
-		printk("\t\t num_rx_queues(%d)\n", port->q_vector[i].num_rx_queues);
-		printk("\t\t pending_cause_rx(%d)\n", port->q_vector[i].pending_cause_rx);
+		DBG_MSG("\t qvector_index(%d)\n", i);
+		DBG_MSG("\t\t irq(%d)\n", port->q_vector[i].irq);
+		DBG_MSG("\t\t qv_type(%d)\n", port->q_vector[i].qv_type);
+		DBG_MSG("\t\t sw_thread_id	(%d)\n", port->q_vector[i].sw_thread_id);
+		DBG_MSG("\t\t sw_thread_mask(%d)\n", port->q_vector[i].sw_thread_mask);
+		DBG_MSG("\t\t first_rx_queue(%d)\n", port->q_vector[i].first_rx_queue);
+		DBG_MSG("\t\t num_rx_queues(%d)\n", port->q_vector[i].num_rx_queues);
+		DBG_MSG("\t\t pending_cause_rx(%d)\n", port->q_vector[i].pending_cause_rx);
 
 	}
 
@@ -2902,6 +2905,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 	int port_count, cpu;
 	int i, err;
 	u16 cpu_map;
+	u32 cell_index = 0;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(struct mvpp2), GFP_KERNEL);
 	if (!priv)
@@ -2918,6 +2922,13 @@ static int mvpp2_probe(struct platform_device *pdev)
 	priv->pp2xdata = (const struct mvpp2x_platform_data *) match->data;
 	priv->pp2_version = priv->pp2xdata->pp2x_ver;
 
+	if (priv->pp2xdata->multi_hw_instance) {
+		if (of_property_read_u32(pdev->dev.of_node, "cell-index",
+					  &cell_index)) {
+			dev_err(&pdev->dev, "missing cell_index value\n");
+			return -ENODEV;
+		}
+	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	hw->base = devm_ioremap_resource(&pdev->dev, res);
@@ -2987,9 +2998,8 @@ static int mvpp2_probe(struct platform_device *pdev)
 	}
 
 	/*Init PP2 Configuration */
-	mvpp2_init_config(&priv->pp2_cfg);
-
-//	mvpp2_pp2_basic_print(priv);
+	mvpp2_init_config(&priv->pp2_cfg, cell_index);
+	mvpp2_pp2_basic_print(priv);
 
 	/* Initialize ports */
 	for_each_available_child_of_node(dn, port_node) {
@@ -2997,7 +3007,8 @@ static int mvpp2_probe(struct platform_device *pdev)
 		if (err < 0)
 			goto err_gop_clk;
 	}
-//	mvpp2_pp2_ports_print(priv, port_count);
+
+	mvpp2_pp2_ports_print(priv, port_count);
 
 	platform_set_drvdata(pdev, priv);
 	return 0;
