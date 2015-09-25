@@ -458,13 +458,22 @@ void mvpp2_prs_mac_multi_set(struct mvpp2_hw *hw, int port, int index,
 int mvpp2_prs_mac_da_accept(struct mvpp2_hw *hw, int port,
 				   const u8 *da, bool add);
 int mvpp2_prs_def_flow(struct mvpp2_port *port);
+int mvpp2_prs_flow_set(struct mvpp2_port *port);
 void mvpp2_prs_mcast_del_all(struct mvpp2_hw *hw, int port);
 int mvpp2_prs_tag_mode_set(struct mvpp2_hw *hw, int port, int type);
 int mvpp2_prs_update_mac_da(struct net_device *dev, const u8 *da);
+void mvpp2_prs_flow_id_attr_init(void);
+int mvpp2_prs_flow_id_attr_get(int flow_id);
 
-void mvpp2_cls_init(struct mvpp2_hw *hw);
+int mvpp2_cls_init(struct platform_device *pdev, struct mvpp2_hw *hw);
 void mvpp2_cls_port_config(struct mvpp2_port *port);
+void mvpp2_cls_config(struct mvpp2_hw *hw);
 void mvpp2_cls_oversize_rxq_set(struct mvpp2_port *port);
+void mvpp2_cls_lookup_read(struct mvpp2_hw *hw, int lkpid, int way, struct mvpp2_cls_lookup_entry *le);
+void mvpp2_cls_flow_tbl_temp_copy(struct mvpp2_hw *hw, int lkpid, int *temp_flow_idx);
+void mvpp2_cls_lkp_flow_set(struct mvpp2_hw *hw, int lkpid, int way, int flow_idx);
+void mvpp2_cls_flow_port_add(struct mvpp2_hw *hw, int index, int port_id);
+void mvpp2_cls_flow_port_del(struct mvpp2_hw *hw, int index, int port_id);
 
 void mvpp2_txp_max_tx_size_set(struct mvpp2_port *port);
 void mvpp2_tx_done_time_coal_set(struct mvpp2_port *port, u32 usec);
@@ -526,6 +535,7 @@ void mvpp2_rx_csum(struct mvpp2_port *port, u32 status,
 			  struct sk_buff *skb);
 void mvpp2_get_mac_address(struct mvpp2_port *port, unsigned char *addr);
 
+int mvpp2_c2_init(struct platform_device *pdev, struct mvpp2_hw *hw);
 
 int mvpp2_prs_sw_sram_shift_get(struct mvpp2_prs_entry *pe, int *shift);
 int mvpp2_prs_sw_sram_next_lu_get(struct mvpp2_prs_entry *pe, unsigned int *lu);
@@ -563,7 +573,6 @@ int mvpp2_cls_c2_hit_cntr_clear_all(struct mvpp2_hw *hw);
 int mvpp2_cls_c2_hit_cntr_read(struct mvpp2_hw *hw, int index, u32 *cntr);
 int mvpp2_cls_c2_hit_cntr_dump(struct mvpp2_hw *hw);
 int mvpp2_cls_c2_regs_dump(struct mvpp2_hw *hw);
-
-
+int mvpp2_cls_c2_rule_set(struct mvpp2_port *port);
 
 #endif /* _MVPP2_HW_H_ */

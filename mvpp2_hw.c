@@ -122,6 +122,348 @@ EXPORT_SYMBOL(mvpp2_read);
 
 /* Parser configuration routines */
 
+/* Flow ID definetion array */
+static struct mvpp2_prs_flow_id mvpp2_prs_flow_id_array[MVPP2_PRS_FL_TCAM_NUM] = {
+	/***********#Flow ID#**************#Result Info#************/
+	{MVPP2_PRS_FL_IP4_TCP_NF_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					 MVPP2_PRS_RI_L3_IP4 |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_VLAN_MASK |
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_TCP_NF_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					 MVPP2_PRS_RI_L3_IP4_OPT |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_VLAN_MASK |
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_TCP_NF_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					 MVPP2_PRS_RI_L3_IP4_OTHER |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_VLAN_MASK |
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP4_UDP_NF_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					 MVPP2_PRS_RI_L3_IP4 |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_VLAN_MASK |
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_UDP_NF_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					 MVPP2_PRS_RI_L3_IP4_OPT |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_VLAN_MASK |
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_UDP_NF_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					 MVPP2_PRS_RI_L3_IP4_OTHER |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_VLAN_MASK |
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP4_TCP_NF_TAG, 	{MVPP2_PRS_RI_L3_IP4 |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_TCP_NF_TAG, 	{MVPP2_PRS_RI_L3_IP4_OPT |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_TCP_NF_TAG, 	{MVPP2_PRS_RI_L3_IP4_OTHER |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP4_UDP_NF_TAG, 	{MVPP2_PRS_RI_L3_IP4 |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_UDP_NF_TAG, 	{MVPP2_PRS_RI_L3_IP4_OPT |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_UDP_NF_TAG, 	{MVPP2_PRS_RI_L3_IP4_OTHER |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP6_TCP_NF_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					 MVPP2_PRS_RI_L3_IP6 |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_VLAN_MASK |
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP6_TCP_NF_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					 MVPP2_PRS_RI_L3_IP6_EXT |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_VLAN_MASK |
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP6_UDP_NF_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					 MVPP2_PRS_RI_L3_IP6 |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_VLAN_MASK |
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP6_UDP_NF_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					 MVPP2_PRS_RI_L3_IP6_EXT |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_VLAN_MASK |
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP6_TCP_NF_TAG, 	{MVPP2_PRS_RI_L3_IP6 |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP6_TCP_NF_TAG, 	{MVPP2_PRS_RI_L3_IP6_EXT |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP6_UDP_NF_TAG, 	{MVPP2_PRS_RI_L3_IP6 |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP6_UDP_NF_TAG, 	{MVPP2_PRS_RI_L3_IP6_EXT |
+					 MVPP2_PRS_RI_IP_FRAG_FALSE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP4_TCP_FRAG_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					   MVPP2_PRS_RI_L3_IP4 |
+					   MVPP2_PRS_RI_IP_FRAG_TRUE |
+					   MVPP2_PRS_RI_L4_TCP,
+					   MVPP2_PRS_RI_VLAN_MASK |
+					   MVPP2_PRS_RI_L3_PROTO_MASK |
+					   MVPP2_PRS_RI_IP_FRAG_MASK |
+					   MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_TCP_FRAG_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					   MVPP2_PRS_RI_L3_IP4_OPT |
+					   MVPP2_PRS_RI_IP_FRAG_TRUE |
+					   MVPP2_PRS_RI_L4_TCP,
+					   MVPP2_PRS_RI_VLAN_MASK |
+					   MVPP2_PRS_RI_L3_PROTO_MASK |
+					   MVPP2_PRS_RI_IP_FRAG_MASK |
+					   MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_TCP_FRAG_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					   MVPP2_PRS_RI_L3_IP4_OTHER |
+					   MVPP2_PRS_RI_IP_FRAG_TRUE |
+					   MVPP2_PRS_RI_L4_TCP,
+					   MVPP2_PRS_RI_VLAN_MASK |
+					   MVPP2_PRS_RI_L3_PROTO_MASK |
+					   MVPP2_PRS_RI_IP_FRAG_MASK |
+					   MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP4_UDP_FRAG_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					   MVPP2_PRS_RI_L3_IP4 |
+					   MVPP2_PRS_RI_IP_FRAG_TRUE |
+					   MVPP2_PRS_RI_L4_UDP,
+					   MVPP2_PRS_RI_VLAN_MASK |
+					   MVPP2_PRS_RI_L3_PROTO_MASK |
+					   MVPP2_PRS_RI_IP_FRAG_MASK |
+					   MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_UDP_FRAG_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					   MVPP2_PRS_RI_L3_IP4_OPT |
+					   MVPP2_PRS_RI_IP_FRAG_TRUE |
+					   MVPP2_PRS_RI_L4_UDP,
+					   MVPP2_PRS_RI_VLAN_MASK |
+					   MVPP2_PRS_RI_L3_PROTO_MASK |
+					   MVPP2_PRS_RI_IP_FRAG_MASK |
+					   MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_UDP_FRAG_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					   MVPP2_PRS_RI_L3_IP4_OTHER |
+					   MVPP2_PRS_RI_IP_FRAG_TRUE |
+					   MVPP2_PRS_RI_L4_UDP,
+					   MVPP2_PRS_RI_VLAN_MASK |
+					   MVPP2_PRS_RI_L3_PROTO_MASK |
+					   MVPP2_PRS_RI_IP_FRAG_MASK |
+					   MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP4_TCP_FRAG_TAG, {MVPP2_PRS_RI_L3_IP4 |
+					 MVPP2_PRS_RI_IP_FRAG_TRUE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_TCP_FRAG_TAG, {MVPP2_PRS_RI_L3_IP4_OPT |
+					 MVPP2_PRS_RI_IP_FRAG_TRUE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_TCP_FRAG_TAG, {MVPP2_PRS_RI_L3_IP4_OTHER |
+					 MVPP2_PRS_RI_IP_FRAG_TRUE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP4_UDP_FRAG_TAG, {MVPP2_PRS_RI_L3_IP4 |
+					 MVPP2_PRS_RI_IP_FRAG_TRUE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_UDP_FRAG_TAG,	{MVPP2_PRS_RI_L3_IP4_OPT |
+					 MVPP2_PRS_RI_IP_FRAG_TRUE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_UDP_FRAG_TAG,	{MVPP2_PRS_RI_L3_IP4_OTHER |
+					 MVPP2_PRS_RI_IP_FRAG_TRUE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP6_TCP_FRAG_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					   MVPP2_PRS_RI_L3_IP6 |
+					   MVPP2_PRS_RI_IP_FRAG_TRUE |
+					   MVPP2_PRS_RI_L4_TCP,
+					   MVPP2_PRS_RI_VLAN_MASK |
+					   MVPP2_PRS_RI_L3_PROTO_MASK |
+					   MVPP2_PRS_RI_IP_FRAG_MASK |
+					   MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP6_TCP_FRAG_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					   MVPP2_PRS_RI_L3_IP6_EXT |
+					   MVPP2_PRS_RI_IP_FRAG_TRUE |
+					   MVPP2_PRS_RI_L4_TCP,
+					   MVPP2_PRS_RI_VLAN_MASK |
+					   MVPP2_PRS_RI_L3_PROTO_MASK |
+					   MVPP2_PRS_RI_IP_FRAG_MASK |
+					   MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP6_UDP_FRAG_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					   MVPP2_PRS_RI_L3_IP6 |
+					   MVPP2_PRS_RI_IP_FRAG_TRUE |
+					   MVPP2_PRS_RI_L4_UDP,
+					   MVPP2_PRS_RI_VLAN_MASK |
+					   MVPP2_PRS_RI_L3_PROTO_MASK |
+					   MVPP2_PRS_RI_IP_FRAG_MASK |
+					   MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP6_UDP_FRAG_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+					   MVPP2_PRS_RI_L3_IP6_EXT |
+					   MVPP2_PRS_RI_IP_FRAG_TRUE |
+					   MVPP2_PRS_RI_L4_UDP,
+					   MVPP2_PRS_RI_VLAN_MASK |
+					   MVPP2_PRS_RI_L3_PROTO_MASK |
+					   MVPP2_PRS_RI_IP_FRAG_MASK |
+					   MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP6_TCP_FRAG_TAG,	{MVPP2_PRS_RI_L3_IP6 |
+					 MVPP2_PRS_RI_IP_FRAG_TRUE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP6_TCP_FRAG_TAG,	{MVPP2_PRS_RI_L3_IP6_EXT |
+					 MVPP2_PRS_RI_IP_FRAG_TRUE |
+					 MVPP2_PRS_RI_L4_TCP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP6_UDP_FRAG_TAG,	{MVPP2_PRS_RI_L3_IP6 |
+					 MVPP2_PRS_RI_IP_FRAG_TRUE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP6_UDP_FRAG_TAG, {MVPP2_PRS_RI_L3_IP6_EXT |
+					 MVPP2_PRS_RI_IP_FRAG_TRUE |
+					 MVPP2_PRS_RI_L4_UDP,
+					 MVPP2_PRS_RI_L3_PROTO_MASK |
+					 MVPP2_PRS_RI_IP_FRAG_MASK |
+					 MVPP2_PRS_RI_L4_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP4_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+				  MVPP2_PRS_RI_L3_IP4,
+				  MVPP2_PRS_RI_VLAN_MASK |
+				  MVPP2_PRS_RI_L3_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+				  MVPP2_PRS_RI_L3_IP4_OPT,
+				  MVPP2_PRS_RI_VLAN_MASK |
+				  MVPP2_PRS_RI_L3_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+				  MVPP2_PRS_RI_L3_IP4_OTHER,
+				  MVPP2_PRS_RI_VLAN_MASK |
+				  MVPP2_PRS_RI_L3_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP4_TAG, {MVPP2_PRS_RI_L3_IP4,
+				MVPP2_PRS_RI_L3_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_TAG, {MVPP2_PRS_RI_L3_IP4_OPT,
+				MVPP2_PRS_RI_L3_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP4_TAG, {MVPP2_PRS_RI_L3_IP4_OTHER,
+				MVPP2_PRS_RI_L3_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP6_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+				  MVPP2_PRS_RI_L3_IP6,
+				  MVPP2_PRS_RI_VLAN_MASK |
+				  MVPP2_PRS_RI_L3_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP6_UNTAG, {MVPP2_PRS_RI_VLAN_NONE |
+				  MVPP2_PRS_RI_L3_IP6_EXT,
+				  MVPP2_PRS_RI_VLAN_MASK |
+				  MVPP2_PRS_RI_L3_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_IP6_TAG, {MVPP2_PRS_RI_L3_IP6,
+				MVPP2_PRS_RI_L3_PROTO_MASK}},
+	{MVPP2_PRS_FL_IP6_TAG, {MVPP2_PRS_RI_L3_IP6_EXT,
+				MVPP2_PRS_RI_L3_PROTO_MASK}},
+
+	{MVPP2_PRS_FL_NON_IP_UNTAG, {MVPP2_PRS_RI_VLAN_NONE,
+				     MVPP2_PRS_RI_VLAN_MASK}},
+
+	{MVPP2_PRS_FL_NON_IP_TAG, {0,0}},
+};
+
+/* Array of bitmask to indicate flow id attribute */
+static int mvpp2_prs_flow_id_attr_tbl[MVPP2_PRS_FL_LAST];
+
 /* Update parser tcam and sram hw entries */
 static int mvpp2_prs_hw_write(struct mvpp2_hw *hw, struct mvpp2_prs_entry *pe)
 {
@@ -256,6 +598,38 @@ static void mvpp2_prs_tcam_data_byte_get(struct mvpp2_prs_entry *pe,
 {
 	*byte = pe->tcam.byte[MVPP2_PRS_TCAM_DATA_BYTE(offs)];
 	*enable = pe->tcam.byte[MVPP2_PRS_TCAM_DATA_BYTE_EN(offs)];
+}
+
+/* Set dword of data and its enable bits in tcam sw entry */
+static void mvpp2_prs_tcam_data_dword_set(struct mvpp2_prs_entry *pe,
+					 unsigned int offs, unsigned int word,
+					 unsigned int enable)
+{
+	int index, offset;
+	unsigned char byte, byteMask;
+
+	for (index = 0; index < 4; index++) {
+		offset = (offs * 4) + index;
+		byte = ((unsigned char *) &word)[index];
+		byteMask = ((unsigned char *) &enable)[index];
+		mvpp2_prs_tcam_data_byte_set(pe, offset, byte, byteMask);
+	}
+}
+
+/* Get dword of data and its enable bits from tcam sw entry */
+static void mvpp2_prs_tcam_data_dword_get(struct mvpp2_prs_entry *pe,
+					 unsigned int offs, unsigned int *word,
+					 unsigned int *enable)
+{
+	int index, offset;
+	unsigned char byte, mask;
+
+	for (index = 0; index < 4; index++) {
+		offset = (offs * 4) + index;
+		mvpp2_prs_tcam_data_byte_get(pe, offset,  &byte, &mask);
+		((unsigned char *) word)[index] = byte;
+		((unsigned char *) enable)[index] = mask;
+	}
 }
 
 /* Compare tcam data bytes with a pattern */
@@ -471,10 +845,11 @@ static void mvpp2_prs_sram_offset_set(struct mvpp2_prs_entry *pe,
 }
 
 /* Find parser flow entry */
-static struct mvpp2_prs_entry *mvpp2_prs_flow_find(struct mvpp2_hw *hw, int flow)
+static struct mvpp2_prs_entry *mvpp2_prs_flow_find(struct mvpp2_hw *hw, int flow, unsigned int ri, unsigned int ri_mask)
 {
 	struct mvpp2_prs_entry *pe;
 	int tid;
+	unsigned int dword, enable;
 
 	pe = kzalloc(sizeof(*pe), GFP_KERNEL);
 	if (!pe)
@@ -491,6 +866,12 @@ static struct mvpp2_prs_entry *mvpp2_prs_flow_find(struct mvpp2_hw *hw, int flow
 
 		pe->index = tid;
 		mvpp2_prs_hw_read(hw, pe);
+
+		/* Check result info, because there maybe several TCAM lines to generate the same flow */
+		mvpp2_prs_tcam_data_dword_get(pe, 0, &dword, &enable);
+		if ((dword != ri) || (enable != ri_mask))
+			continue;
+
 		bits = mvpp2_prs_sram_ai_get(pe);
 
 		/* Sram store classification lookup ID in AI bits [5:0] */
@@ -1050,7 +1431,7 @@ static int mvpp2_prs_ip4_proto(struct mvpp2_hw *hw, unsigned short proto,
 	    (proto != IPPROTO_IGMP))
 		return -EINVAL;
 
-	/* Fragmented packet */
+	/* Not fragmented packet */
 	tid = mvpp2_prs_tcam_first_free(hw, MVPP2_PE_FIRST_FREE_TID,
 					MVPP2_PE_LAST_FREE_TID);
 	if (tid < 0)
@@ -1069,9 +1450,11 @@ static int mvpp2_prs_ip4_proto(struct mvpp2_hw *hw, unsigned short proto,
 				  MVPP2_PRS_SRAM_OP_SEL_UDF_ADD);
 	mvpp2_prs_sram_ai_update(&pe, MVPP2_PRS_IPV4_DIP_AI_BIT,
 				 MVPP2_PRS_IPV4_DIP_AI_BIT);
-	mvpp2_prs_sram_ri_update(&pe, ri | MVPP2_PRS_RI_IP_FRAG_MASK,
+	mvpp2_prs_sram_ri_update(&pe, ri | MVPP2_PRS_RI_IP_FRAG_FALSE,
 				 ri_mask | MVPP2_PRS_RI_IP_FRAG_MASK);
 
+	mvpp2_prs_tcam_data_byte_set(&pe, 2, 0x00, MVPP2_PRS_TCAM_PROTO_MASK_L);
+	mvpp2_prs_tcam_data_byte_set(&pe, 3, 0x00, MVPP2_PRS_TCAM_PROTO_MASK);
 	mvpp2_prs_tcam_data_byte_set(&pe, 5, proto, MVPP2_PRS_TCAM_PROTO_MASK);
 	mvpp2_prs_tcam_ai_update(&pe, 0, MVPP2_PRS_IPV4_DIP_AI_BIT);
 	/* Unmask all ports */
@@ -1081,7 +1464,7 @@ static int mvpp2_prs_ip4_proto(struct mvpp2_hw *hw, unsigned short proto,
 	mvpp2_prs_shadow_set(hw, pe.index, MVPP2_PRS_LU_IP4);
 	mvpp2_prs_hw_write(hw, &pe);
 
-	/* Not fragmented packet */
+	/* Fragmented packet */
 	tid = mvpp2_prs_tcam_first_free(hw, MVPP2_PE_FIRST_FREE_TID,
 					MVPP2_PE_LAST_FREE_TID);
 	if (tid < 0)
@@ -1092,9 +1475,11 @@ static int mvpp2_prs_ip4_proto(struct mvpp2_hw *hw, unsigned short proto,
 	pe.sram.word[MVPP2_PRS_SRAM_RI_WORD] = 0x0;
 	pe.sram.word[MVPP2_PRS_SRAM_RI_CTRL_WORD] = 0x0;
 	mvpp2_prs_sram_ri_update(&pe, ri, ri_mask);
+	mvpp2_prs_sram_ri_update(&pe, ri | MVPP2_PRS_RI_IP_FRAG_TRUE,
+				 ri_mask | MVPP2_PRS_RI_IP_FRAG_MASK);
 
-	mvpp2_prs_tcam_data_byte_set(&pe, 2, 0x00, MVPP2_PRS_TCAM_PROTO_MASK_L);
-	mvpp2_prs_tcam_data_byte_set(&pe, 3, 0x00, MVPP2_PRS_TCAM_PROTO_MASK);
+	mvpp2_prs_tcam_data_byte_set(&pe, 2, 0x00, 0x0);
+	mvpp2_prs_tcam_data_byte_set(&pe, 3, 0x00, 0x0);
 
 	/* Update shadow table and hw entry */
 	mvpp2_prs_shadow_set(hw, pe.index, MVPP2_PRS_LU_IP4);
@@ -2284,7 +2669,7 @@ int mvpp2_prs_def_flow(struct mvpp2_port *port)
 	struct mvpp2_hw *hw = &(port->priv->hw);
 	int tid;
 
-	pe = mvpp2_prs_flow_find(hw, port->id);
+	pe = mvpp2_prs_flow_find(hw, port->id, 0, 0);
 
 	/* Such entry not exist */
 	if (!pe) {
@@ -2317,6 +2702,122 @@ int mvpp2_prs_def_flow(struct mvpp2_port *port)
 	return 0;
 }
 
+/* Set prs dedicated flow for the port */
+int mvpp2_prs_flow_id_gen(struct mvpp2_port *port, u32 flowId, u32 res, u32 resMask)
+{
+	struct mvpp2_prs_entry *pe;
+	struct mvpp2_hw *hw = &(port->priv->hw);
+	int tid;
+	unsigned int pmap = 0;
+
+	pe = mvpp2_prs_flow_find(hw, flowId, res, resMask);
+
+	/* Such entry not exist */
+	if (!pe) {
+		pe = kzalloc(sizeof(*pe), GFP_KERNEL);
+		if (!pe)
+			return -ENOMEM;
+
+		/* Go through the all entires from last to first */
+		tid = mvpp2_prs_tcam_first_free(hw,
+						MVPP2_PE_LAST_FREE_TID,
+					       MVPP2_PE_FIRST_FREE_TID);
+		if (tid < 0) {
+			kfree(pe);
+			return tid;
+		}
+
+		mvpp2_prs_tcam_lu_set(pe, MVPP2_PRS_LU_FLOWS);
+		pe->index = tid;
+
+		mvpp2_prs_sram_ai_update(pe, flowId, MVPP2_PRS_FLOW_ID_MASK);
+		mvpp2_prs_sram_bits_set(pe, MVPP2_PRS_SRAM_LU_DONE_BIT, 1);
+
+		/* Update shadow table */
+		mvpp2_prs_shadow_set(hw, pe->index, MVPP2_PRS_LU_FLOWS);
+
+		/*update result data and mask*/
+		mvpp2_prs_tcam_data_dword_set(pe, 0, res, resMask);
+	} else {
+		pmap = mvpp2_prs_tcam_port_map_get(pe);
+	}
+
+	mvpp2_prs_tcam_port_map_set(pe, (1 << port->id) | pmap);
+	mvpp2_prs_hw_write(hw, pe);
+	kfree(pe);
+
+	return 0;
+}
+
+int mvpp2_prs_flow_set(struct mvpp2_port *port)
+{
+	int index, ret;
+
+	for (index = 0; index < MVPP2_PRS_FL_TCAM_NUM; index++) {
+		ret = mvpp2_prs_flow_id_gen(port,
+					    mvpp2_prs_flow_id_array[index].flow_id,
+					    mvpp2_prs_flow_id_array[index].prs_result.ri,
+					    mvpp2_prs_flow_id_array[index].prs_result.ri_mask);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+static void mvpp2_prs_flow_id_attr_set(int flow_id, int ri, int ri_mask)
+{
+	int flow_attr = 0;
+
+	flow_attr |= MVPP2_PRS_FL_ATTR_VLAN_BIT;
+	if (ri_mask & MVPP2_PRS_RI_VLAN_MASK &&
+	    (ri & MVPP2_PRS_RI_VLAN_MASK) == MVPP2_PRS_RI_VLAN_NONE)
+		flow_attr &= ~MVPP2_PRS_FL_ATTR_VLAN_BIT;
+
+	if ((ri & MVPP2_PRS_RI_L3_PROTO_MASK) == MVPP2_PRS_RI_L3_IP4 ||
+	    (ri & MVPP2_PRS_RI_L3_PROTO_MASK) == MVPP2_PRS_RI_L3_IP4_OPT ||
+	    (ri & MVPP2_PRS_RI_L3_PROTO_MASK) == MVPP2_PRS_RI_L3_IP4_OTHER)
+		flow_attr |= MVPP2_PRS_FL_ATTR_IP4_BIT;
+
+	if ((ri & MVPP2_PRS_RI_L3_PROTO_MASK) == MVPP2_PRS_RI_L3_IP6 ||
+	    (ri & MVPP2_PRS_RI_L3_PROTO_MASK) == MVPP2_PRS_RI_L3_IP6_EXT)
+		flow_attr |= MVPP2_PRS_FL_ATTR_IP6_BIT;
+
+	if ((ri & MVPP2_PRS_RI_L3_PROTO_MASK) == MVPP2_PRS_RI_L3_ARP)
+		flow_attr |= MVPP2_PRS_FL_ATTR_ARP_BIT;
+
+	if (ri & MVPP2_PRS_RI_IP_FRAG_MASK)
+		flow_attr |= MVPP2_PRS_FL_ATTR_FRAG_BIT;
+
+	if ((ri & MVPP2_PRS_RI_L4_PROTO_MASK) == MVPP2_PRS_RI_L4_TCP)
+		flow_attr |= MVPP2_PRS_FL_ATTR_TCP_BIT;
+
+	if ((ri & MVPP2_PRS_RI_L4_PROTO_MASK) == MVPP2_PRS_RI_L4_UDP)
+		flow_attr |= MVPP2_PRS_FL_ATTR_UDP_BIT;
+
+	mvpp2_prs_flow_id_attr_tbl[flow_id] = flow_attr;
+}
+
+/* Init lookup id attribute array */
+void mvpp2_prs_flow_id_attr_init(void)
+{
+	int index;
+	u32 ri, ri_mask, flow_id;
+
+	for (index = 0; index < MVPP2_PRS_FL_TCAM_NUM; index++) {
+		ri = mvpp2_prs_flow_id_array[index].prs_result.ri;
+		ri_mask = mvpp2_prs_flow_id_array[index].prs_result.ri_mask;
+		flow_id = mvpp2_prs_flow_id_array[index].flow_id;
+
+		mvpp2_prs_flow_id_attr_set(flow_id, ri, ri_mask);
+	}
+}
+
+int mvpp2_prs_flow_id_attr_get(int flow_id)
+{
+	return mvpp2_prs_flow_id_attr_tbl[flow_id];
+}
+
 /* Classifier configuration routines */
 
 /* Update classification flow table registers */
@@ -2327,6 +2828,17 @@ static void mvpp2_cls_flow_write(struct mvpp2_hw *hw,
 	mvpp2_write(hw, MVPP2_CLS_FLOW_TBL0_REG,  fe->data[0]);
 	mvpp2_write(hw, MVPP2_CLS_FLOW_TBL1_REG,  fe->data[1]);
 	mvpp2_write(hw, MVPP2_CLS_FLOW_TBL2_REG,  fe->data[2]);
+}
+
+static void mvpp2_cls_flow_read(struct mvpp2_hw *hw, int index, struct mvpp2_cls_flow_entry *fe)
+{
+	fe->index = index;
+	/*write index*/
+	mvpp2_write(hw, MVPP2_CLS_FLOW_INDEX_REG, index);
+
+	fe->data[0] = mvpp2_read(hw, MVPP2_CLS_FLOW_TBL0_REG);
+	fe->data[1] = mvpp2_read(hw, MVPP2_CLS_FLOW_TBL1_REG);
+	fe->data[2] = mvpp2_read(hw, MVPP2_CLS_FLOW_TBL2_REG);
 }
 
 /* Update classification lookup table register */
@@ -2340,8 +2852,309 @@ static void mvpp2_cls_lookup_write(struct mvpp2_hw *hw,
 	mvpp2_write(hw, MVPP2_CLS_LKP_TBL_REG, le->data);
 }
 
+void mvpp2_cls_lookup_read(struct mvpp2_hw *hw, int lkpid, int way, struct mvpp2_cls_lookup_entry *le)
+{
+	unsigned int val = 0;
+
+	/* write index reg */
+	val = (way << MVPP2_CLS_LKP_INDEX_WAY_OFFS) | lkpid;
+	mvpp2_write(hw, MVPP2_CLS_LKP_INDEX_REG, val);
+	le->way = way;
+	le->lkpid = lkpid;
+	le->data = mvpp2_read(hw, MVPP2_CLS_LKP_TBL_REG);
+}
+
+/* Operations on flow entry */
+static void mvpp2_cls_sw_flow_hek_num_set(struct mvpp2_cls_flow_entry *fe, int num_of_fields)
+{
+	fe->data[1] &= ~MVPP2_FLOW_FIELDS_NUM_MASK;
+	fe->data[1] |= (num_of_fields << MVPP2_FLOW_FIELDS_NUM);
+}
+
+int mvpp2_cls_sw_flow_hek_set(struct mvpp2_cls_flow_entry *fe, int field_index, int field_id)
+{
+	int num_of_fields;
+
+	/* get current num_of_fields */
+	num_of_fields = ((fe->data[1] & MVPP2_FLOW_FIELDS_NUM_MASK) >> MVPP2_FLOW_FIELDS_NUM) ;
+
+	if (num_of_fields < (field_index+1)) {
+		printk("%s: number of heks = %d , index (%d) is out of range.\n", __func__, num_of_fields, field_index);
+		return -1;
+	}
+
+	fe->data[2] &= ~MVPP2_FLOW_FIELD_MASK(field_index);
+	fe->data[2] |= (field_id <<  MVPP2_FLOW_FIELD_ID(field_index));
+
+	return 0;
+}
+
+static void mvpp2_cls_sw_flow_eng_set(struct mvpp2_cls_flow_entry *fe, int engine, int is_last)
+{
+	fe->data[0] &= ~MVPP2_FLOW_LAST_MASK;
+	fe->data[0] &= ~MVPP2_FLOW_ENGINE_MASK;
+
+	fe->data[0] |= is_last;
+	fe->data[0] |= (engine << MVPP2_FLOW_ENGINE);
+	fe->data[0] |= MVPP2_FLOW_PORT_ID_SEL_MASK;
+}
+
+static void mvpp2_cls_sw_flow_extra_set(struct mvpp2_cls_flow_entry *fe, int type, int prio)
+{
+	fe->data[1] &= ~MVPP2_FLOW_LKP_TYPE_MASK;
+	fe->data[1] |= (type << MVPP2_FLOW_LKP_TYPE);
+
+	fe->data[1] &= ~MVPP2_FLOW_FIELD_PRIO_MASK;
+	fe->data[1] |= (prio << MVPP2_FLOW_FIELD_PRIO);
+}
+
+/* To init flow table waccording to different flow */
+static inline void mvpp2_cls_flow_cos(struct mvpp2_hw *hw, struct mvpp2_cls_flow_entry *fe, int lkpid, int cos_type)
+{
+	int hek_num, field_id, lkp_type, is_last;
+	int entry_idx = hw->cls_shadow->flow_free_start;
+
+	switch (cos_type) {
+	case MVPP2_COS_TYPE_VLAN:
+		lkp_type = MVPP2_CLS_LKP_VLAN_PRI;
+		break;
+	case MVPP2_COS_TYPE_DSCP:
+		lkp_type = MVPP2_CLS_LKP_DSCP_PRI;
+		break;
+	default:
+		lkp_type = MVPP2_CLS_LKP_DEFAULT;
+		break;
+	}
+	hek_num = 0;
+	if ((lkpid == MVPP2_PRS_FL_NON_IP_UNTAG &&  cos_type == MVPP2_COS_TYPE_DEF ) ||
+	    (lkpid == MVPP2_PRS_FL_NON_IP_TAG && cos_type == MVPP2_COS_TYPE_VLAN))
+		is_last = 1;
+	else
+		is_last = 0;
+
+	/* Set SW */
+	memset(fe, 0, sizeof(struct mvpp2_cls_flow_entry));
+	mvpp2_cls_sw_flow_hek_num_set(fe, hek_num);
+	if (hek_num)
+		mvpp2_cls_sw_flow_hek_set(fe, 0, field_id);
+	mvpp2_cls_sw_flow_eng_set(fe, MVPP2_CLS_ENGINE_C2, is_last);
+	mvpp2_cls_sw_flow_extra_set(fe, lkp_type, MVPP2_CLS_FL_COS_PRI);
+	fe->index = entry_idx;
+
+	/* Write HW */
+	mvpp2_cls_flow_write(hw, fe);
+
+	/* Update Shadow */
+	if (cos_type == MVPP2_COS_TYPE_DEF)
+		hw->cls_shadow->flow_info[lkpid - MVPP2_PRS_FL_START].flow_entry_dflt = entry_idx;
+	else if (cos_type == MVPP2_COS_TYPE_VLAN)
+		hw->cls_shadow->flow_info[lkpid - MVPP2_PRS_FL_START].flow_entry_vlan = entry_idx;
+	else
+		hw->cls_shadow->flow_info[lkpid - MVPP2_PRS_FL_START].flow_entry_dscp = entry_idx;
+
+	/* Update first available flow entry */
+	hw->cls_shadow->flow_free_start++;
+}
+
+/* Init flow entry for RSS hash in PP22 */
+static inline void mvpp2_cls_flow_rss_hash(struct mvpp2_hw *hw, struct mvpp2_cls_flow_entry *fe,
+						int lkpid, int rss_mode)
+{
+	int field_id[4];
+	int entry_idx = hw->cls_shadow->flow_free_start;
+
+	if ((lkpid >= MVPP2_PRS_FL_IP4_TCP_NF_UNTAG && lkpid <= MVPP2_PRS_FL_IP4_UDP_NF_TAG) ||
+	    (lkpid >= MVPP2_PRS_FL_IP4_TCP_FRAG_UNTAG && lkpid <= MVPP2_PRS_FL_IP4_UDP_FRAG_TAG) ||
+	    (lkpid >= MVPP2_PRS_FL_IP4_UNTAG && lkpid <= MVPP2_PRS_FL_IP4_TAG)) {
+		field_id[0] = MVPP2_CLS_FIELD_IP4SA;
+		field_id[1] = MVPP2_CLS_FIELD_IP4DA;
+	} else {
+		field_id[0] = MVPP2_CLS_FIELD_IP6SA;
+		field_id[1] = MVPP2_CLS_FIELD_IP6DA;
+	}
+	field_id[2] = MVPP2_CLS_FIELD_L4SIP;
+	field_id[3] = MVPP2_CLS_FIELD_L4DIP;
+
+	/* Set SW */
+	memset(fe, 0, sizeof(struct mvpp2_cls_flow_entry));
+	if (rss_mode == MVPP2_RSS_HASH_2T) {
+		mvpp2_cls_sw_flow_hek_num_set(fe, 2);
+		mvpp2_cls_sw_flow_eng_set(fe, MVPP2_CLS_ENGINE_C3HA, 1);
+		mvpp2_cls_sw_flow_hek_set(fe, 0, field_id[0]);
+		mvpp2_cls_sw_flow_hek_set(fe, 1, field_id[1]);
+	} else {
+		mvpp2_cls_sw_flow_hek_num_set(fe, 4);
+		mvpp2_cls_sw_flow_hek_set(fe, 0, field_id[0]);
+		mvpp2_cls_sw_flow_hek_set(fe, 1, field_id[1]);
+		mvpp2_cls_sw_flow_hek_set(fe, 2, field_id[2]);
+		mvpp2_cls_sw_flow_hek_set(fe, 3, field_id[3]);
+		mvpp2_cls_sw_flow_eng_set(fe, MVPP2_CLS_ENGINE_C3HB, 1);
+	}
+	mvpp2_cls_sw_flow_extra_set(fe, MVPP2_CLS_LKP_HASH, MVPP2_CLS_FL_RSS_PRI);
+	fe->index = entry_idx;
+
+	/* Update last for UDP NF flow */
+	if (lkpid == MVPP2_PRS_FL_IP4_UDP_NF_UNTAG ||
+	    lkpid == MVPP2_PRS_FL_IP4_UDP_NF_TAG ||
+	    lkpid == MVPP2_PRS_FL_IP6_UDP_NF_UNTAG ||
+	    lkpid == MVPP2_PRS_FL_IP6_UDP_NF_TAG) {
+		if (!hw->cls_shadow->flow_info[lkpid - MVPP2_PRS_FL_START].flow_entry_rss1) {
+			if (rss_mode == MVPP2_RSS_HASH_2T)
+				mvpp2_cls_sw_flow_eng_set(fe, MVPP2_CLS_ENGINE_C3HA, 0);
+			else
+				mvpp2_cls_sw_flow_eng_set(fe, MVPP2_CLS_ENGINE_C3HB, 0);
+		}
+	}
+
+	/* Write HW */
+	mvpp2_cls_flow_write(hw, fe);
+
+	/* Update Shadow */
+	if (hw->cls_shadow->flow_info[lkpid - MVPP2_PRS_FL_START].flow_entry_rss1 == 0)
+		hw->cls_shadow->flow_info[lkpid - MVPP2_PRS_FL_START].flow_entry_rss1 = entry_idx;
+	else
+		hw->cls_shadow->flow_info[lkpid - MVPP2_PRS_FL_START].flow_entry_rss2 = entry_idx;
+
+	/* Update first available flow entry */
+	hw->cls_shadow->flow_free_start++;
+}
+
+/* Init cls flow table according to different flow id */
+void mvpp2_cls_flow_tbl_config(struct mvpp2_hw *hw)
+{
+	int lkpid, rss_mode, lkpid_attr;
+	struct mvpp2_cls_flow_entry fe;
+
+	for (lkpid = MVPP2_PRS_FL_START; lkpid < MVPP2_PRS_FL_LAST; lkpid++) {
+		/* Get lookup id attribute */
+		lkpid_attr = mvpp2_prs_flow_id_attr_get(lkpid);
+		/* Default rss hash is based on 5T */
+		rss_mode = MVPP2_RSS_HASH_5T;
+		/* For frag packets or non-TCP&UDP, rss must be based on 2T */
+		if ((lkpid_attr & MVPP2_PRS_FL_ATTR_FRAG_BIT) ||
+		    !(lkpid_attr & (MVPP2_PRS_FL_ATTR_TCP_BIT | MVPP2_PRS_FL_ATTR_UDP_BIT)))
+			rss_mode = MVPP2_RSS_HASH_2T;
+
+		/* For untagged IP packets, only need default rule and dscp rule */
+		if ((lkpid_attr & (MVPP2_PRS_FL_ATTR_IP4_BIT | MVPP2_PRS_FL_ATTR_IP6_BIT)) &&
+		    (!(lkpid_attr & MVPP2_PRS_FL_ATTR_VLAN_BIT))) {
+			/* Default rule */
+			mvpp2_cls_flow_cos(hw, &fe, lkpid, MVPP2_COS_TYPE_DEF);
+			/* DSCP rule */
+			mvpp2_cls_flow_cos(hw, &fe, lkpid, MVPP2_COS_TYPE_DSCP);
+			/* RSS hash rule */
+			if ((!(lkpid_attr & MVPP2_PRS_FL_ATTR_FRAG_BIT)) &&
+			    (lkpid_attr & MVPP2_PRS_FL_ATTR_UDP_BIT)) {
+				/* RSS hash rules for UDP rss mode update */
+				mvpp2_cls_flow_rss_hash(hw, &fe, lkpid, MVPP2_RSS_HASH_2T);
+				mvpp2_cls_flow_rss_hash(hw, &fe, lkpid, MVPP2_RSS_HASH_5T);
+			} else {
+				mvpp2_cls_flow_rss_hash(hw, &fe, lkpid, rss_mode);
+			}
+		}
+
+		/* For tagged IP packets, only need vlan rule and dscp rule */
+		if ((lkpid_attr & (MVPP2_PRS_FL_ATTR_IP4_BIT | MVPP2_PRS_FL_ATTR_IP6_BIT)) &&
+		    (lkpid_attr & MVPP2_PRS_FL_ATTR_VLAN_BIT)) {
+			/* VLAN rule */
+			mvpp2_cls_flow_cos(hw, &fe, lkpid, MVPP2_COS_TYPE_VLAN);
+			/* DSCP rule */
+			mvpp2_cls_flow_cos(hw, &fe, lkpid, MVPP2_COS_TYPE_DSCP);
+			/* RSS hash rule */
+			if ((!(lkpid_attr & MVPP2_PRS_FL_ATTR_FRAG_BIT)) &&
+			    (lkpid_attr & MVPP2_PRS_FL_ATTR_UDP_BIT)) {
+				/* RSS hash rules for UDP rss mode update */
+				mvpp2_cls_flow_rss_hash(hw, &fe, lkpid, MVPP2_RSS_HASH_2T);
+				mvpp2_cls_flow_rss_hash(hw, &fe, lkpid, MVPP2_RSS_HASH_5T);
+			} else {
+				mvpp2_cls_flow_rss_hash(hw, &fe, lkpid, rss_mode);
+			}
+		}
+
+		/* For non-IP packets, only need default rule if untagged, vlan rule also needed if tagged  */
+		if (!(lkpid_attr & (MVPP2_PRS_FL_ATTR_IP4_BIT | MVPP2_PRS_FL_ATTR_IP6_BIT))) {
+			/* Default rule */
+			mvpp2_cls_flow_cos(hw, &fe, lkpid, MVPP2_COS_TYPE_DEF);
+			/* VLAN rule if tagged */
+			if (lkpid_attr & MVPP2_PRS_FL_ATTR_VLAN_BIT)
+				mvpp2_cls_flow_cos(hw, &fe, lkpid, MVPP2_COS_TYPE_VLAN);
+		}
+	}
+}
+
+static inline void mvpp2_cls_sw_lkp_rxq_set(struct mvpp2_cls_lookup_entry *le, int rxq)
+{
+	le->data &= ~MVPP2_FLOWID_RXQ_MASK;
+	le->data |= (rxq << MVPP2_FLOWID_RXQ);
+}
+
+static inline void mvpp2_cls_sw_lkp_en_set(struct mvpp2_cls_lookup_entry *le, int en)
+{
+	le->data &= ~MVPP2_FLOWID_EN_MASK;
+	le->data |= (en << MVPP2_FLOWID_EN);
+}
+
+static inline void mvpp2_cls_sw_lkp_flow_set(struct mvpp2_cls_lookup_entry *le, int flow_idx)
+{
+	le->data &= ~MVPP2_FLOWID_FLOW_MASK;
+	le->data |= (flow_idx << MVPP2_FLOWID_FLOW);
+}
+
+/* Update the flow index for flow of lkpid */
+void mvpp2_cls_lkp_flow_set(struct mvpp2_hw *hw, int lkpid, int way, int flow_idx)
+{
+	struct mvpp2_cls_lookup_entry le;
+
+	mvpp2_cls_lookup_read(hw, lkpid, way, &le);
+	mvpp2_cls_sw_lkp_flow_set(&le, flow_idx);
+	mvpp2_cls_lookup_write(hw, &le);
+}
+
+/* Init lookup decoding table with lookup id */
+void mvpp2_cls_lookup_tbl_config(struct mvpp2_hw *hw)
+{
+	int index, flow_idx;
+	int data[3];
+	struct mvpp2_cls_lookup_entry le;
+
+	memset(&le, 0, sizeof(struct mvpp2_cls_lookup_entry));
+	/* Enable classifier engine */
+	mvpp2_cls_sw_lkp_en_set(&le, 1);
+
+	for (index = 0; index < (MVPP2_PRS_FL_LAST - MVPP2_PRS_FL_START); index++) {
+		data[0] = MVPP2_FLOW_TBL_SIZE;
+		data[1] = MVPP2_FLOW_TBL_SIZE;
+		data[2] = MVPP2_FLOW_TBL_SIZE;
+		le.lkpid = hw->cls_shadow->flow_info[index].lkpid;
+		/* Find the min non-zero one in flow_entry_dflt, flow_entry_vlan, and flow_entry_dscp */
+		if (hw->cls_shadow->flow_info[index].flow_entry_dflt)
+			data[0] = hw->cls_shadow->flow_info[index].flow_entry_dflt;
+		if (hw->cls_shadow->flow_info[index].flow_entry_vlan)
+			data[1] = hw->cls_shadow->flow_info[index].flow_entry_vlan;
+		if (hw->cls_shadow->flow_info[index].flow_entry_dscp)
+			data[2] = hw->cls_shadow->flow_info[index].flow_entry_dscp;
+		flow_idx = min(data[0], min(data[1], data[2]));
+
+		/* Set flow pointer index */
+		mvpp2_cls_sw_lkp_flow_set(&le, flow_idx);
+
+		/* Set initial rx queue */
+		mvpp2_cls_sw_lkp_rxq_set(&le, 0x0);
+
+		le.way = 0;
+
+		/* Update lookup ID table entry */
+		mvpp2_cls_lookup_write(hw, &le);
+
+		le.way = 1;
+
+		/* Update lookup ID table entry */
+		mvpp2_cls_lookup_write(hw, &le);
+	}
+}
+
 /* Classifier default initialization */
-void mvpp2_cls_init(struct mvpp2_hw *hw)
+int mvpp2_cls_init(struct platform_device *pdev, struct mvpp2_hw *hw)
 {
 	struct mvpp2_cls_lookup_entry le;
 	struct mvpp2_cls_flow_entry fe;
@@ -2367,6 +3180,28 @@ void mvpp2_cls_init(struct mvpp2_hw *hw)
 		le.way = 1;
 		mvpp2_cls_lookup_write(hw, &le);
 	}
+
+	hw->cls_shadow = devm_kcalloc(&pdev->dev, 1, sizeof(struct mvpp2_cls_shadow), GFP_KERNEL);
+	if (!hw->cls_shadow)
+		return -ENOMEM;
+
+	hw->cls_shadow->flow_info = devm_kcalloc (&pdev->dev, (MVPP2_PRS_FL_LAST - MVPP2_PRS_FL_START),
+					sizeof(struct mvpp2_cls_flow_info),
+					GFP_KERNEL);
+	if (!hw->cls_shadow->flow_info)
+		return -ENOMEM;
+	/* Start from entry 1 to allocate flow table */
+	hw->cls_shadow->flow_free_start = 1;
+	for (index = 0; index < (MVPP2_PRS_FL_LAST - MVPP2_PRS_FL_START); index++)
+		hw->cls_shadow->flow_info[index].lkpid = index + MVPP2_PRS_FL_START;
+
+	/* Init flow table */
+	mvpp2_cls_flow_tbl_config(hw);
+
+	/* Init lookup table */
+	mvpp2_cls_lookup_tbl_config(hw);
+
+	return 0;
 }
 
 void mvpp2_cls_port_config(struct mvpp2_port *port)
@@ -2414,7 +3249,6 @@ void mvpp2_cls_oversize_rxq_set(struct mvpp2_port *port)
 	val |= MVPP2_CLS_SWFWD_PCTRL_MASK(port->id);
 	mvpp2_write(hw, MVPP2_CLS_SWFWD_PCTRL_REG, val);
 }
-
 
 void mvpp2_get_mac_address(struct mvpp2_port *port, unsigned char *addr)
 {
@@ -3541,7 +4375,7 @@ int mvpp2_cls_sw_flow_hek_get(struct mvpp2_cls_flow_entry *fe, int *num_of_field
 
 
 	for (index = 0; index < (*num_of_fields); index++)
-		field_ids[index] = ((fe->data[2] & MVPP2_FLOW_FIELED_MASK(index)) >>  MVPP2_FLOW_FIELED_ID(index));
+		field_ids[index] = ((fe->data[2] & MVPP2_FLOW_FIELD_MASK(index)) >>  MVPP2_FLOW_FIELD_ID(index));
 
 	return MV_OK;
 }
@@ -3582,7 +4416,7 @@ int mvpp2_cls_sw_flow_extra_get(struct mvpp2_cls_flow_entry *fe, int *type, int 
 	PTR_VALIDATE(prio);
 
 	*type = (fe->data[1] & MVPP2_FLOW_LKP_TYPE_MASK) >> MVPP2_FLOW_LKP_TYPE;
-	*prio = (fe->data[1] & MVPP2_FLOW_FIELED_PRIO_MASK) >> MVPP2_FLOW_FIELED_PRIO;
+	*prio = (fe->data[1] & MVPP2_FLOW_FIELD_PRIO_MASK) >> MVPP2_FLOW_FIELD_PRIO;
 
 	return MV_OK;
 }
@@ -4407,9 +5241,642 @@ int mvpp2_cls_c2_regs_dump(struct mvpp2_hw *hw)
 }
 EXPORT_SYMBOL(mvpp2_cls_c2_regs_dump);
 
+void mvpp2_cls_flow_port_add(struct mvpp2_hw *hw, int index, int port_id)
+{
+	u32 data;
 
+	/* Write flow index */
+	mvpp2_write(hw, MVPP2_CLS_FLOW_INDEX_REG, index);
+	/* Read first data with port info */
+	data = mvpp2_read(hw, MVPP2_CLS_FLOW_TBL0_REG);
+	/* Add the port */
+	data |= ((1 << port_id) << MVPP2_FLOW_PORT_ID);
+	/* Update the register */
+	mvpp2_write(hw, MVPP2_CLS_FLOW_TBL0_REG, data);
+}
 
+void mvpp2_cls_flow_port_del(struct mvpp2_hw *hw, int index, int port_id)
+{
+	u32 data;
 
+	/* Write flow index */
+	mvpp2_write(hw, MVPP2_CLS_FLOW_INDEX_REG, index);
+	/* Read first data with port info */
+	data = mvpp2_read(hw, MVPP2_CLS_FLOW_TBL0_REG);
+	/* Delete the port */
+	data &= ~(((1 << port_id) << MVPP2_FLOW_PORT_ID));
+	/* Update the register */
+	mvpp2_write(hw, MVPP2_CLS_FLOW_TBL0_REG, data);
+}
 
+/* The function prepare a temporary flow table for lkpid flow, in order to change the original one */
+void mvpp2_cls_flow_tbl_temp_copy(struct mvpp2_hw *hw, int lkpid, int *temp_flow_idx)
+{
+	struct mvpp2_cls_flow_entry fe;
+	int index = lkpid - MVPP2_PRS_FL_START;
+	int flow_start = hw->cls_shadow->flow_free_start;
 
+	if (hw->cls_shadow->flow_info[index].flow_entry_dflt) {
+		mvpp2_cls_flow_read(hw, hw->cls_shadow->flow_info[index].flow_entry_dflt, &fe);
+		fe.index = flow_start++;
+		mvpp2_cls_flow_write(hw, &fe);
+	}
+	if (hw->cls_shadow->flow_info[index].flow_entry_vlan) {
+		mvpp2_cls_flow_read(hw, hw->cls_shadow->flow_info[index].flow_entry_vlan, &fe);
+		fe.index = flow_start++;
+		mvpp2_cls_flow_write(hw, &fe);
+	}
+	if (hw->cls_shadow->flow_info[index].flow_entry_dscp) {
+		mvpp2_cls_flow_read(hw, hw->cls_shadow->flow_info[index].flow_entry_dscp, &fe);
+		fe.index = flow_start++;
+		mvpp2_cls_flow_write(hw, &fe);
+	}
+	if (hw->cls_shadow->flow_info[index].flow_entry_rss1) {
+		mvpp2_cls_flow_read(hw, hw->cls_shadow->flow_info[index].flow_entry_rss1, &fe);
+		fe.index = flow_start++;
+		mvpp2_cls_flow_write(hw, &fe);
+	}
+	if (hw->cls_shadow->flow_info[index].flow_entry_rss2) {
+		mvpp2_cls_flow_read(hw, hw->cls_shadow->flow_info[index].flow_entry_rss2, &fe);
+		fe.index = flow_start++;
+		mvpp2_cls_flow_write(hw, &fe);
+	}
+
+	*temp_flow_idx = hw->cls_shadow->flow_free_start;
+}
+
+/* C2 rule and Qos table */
+int mvpp2_cls_c2_hw_write(struct mvpp2_hw *hw, int index, struct mvpp2_cls_c2_entry *c2)
+{
+	int TcmIdx;
+
+	if (!c2 || index >= MVPP2_CLS_C2_TCAM_SIZE)
+		return -EINVAL;
+
+	c2->index = index;
+
+	/* write index reg */
+	mvpp2_write(hw, MVPP2_CLS2_TCAM_IDX_REG, index);
+
+	/* write valid bit*/
+	c2->inv = 0;
+	mvpp2_write(hw, MVPP2_CLS2_TCAM_INV_REG, ((c2->inv) << MVPP2_CLS2_TCAM_INV_INVALID_OFF));
+
+	for (TcmIdx = 0; TcmIdx < MVPP2_CLS_C2_TCAM_WORDS; TcmIdx++)
+		mvpp2_write(hw, MVPP2_CLS2_TCAM_DATA_REG(TcmIdx), c2->tcam.words[TcmIdx]);
+
+	/* write action_tbl CLSC2_ACT_DATA */
+	mvpp2_write(hw, MVPP2_CLS2_ACT_DATA_REG, c2->sram.regs.action_tbl);
+
+	/* write actions CLSC2_ACT */
+	mvpp2_write(hw, MVPP2_CLS2_ACT_REG, c2->sram.regs.actions);
+
+	/* write qos_attr CLSC2_ATTR0 */
+	mvpp2_write(hw, MVPP2_CLS2_ACT_QOS_ATTR_REG, c2->sram.regs.qos_attr);
+
+	/* write hwf_attr CLSC2_ATTR1 */
+	mvpp2_write(hw, MVPP2_CLS2_ACT_HWF_ATTR_REG, c2->sram.regs.hwf_attr);
+
+	/* write rss_attr CLSC2_ATTR2 */
+	mvpp2_write(hw, MVPP2_CLS2_ACT_DUP_ATTR_REG, c2->sram.regs.rss_attr);
+
+	return 0;
+}
+
+int mvpp2_cls_c2_qos_hw_write(struct mvpp2_hw *hw, struct mvpp2_cls_c2_qos_entry *qos)
+{
+	unsigned int regVal = 0;
+
+	if (!qos || qos->tbl_sel > MVPP2_QOS_TBL_SEL_DSCP)
+		return -EINVAL;
+
+	if (qos->tbl_sel == MVPP2_QOS_TBL_SEL_DSCP) {
+		/*dscp*/
+		if (qos->tbl_id >=  MVPP2_QOS_TBL_NUM_DSCP || qos->tbl_line >= MVPP2_QOS_TBL_LINE_NUM_DSCP)
+			return -EINVAL;
+	} else {
+		/*pri*/
+		if (qos->tbl_id >=  MVPP2_QOS_TBL_NUM_PRI || qos->tbl_line >= MVPP2_QOS_TBL_LINE_NUM_PRI)
+			return -EINVAL;
+	}
+	/* write index reg */
+	regVal |= (qos->tbl_line << MVPP2_CLS2_DSCP_PRI_INDEX_LINE_OFF);
+	regVal |= (qos->tbl_sel << MVPP2_CLS2_DSCP_PRI_INDEX_SEL_OFF);
+	regVal |= (qos->tbl_id << MVPP2_CLS2_DSCP_PRI_INDEX_TBL_ID_OFF);
+
+	mvpp2_write(hw, MVPP2_CLS2_DSCP_PRI_INDEX_REG, regVal);
+
+	/* write data reg*/
+	mvpp2_write(hw, MVPP2_CLS2_QOS_TBL_REG, qos->data);
+
+	return 0;
+}
+
+static void mvpp2_cls_c2_hw_inv_all(struct mvpp2_hw *hw)
+{
+	int index;
+
+	for (index = 0; index < MVPP2_CLS_C2_TCAM_SIZE; index++) {
+		/* write index reg */
+		mvpp2_write(hw, MVPP2_CLS2_TCAM_IDX_REG, index);
+
+		/* set invalid bit*/
+		mvpp2_write(hw, MVPP2_CLS2_TCAM_INV_REG, (1 << MVPP2_CLS2_TCAM_INV_INVALID_OFF));
+
+		/* trigger */
+		mvpp2_write(hw, MVPP2_CLS2_TCAM_DATA_REG(4), 0);
+	}
+}
+
+static void mvpp2_cls_c2_qos_hw_clear_all(struct mvpp2_hw *hw)
+{
+	struct mvpp2_cls_c2_qos_entry qos;
+
+	memset(&qos, 0, sizeof(struct mvpp2_cls_c2_qos_entry));
+
+	/* clear DSCP tables */
+	qos.tbl_sel = MVPP2_QOS_TBL_SEL_DSCP;
+	for (qos.tbl_id = 0; qos.tbl_id < MVPP2_QOS_TBL_NUM_DSCP; qos.tbl_id++)
+		for (qos.tbl_line = 0; qos.tbl_line < MVPP2_QOS_TBL_LINE_NUM_DSCP; qos.tbl_line++)
+			mvpp2_cls_c2_qos_hw_write(hw, &qos);
+
+	/* clear PRIO tables */
+	qos.tbl_sel = MVPP2_QOS_TBL_SEL_PRI;
+	for (qos.tbl_id = 0; qos.tbl_id < MVPP2_QOS_TBL_NUM_PRI; qos.tbl_id++)
+		for (qos.tbl_line = 0; qos.tbl_line < MVPP2_QOS_TBL_LINE_NUM_PRI; qos.tbl_line++)
+			mvpp2_cls_c2_qos_hw_write(hw, &qos);
+}
+
+static int mvpp2_cls_c2_qos_tbl_set(struct mvpp2_cls_c2_entry *c2, int tbl_id, int tbl_sel)
+{
+	if (!c2 || tbl_sel > 1)
+		return -EINVAL;
+
+	if (tbl_sel == 1) {
+		/*dscp*/
+		if (tbl_id >= MVPP2_QOS_TBL_NUM_DSCP)
+			return -EINVAL;
+	} else {
+		/*pri*/
+		if (tbl_id >= MVPP2_QOS_TBL_NUM_PRI)
+			return -EINVAL;
+	}
+	c2->sram.regs.action_tbl = (tbl_id << MVPP2_CLS2_ACT_DATA_TBL_ID_OFF) |
+				   (tbl_sel << MVPP2_CLS2_ACT_DATA_TBL_SEL_OFF);
+
+	return 0;
+}
+
+static int mvpp2_cls_c2_color_set(struct mvpp2_cls_c2_entry *c2, int cmd, int from)
+{
+	if (!c2 || cmd > MVPP2_COLOR_ACTION_TYPE_RED_LOCK)
+		return -EINVAL;
+
+	c2->sram.regs.actions &= ~MVPP2_CLS2_ACT_COLOR_MASK;
+	c2->sram.regs.actions |= (cmd << MVPP2_CLS2_ACT_COLOR_OFF);
+
+	if (from == 1)
+		c2->sram.regs.action_tbl |= (1 << MVPP2_CLS2_ACT_DATA_TBL_COLOR_OFF);
+	else
+		c2->sram.regs.action_tbl &= ~(1 << MVPP2_CLS2_ACT_DATA_TBL_COLOR_OFF);
+
+	return 0;
+}
+
+static int mvpp2_cls_c2_prio_set(struct mvpp2_cls_c2_entry *c2, int cmd, int prio, int from)
+{
+	if (!c2 || cmd > MVPP2_ACTION_TYPE_UPDT_LOCK || prio >= MVPP2_QOS_TBL_LINE_NUM_PRI)
+		return -EINVAL;
+
+	/*set command*/
+	c2->sram.regs.actions &= ~MVPP2_CLS2_ACT_PRI_MASK;
+	c2->sram.regs.actions |= (cmd << MVPP2_CLS2_ACT_PRI_OFF);
+
+	/*set modify priority value*/
+	c2->sram.regs.qos_attr &= ~MVPP2_CLS2_ACT_QOS_ATTR_PRI_MASK;
+	c2->sram.regs.qos_attr |= (prio << MVPP2_CLS2_ACT_QOS_ATTR_PRI_OFF);
+
+	if (from == 1)
+		c2->sram.regs.action_tbl |= (1 << MVPP2_CLS2_ACT_DATA_TBL_PRI_DSCP_OFF);
+	else
+		c2->sram.regs.action_tbl &= ~(1 << MVPP2_CLS2_ACT_DATA_TBL_PRI_DSCP_OFF);
+
+	return 0;
+}
+
+static int mvpp2_cls_c2_dscp_set(struct mvpp2_cls_c2_entry *c2, int cmd, int dscp, int from)
+{
+	if (!c2 || cmd > MVPP2_ACTION_TYPE_UPDT_LOCK || dscp >= MVPP2_QOS_TBL_LINE_NUM_DSCP)
+		return -EINVAL;
+
+	/*set command*/
+	c2->sram.regs.actions &= ~MVPP2_CLS2_ACT_DSCP_MASK;
+	c2->sram.regs.actions |= (cmd << MVPP2_CLS2_ACT_DSCP_OFF);
+
+	/*set modify DSCP value*/
+	c2->sram.regs.qos_attr &= ~MVPP2_CLS2_ACT_QOS_ATTR_DSCP_MASK;
+	c2->sram.regs.qos_attr |= (dscp << MVPP2_CLS2_ACT_QOS_ATTR_DSCP_OFF);
+
+	if (from == 1)
+		c2->sram.regs.action_tbl |= (1 << MVPP2_CLS2_ACT_DATA_TBL_PRI_DSCP_OFF);
+	else
+		c2->sram.regs.action_tbl &= ~(1 << MVPP2_CLS2_ACT_DATA_TBL_PRI_DSCP_OFF);
+
+	return 0;
+}
+
+static int mvpp2_cls_c2_queue_low_set(struct mvpp2_cls_c2_entry *c2, int cmd, int queue, int from)
+{
+	if (!c2 || cmd > MVPP2_ACTION_TYPE_UPDT_LOCK || queue >= (1 << MVPP2_CLS2_ACT_QOS_ATTR_QL_BITS))
+		return -EINVAL;
+
+	/*set command*/
+	c2->sram.regs.actions &= ~MVPP2_CLS2_ACT_QL_MASK;
+	c2->sram.regs.actions |= (cmd << MVPP2_CLS2_ACT_QL_OFF);
+
+	/*set modify High queue value*/
+	c2->sram.regs.qos_attr &= ~MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK;
+	c2->sram.regs.qos_attr |= (queue << MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF);
+
+	if (from == 1)
+		c2->sram.regs.action_tbl |= (1 << MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_OFF);
+	else
+		c2->sram.regs.action_tbl &= ~(1 << MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_OFF);
+
+	return 0;
+}
+
+static int mvpp2_cls_c2_queue_high_set(struct mvpp2_cls_c2_entry *c2, int cmd, int queue, int from)
+{
+	if (!c2 || cmd > MVPP2_ACTION_TYPE_UPDT_LOCK || queue >= (1 << MVPP2_CLS2_ACT_QOS_ATTR_QH_BITS))
+		return -EINVAL;
+
+	/*set command*/
+	c2->sram.regs.actions &= ~MVPP2_CLS2_ACT_QH_MASK;
+	c2->sram.regs.actions |= (cmd << MVPP2_CLS2_ACT_QH_OFF);
+
+	/*set modify High queue value*/
+	c2->sram.regs.qos_attr &= ~MVPP2_CLS2_ACT_QOS_ATTR_QH_MASK;
+	c2->sram.regs.qos_attr |= (queue << MVPP2_CLS2_ACT_QOS_ATTR_QH_OFF);
+
+	if (from == 1)
+		c2->sram.regs.action_tbl |= (1 << MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_OFF);
+	else
+		c2->sram.regs.action_tbl &= ~(1 << MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_OFF);
+
+	return 0;
+}
+
+static int mvpp2_cls_c2_forward_set(struct mvpp2_cls_c2_entry *c2, int cmd)
+{
+	if (!c2 || cmd > MVPP2_ACTION_TYPE_UPDT_LOCK)
+		return -EINVAL;
+
+	c2->sram.regs.actions &= ~MVPP2_CLS2_ACT_FRWD_MASK;
+	c2->sram.regs.actions |= (cmd << MVPP2_CLS2_ACT_FRWD_OFF);
+
+	return 0;
+}
+
+static int mvpp2_cls_c2_rss_set(struct mvpp2_cls_c2_entry *c2, int cmd, int rss_en)
+{
+	if (!c2 || cmd > MVPP2_ACTION_TYPE_UPDT_LOCK || rss_en >= (1 << MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_BITS))
+		return -EINVAL;
+
+	c2->sram.regs.actions &= ~MVPP2_CLS2_ACT_RSS_MASK;
+	c2->sram.regs.actions |= (cmd << MVPP2_CLS2_ACT_RSS_OFF);
+
+	c2->sram.regs.rss_attr &= ~MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_MASK;
+	c2->sram.regs.rss_attr |= (rss_en << MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_OFF);
+
+	return 0;
+}
+
+static int mvpp2_cls_c2_flow_id_en(struct mvpp2_cls_c2_entry *c2, int flowid_en)
+{
+	if (!c2)
+		return -EINVAL;
+
+	/*set Flow ID enable or disable*/
+	if (flowid_en)
+		c2->sram.regs.actions |= (1 << MVPP2_CLS2_ACT_FLD_EN_OFF);
+	else
+		c2->sram.regs.actions &= ~(1 << MVPP2_CLS2_ACT_FLD_EN_OFF);
+
+	return 0;
+}
+
+static int mvpp2_cls_c2_tcam_byte_set(struct mvpp2_cls_c2_entry *c2, unsigned int offs,
+					unsigned char byte, unsigned char enable)
+{
+	if (!c2 || offs >= MVPP2_CLS_C2_TCAM_DATA_BYTES)
+		return -EINVAL;
+
+	c2->tcam.bytes[MVPP2_CLS_C2_TCAM_DATA_BYTE(offs)] = byte;
+	c2->tcam.bytes[MVPP2_CLS_C2_TCAM_DATA_BYTE_EN(offs)] = enable;
+
+	return 0;
+}
+
+static int mvpp2_cls_c2_qos_queue_set(struct mvpp2_cls_c2_qos_entry *qos, int queue)
+{
+	if (!qos || queue >= (1 << MVPP2_CLS2_QOS_TBL_QUEUENUM_BITS))
+		return -EINVAL;
+
+	qos->data &= ~MVPP2_CLS2_QOS_TBL_QUEUENUM_MASK;
+	qos->data |= (queue << MVPP2_CLS2_QOS_TBL_QUEUENUM_OFF);
+	return 0;
+}
+
+static int mvpp2_c2_tcam_set(struct mvpp2_hw *hw, struct mvpp2_c2_add_entry *c2_add_entry, unsigned int c2_hw_idx)
+{
+	int ret_code;
+	struct mvpp2_cls_c2_entry c2_entry;
+	int hek_offs;
+	unsigned char hek_byte[MVPP2_CLS_C2_HEK_OFF_MAX], hek_byte_mask[MVPP2_CLS_C2_HEK_OFF_MAX];
+
+	if (!c2_add_entry || !hw || c2_hw_idx >= MVPP2_CLS_C2_TCAM_SIZE)
+		return -EINVAL;
+
+	/* Clear C2 sw data */
+	memset(&c2_entry, 0, sizeof(struct mvpp2_cls_c2_entry));
+
+	/* Set QOS table, selection and ID */
+	ret_code = mvpp2_cls_c2_qos_tbl_set(&c2_entry,
+					    c2_add_entry->qos_info.qos_tbl_index,
+					    c2_add_entry->qos_info.qos_tbl_type);
+	if (ret_code)
+		return ret_code;
+
+	/* Set color, cmd and source */
+	ret_code = mvpp2_cls_c2_color_set(&c2_entry,
+					  c2_add_entry->action.color_act,
+					  c2_add_entry->qos_info.color_src);
+	if (ret_code)
+		return ret_code;
+
+	/* Set priority(pbit), cmd, value(not from qos table) and source */
+	ret_code = mvpp2_cls_c2_prio_set(&c2_entry,
+					 c2_add_entry->action.pri_act,
+					 c2_add_entry->qos_value.pri,
+					 c2_add_entry->qos_info.pri_dscp_src);
+	if (ret_code)
+		return ret_code;
+
+	/* Set DSCP, cmd, value(not from qos table) and source */
+	ret_code = mvpp2_cls_c2_dscp_set(&c2_entry,
+					 c2_add_entry->action.dscp_act,
+					 c2_add_entry->qos_value.dscp,
+					 c2_add_entry->qos_info.pri_dscp_src);
+	if (ret_code)
+		return ret_code;
+
+	/* Set queue low, cmd, value, and source */
+	ret_code = mvpp2_cls_c2_queue_low_set(&c2_entry,
+					      c2_add_entry->action.q_low_act,
+					      c2_add_entry->qos_value.q_low,
+					      c2_add_entry->qos_info.q_low_src);
+	if (ret_code)
+		return ret_code;
+
+	/* Set queue high, cmd, value and source */
+	ret_code = mvpp2_cls_c2_queue_high_set(&c2_entry,
+					       c2_add_entry->action.q_high_act,
+					       c2_add_entry->qos_value.q_high,
+					       c2_add_entry->qos_info.q_high_src);
+	if (ret_code)
+		return ret_code;
+
+	/* Set forward */
+	ret_code = mvpp2_cls_c2_forward_set(&c2_entry,
+					    c2_add_entry->action.frwd_act);
+	if (ret_code)
+		return ret_code;
+
+	/* Set RSS */
+	ret_code = mvpp2_cls_c2_rss_set(&c2_entry,
+					c2_add_entry->action.rss_act,
+					c2_add_entry->rss_en);
+	if (ret_code)
+		return ret_code;
+
+	/* Set flowID(not for multicast) */
+	ret_code = mvpp2_cls_c2_flow_id_en(&c2_entry,
+					   c2_add_entry->action.flowid_act);
+	if (ret_code)
+		return ret_code;
+
+	/* Set C2 HEK */
+	memset(hek_byte, 0, MVPP2_CLS_C2_HEK_OFF_MAX);
+	memset(hek_byte_mask, 0, MVPP2_CLS_C2_HEK_OFF_MAX);
+
+	/* HEK offs 8, lookup type, port type */
+	hek_byte[MVPP2_CLS_C2_HEK_OFF_LKP_PORT_TYPE] =
+						(c2_add_entry->port.port_type << MVPP2_CLS_C2_HEK_PORT_TYPE_OFFS) |
+						(c2_add_entry->lkp_type << MVPP2_CLS_C2_HEK_LKP_TYPE_OFFS);
+	hek_byte_mask[MVPP2_CLS_C2_HEK_OFF_LKP_PORT_TYPE] = MVPP2_CLS_C2_HEK_PORT_TYPE_MASK |
+						 ((c2_add_entry->lkp_type_mask << MVPP2_CLS_C2_HEK_LKP_TYPE_OFFS) &
+						 MVPP2_CLS_C2_HEK_LKP_TYPE_MASK);
+	/* HEK offs 9, port ID */
+	hek_byte[MVPP2_CLS_C2_HEK_OFF_PORT_ID] = c2_add_entry->port.port_value;
+	hek_byte_mask[MVPP2_CLS_C2_HEK_OFF_PORT_ID] = c2_add_entry->port.port_mask;
+
+	for (hek_offs = MVPP2_CLS_C2_HEK_OFF_PORT_ID; hek_offs >= MVPP2_CLS_C2_HEK_OFF_BYTE0; hek_offs--) {
+		ret_code = mvpp2_cls_c2_tcam_byte_set(&c2_entry,
+						      hek_offs,
+						      hek_byte[hek_offs],
+						      hek_byte_mask[hek_offs]);
+		if (ret_code)
+			return ret_code;
+	}
+
+	/* Write C2 entry data to HW */
+	ret_code = mvpp2_cls_c2_hw_write(hw, c2_hw_idx, &c2_entry);
+	if (ret_code)
+		return ret_code;
+
+	return 0;
+}
+
+/* C2 TCAM init */
+int mvpp2_c2_init(struct platform_device *pdev, struct mvpp2_hw *hw)
+{
+	int i;
+
+	/* Invalid all C2 and QoS entries */
+	mvpp2_cls_c2_hw_inv_all(hw);
+	mvpp2_cls_c2_qos_hw_clear_all(hw);
+
+	/* Set CLSC2_TCAM_CTRL to enable C2, or C2 does not work */
+	mvpp2_write(hw, MVPP2_CLS2_TCAM_CTRL_REG, MVPP2_CLS2_TCAM_CTRL_EN_MASK);
+
+	/* Allocate mem for c2 shadow */
+	hw->c2_shadow = devm_kcalloc(&pdev->dev, 1, sizeof(struct mvpp2_c2_shadow), GFP_KERNEL);
+	if (!hw->c2_shadow)
+		return -ENOMEM;
+
+	/* Init the rule idx to invalid value */
+	for (i = 0; i < 8; i++) {
+		hw->c2_shadow->rule_idx_info[i].vlan_pri_idx = MVPP2_CLS_C2_TCAM_SIZE;
+		hw->c2_shadow->rule_idx_info[i].dscp_pri_idx = MVPP2_CLS_C2_TCAM_SIZE;
+		hw->c2_shadow->rule_idx_info[i].default_rule_idx = MVPP2_CLS_C2_TCAM_SIZE;
+	}
+	hw->c2_shadow->c2_tcam_free_start = 0;
+
+	return 0;
+}
+
+static int mvpp2_c2_rule_add(struct mvpp2_port *port, struct mvpp2_c2_add_entry *c2_add_entry)
+{
+	int ret, lkp_type, c2_index = 0;
+	bool first_free_update = false;
+
+	if (!port || !c2_add_entry)
+		return -EINVAL;
+
+	lkp_type = c2_add_entry->lkp_type;
+	/* Write rule in C2 TCAM */
+	if (lkp_type == MVPP2_CLS_LKP_VLAN_PRI) {
+		if (port->priv->hw.c2_shadow->rule_idx_info[port->id].vlan_pri_idx == MVPP2_CLS_C2_TCAM_SIZE) {
+			/* If the C2 rule is new, apply a free c2 rule index */
+			c2_index = port->priv->hw.c2_shadow->c2_tcam_free_start;
+			first_free_update = true;
+		} else {
+			/* If the C2 rule is exist one, take the C2 index from shadow */
+			c2_index = port->priv->hw.c2_shadow->rule_idx_info[port->id].vlan_pri_idx;
+			first_free_update = false;
+		}
+	} else if (lkp_type == MVPP2_CLS_LKP_DSCP_PRI) {
+		if (port->priv->hw.c2_shadow->rule_idx_info[port->id].dscp_pri_idx == MVPP2_CLS_C2_TCAM_SIZE) {
+			c2_index = port->priv->hw.c2_shadow->c2_tcam_free_start;
+			first_free_update = true;
+		} else {
+			c2_index = port->priv->hw.c2_shadow->rule_idx_info[port->id].dscp_pri_idx;
+			first_free_update = false;
+		}
+	} else if (lkp_type == MVPP2_CLS_LKP_DEFAULT) {
+		if (port->priv->hw.c2_shadow->rule_idx_info[port->id].default_rule_idx ==
+										MVPP2_CLS_C2_TCAM_SIZE) {
+			c2_index = port->priv->hw.c2_shadow->c2_tcam_free_start;
+			first_free_update = true;
+		} else {
+			c2_index = port->priv->hw.c2_shadow->rule_idx_info[port->id].default_rule_idx;
+			first_free_update = false;
+		}
+	} else {
+		return -EINVAL;
+	}
+
+	/* Write C2 TCAM HW */
+	ret = mvpp2_c2_tcam_set(&port->priv->hw, c2_add_entry, c2_index);
+	if (ret)
+		return ret;
+
+	/* Update first free rule */
+	if (first_free_update)
+		port->priv->hw.c2_shadow->c2_tcam_free_start++;
+
+	/* Update shadow */
+	if (lkp_type == MVPP2_CLS_LKP_VLAN_PRI)
+		port->priv->hw.c2_shadow->rule_idx_info[port->id].vlan_pri_idx = c2_index;
+	else if (lkp_type == MVPP2_CLS_LKP_DSCP_PRI)
+		port->priv->hw.c2_shadow->rule_idx_info[port->id].dscp_pri_idx = c2_index;
+	else if (lkp_type == MVPP2_CLS_LKP_DEFAULT)
+		port->priv->hw.c2_shadow->rule_idx_info[port->id].default_rule_idx = c2_index;
+
+	return 0;
+}
+
+/* C2 rule set */
+int mvpp2_cls_c2_rule_set(struct mvpp2_port *port)
+{
+	int ret, cos_value, cos_queue, lkp_type, vlan_pri, dscp_pri;
+	struct mvpp2_c2_add_entry c2_init_entry;
+	struct mvpp2_cls_c2_qos_entry qos_entry;
+
+	/* QoS of pbit rule */
+	for (lkp_type = MVPP2_CLS_LKP_VLAN_PRI; lkp_type <= MVPP2_CLS_LKP_DEFAULT; lkp_type++) {
+		memset(&c2_init_entry, 0, sizeof(struct mvpp2_c2_add_entry));
+		memset(&qos_entry, 0, sizeof(struct mvpp2_cls_c2_qos_entry));
+
+		/* Port info */
+		c2_init_entry.port.port_type = MVPP2_SRC_PORT_TYPE_PHY;
+		c2_init_entry.port.port_value = (1 << port->id);
+		c2_init_entry.port.port_mask = 0xff;
+
+		/* Lookup type */
+		c2_init_entry.lkp_type = lkp_type;
+		c2_init_entry.lkp_type_mask = 0x3F;
+
+		/* QoS info */
+		if (lkp_type != MVPP2_CLS_LKP_DEFAULT) {
+			/* QoS info from C2 QoS table */
+			if (lkp_type == MVPP2_CLS_LKP_VLAN_PRI)
+				c2_init_entry.qos_info.qos_tbl_type = MVPP2_QOS_TBL_SEL_PRI;
+			else if (lkp_type == MVPP2_CLS_LKP_DSCP_PRI)
+				c2_init_entry.qos_info.qos_tbl_type = MVPP2_QOS_TBL_SEL_DSCP;
+			/* Set the QoS table index equal to port ID */
+			c2_init_entry.qos_info.qos_tbl_index = port->id;
+			c2_init_entry.qos_info.q_low_src = MVPP2_QOS_SRC_DSCP_PBIT_TBL;
+		} else {
+			/* QoS info from C2 action table */
+			c2_init_entry.qos_info.q_low_src = MVPP2_QOS_SRC_ACTION_TBL;
+			cos_value = port->priv->pp2_cfg.cos_cfg.default_cos;
+			c2_init_entry.qos_value.q_low = (port->priv->pp2_cfg.cos_cfg.pri_map >> (cos_value * 4)) & 0x7;
+		}
+
+		/* Action info */
+		c2_init_entry.action.color_act = MVPP2_COLOR_ACTION_TYPE_NO_UPDT_LOCK;
+		c2_init_entry.action.pri_act =	MVPP2_ACTION_TYPE_NO_UPDT_LOCK;
+		c2_init_entry.action.dscp_act = MVPP2_ACTION_TYPE_NO_UPDT_LOCK;
+		c2_init_entry.action.q_low_act = MVPP2_ACTION_TYPE_UPDT_LOCK;
+		/* Queue High always comes from action table */
+		c2_init_entry.qos_info.q_high_src = MVPP2_QOS_SRC_ACTION_TBL;
+		/* Queue high(5 bits) contains 2 parts: port ID and CPU ID, CPU ID will be used in RSS */
+		c2_init_entry.qos_value.q_high = port->id;
+		c2_init_entry.action.q_high_act = MVPP2_ACTION_TYPE_UPDT_LOCK;
+		if (port->priv->pp2_version == PPV22)
+			c2_init_entry.action.rss_act = MVPP2_ACTION_TYPE_UPDT_LOCK;
+		/* To CPU */
+		c2_init_entry.action.frwd_act = MVPP2_FRWD_ACTION_TYPE_SWF_LOCK;
+
+		/* CoS queue, corresponding to queue low(3 bits), from pbit table */
+		qos_entry.tbl_id = c2_init_entry.qos_info.qos_tbl_index;
+		if (c2_init_entry.qos_info.qos_tbl_type == MVPP2_QOS_TBL_SEL_PRI) {
+			qos_entry.tbl_sel = MVPP2_QOS_TBL_SEL_PRI;
+			/* Fill the QoS pbit table */
+			for (vlan_pri = 0; vlan_pri < MVPP2_QOS_TBL_LINE_NUM_PRI; vlan_pri++) {
+				/* cos_value equal to vlan pri */
+				cos_value = vlan_pri;
+				/* nibble index of pri_map indicates a cos value, nibble value is the queue */
+				cos_queue = (port->priv->pp2_cfg.cos_cfg.pri_map >> (cos_value * 4)) & 0x7;
+				qos_entry.tbl_line = vlan_pri;
+				mvpp2_cls_c2_qos_queue_set(&qos_entry, cos_queue);
+				mvpp2_cls_c2_qos_hw_write(&port->priv->hw, &qos_entry);
+			}
+		} else if (c2_init_entry.qos_info.qos_tbl_type == MVPP2_QOS_TBL_SEL_DSCP) {
+			qos_entry.tbl_sel = MVPP2_QOS_TBL_SEL_DSCP;
+			/* Fill the QoS dscp table */
+			for (dscp_pri = 0; dscp_pri < MVPP2_QOS_TBL_LINE_NUM_DSCP; dscp_pri++) {
+				/* cos_value equal to dscp/8 */
+				cos_value = dscp_pri / 8;
+				/* each nibble of pri_map stands for a cos-value, value of nibble is the queue */
+				cos_queue = (port->priv->pp2_cfg.cos_cfg.pri_map >> (cos_value * 4)) & 0x7;
+				qos_entry.tbl_line = dscp_pri;
+				mvpp2_cls_c2_qos_queue_set(&qos_entry, cos_queue);
+				mvpp2_cls_c2_qos_hw_write(&port->priv->hw, &qos_entry);
+			}
+		}
+
+		/* RSS En in PP22 */
+		c2_init_entry.rss_en = port->priv->pp2_cfg.rss_cfg.rss_en;
+
+		/* Add rule to C2 TCAM */
+		ret = mvpp2_c2_rule_add(port, &c2_init_entry);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
 

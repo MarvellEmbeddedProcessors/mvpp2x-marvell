@@ -101,7 +101,7 @@ module_param(default_cpu, byte, S_IRUGO);
 MODULE_PARM_DESC(default_cpu, "Set default CPU for non RSS frames");
 
 module_param(cos_classifer, bool, S_IRUGO);
-MODULE_PARM_DESC(cos_classifer, "Cos Classifier (vlan_pri=0, dscp=1)");
+MODULE_PARM_DESC(cos_classifer, "Cos Classifier (vlan_pri=0, dscp=1, vlan_dscp=2, dscp_vlan=3)");
 
 module_param(pri_map, uint, S_IRUGO);
 MODULE_PARM_DESC(pri_map, "Set priority_map, nibble for each cos.");
@@ -1316,8 +1316,162 @@ static enum hrtimer_restart mvpp2_hr_timer_cb(struct hrtimer *timer)
 	return HRTIMER_NORESTART;
 }
 
+/* CoS API */
 
+/* mvpp2_cos_classifier_set
+*  -- The API supplies interface to config cos classifier:
+*     0: cos based on vlan pri;
+*     1: cos based on dscp;
+*     2: cos based on vlan for tagged packets, and based on dscp for untagged IP packets;
+*     3: cos based on dscp for IP packets, and based on vlan for non-IP packets;
+*/
+int mvpp2_cos_classifier_set(struct mvpp2_port *port, enum mvpp2_cos_classifier cos_mode)
+{
+	int index, flow_idx, lkpid;
+	int data[3];
+	struct mvpp2_hw *hw = &(port->priv->hw);
 
+	for (index = 0; index < (MVPP2_PRS_FL_LAST - MVPP2_PRS_FL_START); index++) {
+		data[0] = MVPP2_FLOW_TBL_SIZE;
+		data[1] = MVPP2_FLOW_TBL_SIZE;
+		data[2] = MVPP2_FLOW_TBL_SIZE;
+		lkpid = index + MVPP2_PRS_FL_START;
+		/* Prepare a temp table for the lkpid */
+		mvpp2_cls_flow_tbl_temp_copy(hw, lkpid, &flow_idx);
+		/* Update lookup table to temp flow table */
+		mvpp2_cls_lkp_flow_set(hw, lkpid, 0, flow_idx);
+		mvpp2_cls_lkp_flow_set(hw, lkpid, 1, flow_idx);
+		/* Update original flow table */
+		/* First, remove the port from original table */
+		if (hw->cls_shadow->flow_info[index].flow_entry_dflt) {
+			mvpp2_cls_flow_port_del(hw,
+						hw->cls_shadow->flow_info[index].flow_entry_dflt,
+						port->id);
+			data[0] = hw->cls_shadow->flow_info[index].flow_entry_dflt;
+		}
+		if (hw->cls_shadow->flow_info[index].flow_entry_vlan) {
+			mvpp2_cls_flow_port_del(hw,
+						hw->cls_shadow->flow_info[index].flow_entry_vlan,
+						port->id);
+			data[1] = hw->cls_shadow->flow_info[index].flow_entry_vlan;
+		}
+		if (hw->cls_shadow->flow_info[index].flow_entry_dscp) {
+			mvpp2_cls_flow_port_del(hw,
+						hw->cls_shadow->flow_info[index].flow_entry_dscp,
+						port->id);
+			data[2] = hw->cls_shadow->flow_info[index].flow_entry_dscp;
+		}
+
+		/* Second, update the port in original table */
+		if (mvpp2_prs_flow_id_attr_get(lkpid) & MVPP2_PRS_FL_ATTR_VLAN_BIT) {
+			if (cos_mode == MVPP2_COS_CLS_VLAN ||
+			    cos_mode == MVPP2_COS_CLS_VLAN_DSCP ||
+			    (cos_mode == MVPP2_COS_CLS_DSCP_VLAN && lkpid == MVPP2_PRS_FL_NON_IP_TAG))
+				mvpp2_cls_flow_port_add(hw,
+							hw->cls_shadow->flow_info[index].flow_entry_vlan,
+							port->id);
+			/* Hanlde NON-IP tagged packet */
+			else if (cos_mode == MVPP2_COS_CLS_DSCP && lkpid == MVPP2_PRS_FL_NON_IP_TAG)
+				mvpp2_cls_flow_port_add(hw,
+							hw->cls_shadow->flow_info[index].flow_entry_dflt,
+							port->id);
+			else if (cos_mode == MVPP2_COS_CLS_DSCP || cos_mode == MVPP2_COS_CLS_DSCP_VLAN)
+				mvpp2_cls_flow_port_add(hw,
+							hw->cls_shadow->flow_info[index].flow_entry_dscp,
+							port->id);
+		} else {
+			if (lkpid == MVPP2_PRS_FL_NON_IP_UNTAG || cos_mode == MVPP2_COS_CLS_VLAN)
+				mvpp2_cls_flow_port_add(hw,
+							hw->cls_shadow->flow_info[index].flow_entry_dflt,
+							port->id);
+			else if (cos_mode == MVPP2_COS_CLS_DSCP ||
+				 cos_mode == MVPP2_COS_CLS_VLAN_DSCP ||
+				 cos_mode == MVPP2_COS_CLS_DSCP_VLAN)
+				mvpp2_cls_flow_port_add(hw,
+							hw->cls_shadow->flow_info[index].flow_entry_dscp,
+							port->id);
+		}
+
+		/* Restore lookup table */
+		flow_idx = min(data[0], min(data[1], data[2]));
+
+		mvpp2_cls_lkp_flow_set(hw, lkpid, 0, flow_idx);
+		mvpp2_cls_lkp_flow_set(hw, lkpid, 1, flow_idx);
+	}
+
+	/* Update it in priv */
+	port->priv->pp2_cfg.cos_cfg.cos_classifier = cos_mode;
+
+	return 0;
+}
+
+/* mvpp2_cos_classifier_get
+*  -- Get the cos classifier on the port.
+*/
+int mvpp2_cos_classifier_get(struct mvpp2_port *port)
+{
+	return port->priv->pp2_cfg.cos_cfg.cos_classifier;
+}
+
+/* mvpp2_cos_pri_map_set
+*  -- Set priority_map per port, nibble for each cos value(0~7).
+*/
+int mvpp2_cos_pri_map_set(struct mvpp2_port *port, int cos_pri_map)
+{
+	int ret;
+
+	if (pri_map == cos_pri_map)
+		return 0;
+
+	port->priv->pp2_cfg.cos_cfg.pri_map = cos_pri_map;
+
+	/* Update C2 rules with nre pri_map */
+	ret = mvpp2_cls_c2_rule_set(port);
+	if (ret) {
+		port->priv->pp2_cfg.cos_cfg.pri_map = pri_map;
+		return ret;
+	}
+
+	return 0;
+}
+
+/* mvpp2_cos_pri_map_get
+*  -- Get priority_map on the port.
+*/
+int mvpp2_cos_pri_map_get(struct mvpp2_port *port)
+{
+	return port->priv->pp2_cfg.cos_cfg.pri_map;
+}
+
+/* mvpp2_cos_default_value_set
+*  -- Set default cos value for untagged or non-IP packets per port.
+*/
+int mvpp2_cos_default_value_set(struct mvpp2_port *port, int cos_value)
+{
+	int ret;
+
+	if (default_cos == cos_value)
+		return 0;
+
+	port->priv->pp2_cfg.cos_cfg.default_cos = cos_value;
+
+	/* Update C2 rules with nre pri_map */
+	ret = mvpp2_cls_c2_rule_set(port);
+	if (ret) {
+		port->priv->pp2_cfg.cos_cfg.default_cos = cos_value;
+		return ret;
+	}
+
+	return 0;
+}
+
+/* mvpp2_cos_default_value_get
+*  -- Get default cos value for untagged or non-IP packets on the port.
+*/
+int mvpp2_cos_default_value_get(struct mvpp2_port *port)
+{
+	return port->priv->pp2_cfg.cos_cfg.default_cos;
+}
 
 /* Main RX/TX processing routines */
 
@@ -1998,6 +2152,12 @@ static int mvpp2_open(struct net_device *dev)
 		return err;
 	}
 
+	err = mvpp2_prs_flow_set(port);
+	if (err) {
+		netdev_err(dev, "mvpp2_prs_flow_set failed\n");
+		return err;
+	}
+
 	/* Allocate the Rx/Tx queues */
 	err = mvpp2_setup_rxqs(port);
 	if (err) {
@@ -2035,6 +2195,20 @@ static int mvpp2_open(struct net_device *dev)
 	/* Unmask shared interrupts */
 	mvpp2_shared_thread_interrupts_unmask(port);
 #endif
+
+	/* Set CoS classifier */
+	err = mvpp2_cos_classifier_set(port, cos_classifer);
+	if (err) {
+		netdev_err(port->dev, "cannot set cos classifier \n");
+		goto err_free_irq;
+	}
+
+	/* Init C2 rules */
+	err = mvpp2_cls_c2_rule_set(port);
+	if (err) {
+		netdev_err(port->dev, "cannot init C2 rules \n");
+		goto err_free_irq;
+	}
 
 	mvpp2_start_dev(port);
 
@@ -3003,6 +3177,9 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 		return err;
 	MVPP2_PRINT_LINE();
 
+	/* Parser flow id attribute tbl init */
+	mvpp2_prs_flow_id_attr_init();
+
 	/* Parser default initialization */
 	err = mvpp2_prs_default_init(pdev, hw);
 	if (err < 0)
@@ -3010,7 +3187,14 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 	MVPP2_PRINT_LINE();
 
 	/* Classifier default initialization */
-	mvpp2_cls_init(hw);
+	err = mvpp2_cls_init(pdev, hw);
+	if (err < 0)
+		return err;
+
+	/* Classifier engine2 initialization */
+	err = mvpp2_c2_init(pdev, hw);
+	if (err < 0)
+		return err;
 
 	MVPP2_PRINT_LINE();
 
@@ -3084,7 +3268,8 @@ static void mvpp2_init_config(struct mvpp2_param_config *pp2_cfg, u32 cell_index
 
 	pp2_cfg->rss_cfg.dflt_cpu = default_cpu;
 	pp2_cfg->rss_cfg.queue_mode = mvpp2_queue_mode; /*TODO : This param is redundant, reduce from rss */
-	pp2_cfg->rss_cfg.reserved = 0;
+	/* RSS enable staste equal to queue mode at the beginning, which can be update in running time */
+	pp2_cfg->rss_cfg.rss_en = mvpp2_queue_mode;
 	pp2_cfg->rss_cfg.rss_mode = rss_mode;
 }
 
@@ -3163,7 +3348,6 @@ static void mvpp2_pp2_ports_print(struct mvpp2 *priv)
 	}
 }
 EXPORT_SYMBOL(mvpp2_pp2_ports_print);
-
 
 static int mvpp2_probe(struct platform_device *pdev)
 {

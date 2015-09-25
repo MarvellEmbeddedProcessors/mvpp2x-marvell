@@ -137,7 +137,6 @@
 #define MVPP2_PRS_TCAM_HIT_CNT_MASK		\
 	(((1 << MVPP2_PRS_TCAM_HIT_CNT_BITS) - 1) << MVPP2_PRS_TCAM_HIT_CNT_OFFS)
 
-
 /* Classifier Registers */
 #define MVPP2_CLS_MODE_REG			0x1800
 #define MVPP2_CLS_MODE_ACTIVE_MASK		BIT(0)
@@ -942,6 +941,7 @@ enum mvpp2_tag_type {
 #define MVPP2_PRS_TCAM_LU_BYTE			20
 #define MVPP2_PRS_TCAM_EN_OFFS(offs)		((offs) + 2)
 #define MVPP2_PRS_TCAM_INV_WORD			5
+#define MVPP2_PRS_TCAM_INV_MASK			BIT(31)
 /* Tcam entries ID */
 #define MVPP2_PE_DROP_ALL		0
 #define MVPP2_PE_FIRST_FREE_TID		1
@@ -976,6 +976,7 @@ enum mvpp2_tag_type {
  */
 #define MVPP2_PRS_SRAM_RI_OFFS			0
 #define MVPP2_PRS_SRAM_RI_WORD			0
+#define MVPP2_PRS_SRAM_RI_BITS			32
 #define MVPP2_PRS_SRAM_RI_CTRL_OFFS		32
 #define MVPP2_PRS_SRAM_RI_CTRL_WORD		1
 #define MVPP2_PRS_SRAM_RI_CTRL_BITS		32
@@ -992,6 +993,7 @@ enum mvpp2_tag_type {
 #define MVPP2_PRS_SRAM_UDF_TYPE_L4		4
 #define MVPP2_PRS_SRAM_OP_SEL_SHIFT_OFFS	85
 #define MVPP2_PRS_SRAM_OP_SEL_SHIFT_BITS	2
+#define MVPP2_PRS_SRAM_OP_SEL_BITS		5
 #define MVPP2_PRS_SRAM_OP_SEL_SHIFT_MASK	0x3
 #define MVPP2_PRS_SRAM_OP_SEL_SHIFT_ADD		1
 #define MVPP2_PRS_SRAM_OP_SEL_SHIFT_IP4_ADD	2
@@ -1016,19 +1018,19 @@ enum mvpp2_tag_type {
 #define MVPP2_PRS_RI_MAC_ME_MASK		0x1
 #define MVPP2_PRS_RI_DSA_MASK			0x2
 #define MVPP2_PRS_RI_VLAN_MASK			0xc
-#define MVPP2_PRS_RI_VLAN_NONE			~(BIT(2) | BIT(3))
+#define MVPP2_PRS_RI_VLAN_NONE			0x0
 #define MVPP2_PRS_RI_VLAN_SINGLE		BIT(2)
 #define MVPP2_PRS_RI_VLAN_DOUBLE		BIT(3)
 #define MVPP2_PRS_RI_VLAN_TRIPLE		(BIT(2) | BIT(3))
 #define MVPP2_PRS_RI_CPU_CODE_MASK		0x70
 #define MVPP2_PRS_RI_CPU_CODE_RX_SPEC		BIT(4)
 #define MVPP2_PRS_RI_L2_CAST_MASK		0x600
-#define MVPP2_PRS_RI_L2_UCAST			~(BIT(9) | BIT(10))
+#define MVPP2_PRS_RI_L2_UCAST			0x0
 #define MVPP2_PRS_RI_L2_MCAST			BIT(9)
 #define MVPP2_PRS_RI_L2_BCAST			BIT(10)
 #define MVPP2_PRS_RI_PPPOE_MASK			0x800
 #define MVPP2_PRS_RI_L3_PROTO_MASK		0x7000
-#define MVPP2_PRS_RI_L3_UN			~(BIT(12) | BIT(13) | BIT(14))
+#define MVPP2_PRS_RI_L3_UN			0x0
 #define MVPP2_PRS_RI_L3_IP4			BIT(12)
 #define MVPP2_PRS_RI_L3_IP4_OPT			BIT(13)
 #define MVPP2_PRS_RI_L3_IP4_OTHER		(BIT(12) | BIT(13))
@@ -1036,10 +1038,12 @@ enum mvpp2_tag_type {
 #define MVPP2_PRS_RI_L3_IP6_EXT			(BIT(12) | BIT(14))
 #define MVPP2_PRS_RI_L3_ARP			(BIT(13) | BIT(14))
 #define MVPP2_PRS_RI_L3_ADDR_MASK		0x18000
-#define MVPP2_PRS_RI_L3_UCAST			~(BIT(15) | BIT(16))
+#define MVPP2_PRS_RI_L3_UCAST			0x0
 #define MVPP2_PRS_RI_L3_MCAST			BIT(15)
 #define MVPP2_PRS_RI_L3_BCAST			(BIT(15) | BIT(16))
 #define MVPP2_PRS_RI_IP_FRAG_MASK		0x20000
+#define MVPP2_PRS_RI_IP_FRAG_TRUE		BIT(17)
+#define MVPP2_PRS_RI_IP_FRAG_FALSE		0x0
 #define MVPP2_PRS_RI_UDF3_MASK			0x300000
 #define MVPP2_PRS_RI_UDF3_RX_SPECIAL		BIT(21)
 #define MVPP2_PRS_RI_L4_PROTO_MASK		0x1c00000
@@ -1144,10 +1148,10 @@ enum mvpp2_tag_type {
 #define MVPP2_FLOW_LKP_TYPE_MASK	(((1 << MVPP2_FLOW_LKP_TYPE_BITS) - 1) << MVPP2_FLOW_LKP_TYPE)
 #define MVPP2_FLOW_LKP_TYPE_MAX		((1 << MVPP2_FLOW_LKP_TYPE_BITS) - 1)
 
-#define MVPP2_FLOW_FIELED_PRIO		9
-#define MVPP2_FLOW_FIELED_PRIO_BITS	6
-#define MVPP2_FLOW_FIELED_PRIO_MASK	(((1 << MVPP2_FLOW_FIELED_PRIO_BITS) - 1) << MVPP2_FLOW_FIELED_PRIO)
-#define MVPP2_FLOW_FIELED_PRIO_MAX	((1 << MVPP2_FLOW_FIELED_PRIO_BITS) - 1)
+#define MVPP2_FLOW_FIELD_PRIO		9
+#define MVPP2_FLOW_FIELD_PRIO_BITS	6
+#define MVPP2_FLOW_FIELD_PRIO_MASK	(((1 << MVPP2_FLOW_FIELD_PRIO_BITS) - 1) << MVPP2_FLOW_FIELD_PRIO)
+#define MVPP2_FLOW_FIELD_PRIO_MAX	((1 << MVPP2_FLOW_FIELD_PRIO_BITS) - 1)
 
 #define MVPP2_FLOW_SEQ_CTRL		15
 #define MVPP2_FLOW_SEQ_CTRL_BITS	3
@@ -1161,9 +1165,9 @@ enum mvpp2_tag_type {
 #define MVPP2_FLOW_FIELD3_ID		18
 
 #define MVPP2_FLOW_FIELD_ID_BITS	6
-#define MVPP2_FLOW_FIELED_ID(num)	(MVPP2_FLOW_FIELD0_ID + (MVPP2_FLOW_FIELD_ID_BITS * (num)))
-#define MVPP2_FLOW_FIELED_MASK(num)	(((1 << MVPP2_FLOW_FIELD_ID_BITS) - 1) << (MVPP2_FLOW_FIELD_ID_BITS * (num)))
-#define MVPP2_FLOW_FIELED_MAX		((1 << MVPP2_FLOW_FIELD_ID_BITS) - 1)
+#define MVPP2_FLOW_FIELD_ID(num)	(MVPP2_FLOW_FIELD0_ID + (MVPP2_FLOW_FIELD_ID_BITS * (num)))
+#define MVPP2_FLOW_FIELD_MASK(num)	(((1 << MVPP2_FLOW_FIELD_ID_BITS) - 1) << (MVPP2_FLOW_FIELD_ID_BITS * (num)))
+#define MVPP2_FLOW_FIELD_MAX		((1 << MVPP2_FLOW_FIELD_ID_BITS) - 1)
 
 /* lookup id attribute define */
 #define MVPP2_PRS_FL_ATTR_VLAN_BIT	BIT(0)
@@ -1173,7 +1177,6 @@ enum mvpp2_tag_type {
 #define MVPP2_PRS_FL_ATTR_FRAG_BIT	BIT(4)
 #define MVPP2_PRS_FL_ATTR_TCP_BIT	BIT(5)
 #define MVPP2_PRS_FL_ATTR_UDP_BIT	BIT(6)
-
 
 /* MAC entries, shadow udf */
 enum mvpp2_prs_udf {
@@ -1203,6 +1206,86 @@ enum mvpp2_prs_l3_cast {
 	MVPP2_PRS_L3_UNI_CAST,
 	MVPP2_PRS_L3_MULTI_CAST,
 	MVPP2_PRS_L3_BROAD_CAST
+};
+
+/* Packet flow ID */
+enum mvpp2_prs_flow {
+	MVPP2_PRS_FL_START = 8,
+	MVPP2_PRS_FL_IP4_TCP_NF_UNTAG = MVPP2_PRS_FL_START,
+	MVPP2_PRS_FL_IP4_UDP_NF_UNTAG,
+	MVPP2_PRS_FL_IP4_TCP_NF_TAG,
+	MVPP2_PRS_FL_IP4_UDP_NF_TAG,
+	MVPP2_PRS_FL_IP6_TCP_NF_UNTAG,
+	MVPP2_PRS_FL_IP6_UDP_NF_UNTAG,
+	MVPP2_PRS_FL_IP6_TCP_NF_TAG,
+	MVPP2_PRS_FL_IP6_UDP_NF_TAG,
+	MVPP2_PRS_FL_IP4_TCP_FRAG_UNTAG,
+	MVPP2_PRS_FL_IP4_UDP_FRAG_UNTAG,
+	MVPP2_PRS_FL_IP4_TCP_FRAG_TAG,
+	MVPP2_PRS_FL_IP4_UDP_FRAG_TAG,
+	MVPP2_PRS_FL_IP6_TCP_FRAG_UNTAG,
+	MVPP2_PRS_FL_IP6_UDP_FRAG_UNTAG,
+	MVPP2_PRS_FL_IP6_TCP_FRAG_TAG,
+	MVPP2_PRS_FL_IP6_UDP_FRAG_TAG,
+	MVPP2_PRS_FL_IP4_UNTAG, /* non-TCP, non-UDP, same for below */
+	MVPP2_PRS_FL_IP4_TAG,
+	MVPP2_PRS_FL_IP6_UNTAG,
+	MVPP2_PRS_FL_IP6_TAG,
+	MVPP2_PRS_FL_NON_IP_UNTAG,
+	MVPP2_PRS_FL_NON_IP_TAG,
+	MVPP2_PRS_FL_LAST,
+	MVPP2_PRS_FL_TCAM_NUM = 52, /* The parser TCAM lines needed to generate flow ID */
+};
+
+enum mvpp2_cls_engine_num {
+	MVPP2_CLS_ENGINE_C2 = 1,
+	MVPP2_CLS_ENGINE_C3A,
+	MVPP2_CLS_ENGINE_C3B,
+	MVPP2_CLS_ENGINE_C4,
+	MVPP2_CLS_ENGINE_C3HA = 6,
+	MVPP2_CLS_ENGINE_C3HB,
+};
+
+enum mvpp2_cls_lkp_type {
+	MVPP2_CLS_LKP_HASH = 0,
+	MVPP2_CLS_LKP_VLAN_PRI,
+	MVPP2_CLS_LKP_DSCP_PRI,
+	MVPP2_CLS_LKP_DEFAULT,
+};
+
+enum mvpp2_cls_fl_pri {
+	MVPP2_CLS_FL_COS_PRI = 0,
+	MVPP2_CLS_FL_RSS_PRI,
+};
+
+enum mvpp2_cls_filed_id {
+	MVPP2_CLS_FIELD_IP4SA = 0x10,
+	MVPP2_CLS_FIELD_IP4DA = 0x11,
+	MVPP2_CLS_FIELD_IP6SA = 0x17,
+	MVPP2_CLS_FIELD_IP6DA = 0x18,
+	MVPP2_CLS_FIELD_L4SIP = 0x1D,
+	MVPP2_CLS_FIELD_L4DIP = 0x1E,
+};
+
+enum mvpp2_cos_type {
+	MVPP2_COS_TYPE_DEF = 0,
+	MVPP2_COS_TYPE_VLAN,
+	MVPP2_COS_TYPE_DSCP,
+};
+
+enum mvpp2_rss_hash_mode {
+	MVPP2_RSS_HASH_2T = 0,
+	MVPP2_RSS_HASH_5T,
+};
+
+struct mvpp2_prs_result_info {
+	u32 ri;
+	u32 ri_mask;
+};
+
+struct mvpp2_prs_flow_id {
+	u32 flow_id;
+	struct mvpp2_prs_result_info prs_result;
 };
 
 /* Classifier constants */
@@ -1406,7 +1489,6 @@ struct mvpp2_cls_lookup_entry {
 	u32 data;
 };
 
-
 struct mvpp2_cls_flow_info {
 	u32 lkpid;
 	u32 flow_entry_dflt; /* The flow table entry index of CoS default rule */
@@ -1437,12 +1519,10 @@ struct mvpp2_cls_shadow {
 #define MVPP2_CLS_C2_HEK_PORT_TYPE_MASK		(0x3 << MVPP2_CLS_C2_HEK_PORT_TYPE_OFFS)
 #define MVPP2_CLS_C2_TCAM_DATA_BYTE(offs)		(MVPP2_PRS_TCAM_DATA_BYTE(offs))
 #define MVPP2_CLS_C2_TCAM_DATA_BYTE_EN(offs)	(MVPP2_PRS_TCAM_DATA_BYTE_EN(offs))
-
-#define MVPP2_CLS_C2_QOS_DSCP_TBL_SIZE			64
-#define MVPP2_CLS_C2_QOS_PRIO_TBL_SIZE			8
-#define MVPP2_CLS_C2_QOS_DSCP_TBL_NUM			8
-#define MVPP2_CLS_C2_QOS_PRIO_TBL_NUM			64
-
+#define MVPP2_CLS_C2_QOS_DSCP_TBL_SIZE		64
+#define MVPP2_CLS_C2_QOS_PRIO_TBL_SIZE		8
+#define MVPP2_CLS_C2_QOS_DSCP_TBL_NUM		8
+#define MVPP2_CLS_C2_QOS_PRIO_TBL_NUM		64
 
 struct mvpp2_cls_c2_entry {
 	u32          index;
@@ -1607,7 +1687,6 @@ struct mvpp2_c2_shadow {
 	int c2_tcam_free_start;
 	struct mvpp2_c2_rule_idx rule_idx_info[8];	/* Per src port */
 };
-
 
 struct mvpp2_bm_pool {
 	/* Pool number in the range 0-7 */

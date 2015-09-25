@@ -240,7 +240,17 @@ enum mvpp2_queue_distribution_mode{
 	MVPP2_QDIST_MULTI_MODE  /* PPv2.2 only requires N interrupts. */
 };
 
+enum mvpp2_cos_classifier {
+	MVPP2_COS_CLS_VLAN, /* CoS based on VLAN pri */
+	MVPP2_COS_CLS_DSCP,
+	MVPP2_COS_CLS_VLAN_DSCP, /* CoS based on VLAN pri, if untagged and IP, then based on DSCP */
+	MVPP2_COS_CLS_DSCP_VLAN
+};
 
+enum mvpp2_rss_nf_udp_mode {
+	MVPP2_RSS_NF_UDP_2T, /* non-frag UDP packet hash value is calculated based on 2T */
+	MVPP2_RSS_NF_UDP_5T /* non-frag UDP packet hash value is calculated based on 5T */
+};
 
 /* Per-CPU Tx queue control */
 struct mvpp2_txq_pcpu {
@@ -373,6 +383,10 @@ struct mvpp2_hw {
 	struct mvpp2_prs_shadow *prs_shadow;
 	/* PRS auxiliary table for double vlan entries control */
 	bool *prs_double_vlans;
+	/* CLS shadow info for update in running time */
+	struct mvpp2_cls_shadow *cls_shadow;
+	/* C2 shadow info */
+	struct mvpp2_c2_shadow *c2_shadow;
 };
 
 struct mvpp2_cos {
@@ -387,7 +401,7 @@ struct mvpp2_rss {
 	enum mvpp2_queue_distribution_mode queue_mode;//single/multi mode
 	u8 rss_mode; /*UDP packet */
 	u8 dflt_cpu; /*non-IP packet */
-	u8 reserved;
+	u8 rss_en;
 };
 
 
@@ -564,6 +578,5 @@ void mvpp2_cleanup_txqs(struct mvpp2_port *port);
 
 
 void mvpp2_set_ethtool_ops(struct net_device *netdev);
-
 #endif /*_MVPP2_H_*/
 
