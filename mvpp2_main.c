@@ -26,6 +26,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/version.h>
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
 #include <linux/platform_device.h>
@@ -1473,6 +1474,170 @@ int mvpp2_cos_default_value_get(struct mvpp2_port *port)
 	return port->priv->pp2_cfg.cos_cfg.default_cos;
 }
 
+/* RSS API */
+
+/* Translate CPU sequence number to real CPU ID */
+static inline int mvpp22_cpu_id_from_indir_tbl_get(struct mvpp2 *pp2, int cpu_seq, u32 *cpu_id)
+{
+	int i;
+	int seq = 0;
+
+	if (!pp2 || !cpu_id || cpu_seq >= 16)
+		return -EINVAL;
+
+	for (i = 0; i < 16; i++) {
+		if (pp2->cpu_map & (1 << i)) {
+			if (seq == cpu_seq) {
+				*cpu_id = i;
+				return 0;
+			}
+			seq++;
+		}
+	}
+
+	return -1;
+}
+
+/* mvpp22_rss_rxfh_indir_set
+*  -- The API set the RSS table according to CPU weight from ethtool
+*/
+int mvpp22_rss_rxfh_indir_set(struct mvpp2_port *port)
+{
+	int rss_tbl_needed = port->priv->pp2_cfg.cos_cfg.num_cos_queues;
+	int rss_tbl, entry_idx;
+	u32 cos_width, cpu_width, cpu_id;
+	struct mvpp22_rss_entry rss_entry;
+
+	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+		return -1;
+
+	memset(&rss_entry, 0, sizeof(struct mvpp22_rss_entry));
+
+	if (!port->priv->cpu_map)
+		return -1;
+
+	/* Calculate width */
+	cpu_width = ilog2(roundup_pow_of_two(port->priv->cpu_map));
+	cos_width = ilog2(roundup_pow_of_two(port->priv->pp2_cfg.cos_cfg.num_cos_queues));
+	rss_entry.u.entry.width = cos_width + cpu_width;
+
+	rss_entry.sel = MVPP22_RSS_ACCESS_TBL;
+
+	for (rss_tbl = 0; rss_tbl < rss_tbl_needed; rss_tbl++) {
+		for (entry_idx = 0; entry_idx < MVPP22_RSS_TBL_LINE_NUM; entry_idx++) {
+			rss_entry.u.entry.tbl_id = rss_tbl;
+			rss_entry.u.entry.tbl_line = entry_idx;
+			if (mvpp22_cpu_id_from_indir_tbl_get(port->priv,
+							     port->priv->rx_indir_table[entry_idx],
+							     &cpu_id))
+				return -1;
+			/* Value of rss_tbl equals to cos queue */
+			rss_entry.u.entry.rxq = (cpu_id << cos_width) | rss_tbl;
+			if (mvpp22_rss_tbl_entry_set(&port->priv->hw, &rss_entry))
+				return -1;
+		}
+	}
+
+	return 0;
+}
+
+/* mvpp22_rss_enable_set
+*  -- The API enable or disable RSS on the port
+*/
+void mvpp22_rss_enable(struct mvpp2_port *port, bool en)
+{
+	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_MULTI_MODE)
+		mvpp22_rss_c2_enable(port, en);
+}
+
+/* mvpp2_rss_mode_set
+*  -- The API to update RSS hash mode for non-fragemnt UDP packet per port.
+*/
+int mvpp22_rss_mode_set(struct mvpp2_port *port, int rss_mode)
+{
+	int index, flow_idx, flow_idx_rss, lkpid, lkpid_attr;
+	int data[3];
+	struct mvpp2_hw *hw = &(port->priv->hw);
+
+	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+		return -1;
+
+	for (index = 0; index < (MVPP2_PRS_FL_LAST - MVPP2_PRS_FL_START); index++) {
+		data[0] = MVPP2_FLOW_TBL_SIZE;
+		data[1] = MVPP2_FLOW_TBL_SIZE;
+		data[2] = MVPP2_FLOW_TBL_SIZE;
+		lkpid = index + MVPP2_PRS_FL_START;
+		/* Get lookup ID attribute */
+		lkpid_attr = mvpp2_prs_flow_id_attr_get(lkpid);
+		/* Only non-frag UDP can set rss mode */
+		if ((lkpid_attr & MVPP2_PRS_FL_ATTR_UDP_BIT) &&
+		    !(lkpid_attr & MVPP2_PRS_FL_ATTR_FRAG_BIT)) {
+			/* Prepare a temp table for the lkpid */
+			mvpp2_cls_flow_tbl_temp_copy(hw, lkpid, &flow_idx);
+			/* Update lookup table to temp flow table */
+			mvpp2_cls_lkp_flow_set(hw, lkpid, 0, flow_idx);
+			mvpp2_cls_lkp_flow_set(hw, lkpid, 1, flow_idx);
+			/* Update original flow table */
+			/* First, remove the port from original table */
+			mvpp2_cls_flow_port_del(hw,
+						hw->cls_shadow->flow_info[index].flow_entry_rss1,
+						port->id);
+			mvpp2_cls_flow_port_del(hw,
+						hw->cls_shadow->flow_info[index].flow_entry_rss2,
+						port->id);
+			if (hw->cls_shadow->flow_info[index].flow_entry_dflt)
+				data[0] = hw->cls_shadow->flow_info[index].flow_entry_dflt;
+			if (hw->cls_shadow->flow_info[index].flow_entry_vlan)
+				data[1] = hw->cls_shadow->flow_info[index].flow_entry_vlan;
+			if (hw->cls_shadow->flow_info[index].flow_entry_dscp)
+				data[2] = hw->cls_shadow->flow_info[index].flow_entry_dscp;
+			/* Second, update port in original table with rss_mode*/
+			if (rss_mode == MVPP2_RSS_NF_UDP_2T)
+				flow_idx_rss = hw->cls_shadow->flow_info[index].flow_entry_rss1;
+			else
+				flow_idx_rss = hw->cls_shadow->flow_info[index].flow_entry_rss2;
+			mvpp2_cls_flow_port_add(hw, flow_idx_rss, port->id);
+
+			/*Find the pointer of flow table, the minimum flow index */
+			flow_idx_rss = min(hw->cls_shadow->flow_info[index].flow_entry_rss1,
+					   hw->cls_shadow->flow_info[index].flow_entry_rss2);
+			flow_idx = min(min(data[0], data[1]), min(data[2], flow_idx_rss));
+			/*Third, restore lookup table */
+			mvpp2_cls_lkp_flow_set(hw, lkpid, 0, flow_idx);
+			mvpp2_cls_lkp_flow_set(hw, lkpid, 1, flow_idx);
+		} else if (hw->cls_shadow->flow_info[index].flow_entry_rss1) {
+			flow_idx_rss = hw->cls_shadow->flow_info[index].flow_entry_rss1;
+			mvpp2_cls_flow_port_add(hw, flow_idx_rss, port->id);
+		}
+	}
+	/* Record it in priv */
+	port->priv->pp2_cfg.rss_cfg.rss_mode = rss_mode;
+
+	return 0;
+}
+
+/* mvpp22_rss_default_cpu_set
+*  -- The API to update the default CPU to handle the non-IP packets.
+*/
+int mvpp22_rss_default_cpu_set(struct mvpp2_port *port, int default_cpu)
+{
+	u32 index;
+
+	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+		return -1;
+
+	/* Update the default C2 rule on the port */
+	index = port->priv->hw.c2_shadow->rule_idx_info[port->id].default_rule_idx;
+	mvpp2_cls_c2_rule_queue_set(port->priv, index, default_cpu);
+	/* Update the pbit table queue, the table index equals to port id as design */
+	mvpp2_cls_c2_pbit_qos_queue_set(port->priv, port->id, default_cpu);
+
+	/* Update default cpu in cfg */
+	port->priv->pp2_cfg.rss_cfg.dflt_cpu = default_cpu;
+
+	return 0;
+}
+
 /* Main RX/TX processing routines */
 
 
@@ -2210,6 +2375,36 @@ static int mvpp2_open(struct net_device *dev)
 		goto err_free_irq;
 	}
 
+	/* Assign rss table for rxq belong to this port */
+	err = mvpp22_rss_rxq_set(port);
+	if (err) {
+		netdev_err(port->dev, "cannot allocate rss table for rxq \n");
+		goto err_free_irq;
+	}
+
+	/* RSS related config */
+	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_MULTI_MODE) {
+		/* Set RSS mode */
+		err = mvpp22_rss_mode_set(port, port->priv->pp2_cfg.rss_cfg.rss_mode);
+		if (err) {
+			netdev_err(port->dev, "cannot set rss mode \n");
+			goto err_free_irq;
+		}
+		/* Init RSS table */
+		err = mvpp22_rss_rxfh_indir_set(port);
+		if (err) {
+			netdev_err(port->dev, "cannot init rss rxfh indir \n");
+			goto err_free_irq;
+		}
+
+		/* Set rss default CPU */
+		err = mvpp22_rss_default_cpu_set(port, port->priv->pp2_cfg.rss_cfg.dflt_cpu);
+		if (err) {
+			netdev_err(port->dev, "cannot set rss default cpu \n");
+			goto err_free_irq;
+		}
+	}
+
 	mvpp2_start_dev(port);
 
 #ifdef CONFIG_MV_PP2_FPGA
@@ -2433,6 +2628,30 @@ int mvpp2_of_irq_count(struct device_node *dev)
 	return nr;
 }
 
+/* Currently only support LK-3.18 and above, no back support */
+static int mvpp2_netdev_set_features(struct net_device *dev, netdev_features_t features)
+{
+	u32 changed = dev->features ^ features;
+	struct mvpp2_port *port = netdev_priv(dev);
+
+	/* dev->features is not changed */
+	if (!changed)
+		return 0;
+
+	if (changed & NETIF_F_RXHASH) {
+		if (features & NETIF_F_RXHASH) {
+			/* Enable RSS */
+			mvpp22_rss_enable(port, true);
+		} else {
+			/* Disable RSS */
+			mvpp22_rss_enable(port, false);
+		}
+	}
+
+	dev->features = features;
+
+	return 0;
+}
 
 /* Device ops */
 
@@ -2445,6 +2664,7 @@ static const struct net_device_ops mvpp2_netdev_ops = {
 	.ndo_change_mtu		= mvpp2_change_mtu,
 	.ndo_get_stats64	= mvpp2_get_stats64,
 	.ndo_do_ioctl		= mvpp2_ioctl,
+	.ndo_set_features	= mvpp2_netdev_set_features,
 };
 
 /* Driver initialization */
@@ -2856,6 +3076,9 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	features = NETIF_F_SG | NETIF_F_IP_CSUM;
 	dev->features = features | NETIF_F_RXCSUM;
 	dev->hw_features |= features | NETIF_F_RXCSUM | NETIF_F_GRO;
+	/* Only when multi queue mode, rxhash is supported */
+	if (mvpp2_queue_mode)
+		dev->hw_features |= NETIF_F_RXHASH;
 	dev->vlan_features |= features;
 
 	err = register_netdev(dev);
@@ -2999,6 +3222,9 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 	features = NETIF_F_SG | NETIF_F_IP_CSUM;
 	dev->features = features | NETIF_F_RXCSUM;
 	dev->hw_features |= features | NETIF_F_RXCSUM | NETIF_F_GRO;
+	/* Only when multi queue mode, rxhash is supported */
+	if (mvpp2_queue_mode)
+		dev->hw_features |= NETIF_F_RXHASH;
 	dev->vlan_features |= features;
 
 	err = register_netdev(dev);
@@ -3273,6 +3499,32 @@ static void mvpp2_init_config(struct mvpp2_param_config *pp2_cfg, u32 cell_index
 	pp2_cfg->rss_cfg.rss_mode = rss_mode;
 }
 
+/* The function get the number of cpu online */
+static inline int mvpp2x_num_online_cpu_get(struct mvpp2 *pp2)
+{
+	u8 num_online_cpus = 0;
+	u16 x = pp2->cpu_map;
+
+	while(x) {
+		x &= (x - 1);
+		num_online_cpus++;
+	}
+
+	return num_online_cpus;
+}
+
+static void mvpp2_init_rxfhindir(struct mvpp2 *pp2)
+{
+	int i;
+	int online_cpus = mvpp2x_num_online_cpu_get(pp2);
+
+	if (!online_cpus)
+		return;
+
+	for (i = 0; i < MVPP22_RSS_TBL_LINE_NUM; i++)
+		pp2->rx_indir_table[i] = i%online_cpus;
+}
+
 void mvpp2_pp2_basic_print(struct platform_device *pdev, struct mvpp2 *priv)
 {
 
@@ -3485,6 +3737,9 @@ MVPP2_PRINT_LINE();
 	/*Init PP2 Configuration */
 	mvpp2_init_config(&priv->pp2_cfg, cell_index);
 	mvpp2_pp2_basic_print(pdev, priv);
+
+	/* Init PP22 rxfhindir table evenly in probe */
+	mvpp2_init_rxfhindir(priv);
 
 	/* Initialize ports */
 #ifndef CONFIG_MV_PP2_FPGA

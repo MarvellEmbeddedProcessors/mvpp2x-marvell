@@ -575,4 +575,16 @@ int mvpp2_cls_c2_hit_cntr_dump(struct mvpp2_hw *hw);
 int mvpp2_cls_c2_regs_dump(struct mvpp2_hw *hw);
 int mvpp2_cls_c2_rule_set(struct mvpp2_port *port);
 
+void mvpp2_cls_c2_rule_queue_set(struct mvpp2 *pp2, u32 rule_idx, u8 queue);
+
+void mvpp2_cls_c2_pbit_qos_queue_set(struct mvpp2 *pp2, u8 tbl_id, u8 queue);
+
+int mvpp22_rss_tbl_entry_set(struct mvpp2_hw *hw, struct mvpp22_rss_entry *rss);
+int mvpp22_rss_tbl_entry_get(struct mvpp2_hw *hw, struct mvpp22_rss_entry *rss);
+
+int mvpp22_rss_rxq_set(struct mvpp2_port *port);
+
+void mvpp22_rss_c2_enable(struct mvpp2_port *port, bool en);
+int mvpp22_rss_hw_dump(struct mvpp2_hw *hw);
+
 #endif /* _MVPP2_HW_H_ */

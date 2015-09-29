@@ -345,16 +345,78 @@ err_out:
 	return err;
 }
 
+static u32 mvpp2_ethtool_get_rxfh_indir_size(struct net_device *dev)
+{
+	struct mvpp2_port *port = netdev_priv(dev);
+
+	return ARRAY_SIZE(port->priv->rx_indir_table);
+}
+
+static int mvpp2_ethtool_get_rxfh_indir(struct net_device *dev, u32 *indir)
+{
+	size_t copy_size;
+	struct mvpp2_port *port = netdev_priv(dev);
+
+	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+		return -EOPNOTSUPP;
+
+	copy_size = ARRAY_SIZE(port->priv->rx_indir_table);
+
+	memcpy(indir, port->priv->rx_indir_table,
+	       copy_size * sizeof(u32));
+
+	return 0;
+}
+
+static int mvpp2_ethtool_set_rxfh_indir(struct net_device *dev, const u32 *indir)
+{
+	int i;
+	int err;
+	struct mvpp2_port *port = netdev_priv(dev);
+
+	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+		return -EOPNOTSUPP;
+
+	for (i = 0; i < ARRAY_SIZE(port->priv->rx_indir_table); i++)
+		port->priv->rx_indir_table[i] = indir[i];
+
+	err = mvpp22_rss_rxfh_indir_set(port);
+	if (err) {
+		netdev_err(dev, "fail to change rxfh indir table");
+		return err;
+	}
+
+	return 0;
+}
+
+static int mvpp2_ethtool_get_rxnfc(struct net_device *dev, struct ethtool_rxnfc *info, u32 *rules)
+{
+	struct mvpp2_port *port = netdev_priv(dev);
+
+	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+		return -EOPNOTSUPP;
+
+	if (info->cmd == ETHTOOL_GRXRINGS) {
+		if (port)
+			info->data = ARRAY_SIZE(port->priv->rx_indir_table);
+	}
+	return 0;
+}
 
 static const struct ethtool_ops mvpp2_eth_tool_ops = {
-	.get_link	= ethtool_op_get_link,
-	.get_settings	= mvpp2_ethtool_get_settings,
-	.set_settings	= mvpp2_ethtool_set_settings,
-	.set_coalesce	= mvpp2_ethtool_set_coalesce,
-	.get_coalesce	= mvpp2_ethtool_get_coalesce,
-	.get_drvinfo	= mvpp2_ethtool_get_drvinfo,
-	.get_ringparam	= mvpp2_ethtool_get_ringparam,
-	.set_ringparam	= mvpp2_ethtool_set_ringparam,
+	.get_link		= ethtool_op_get_link,
+	.get_settings		= mvpp2_ethtool_get_settings,
+	.set_settings		= mvpp2_ethtool_set_settings,
+	.set_coalesce		= mvpp2_ethtool_set_coalesce,
+	.get_coalesce		= mvpp2_ethtool_get_coalesce,
+	.get_drvinfo		= mvpp2_ethtool_get_drvinfo,
+	.get_ringparam		= mvpp2_ethtool_get_ringparam,
+	.set_ringparam		= mvpp2_ethtool_set_ringparam,
+	/* For rxfh relevant command, only support LK-3.18 */
+	.get_rxfh_indir_size	= mvpp2_ethtool_get_rxfh_indir_size,
+	.get_rxfh_indir		= mvpp2_ethtool_get_rxfh_indir,
+	.set_rxfh_indir		= mvpp2_ethtool_set_rxfh_indir,
+	.get_rxnfc		= mvpp2_ethtool_get_rxnfc,
 };
 
 
@@ -362,6 +424,4 @@ void mvpp2_set_ethtool_ops(struct net_device *netdev)
 {
 	netdev->ethtool_ops = &mvpp2_eth_tool_ops;
 }
-
-
 

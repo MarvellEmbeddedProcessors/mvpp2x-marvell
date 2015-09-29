@@ -2960,18 +2960,19 @@ static inline void mvpp2_cls_flow_cos(struct mvpp2_hw *hw, struct mvpp2_cls_flow
 static inline void mvpp2_cls_flow_rss_hash(struct mvpp2_hw *hw, struct mvpp2_cls_flow_entry *fe,
 						int lkpid, int rss_mode)
 {
-	int field_id[4];
+	int field_id[4] = {0};
 	int entry_idx = hw->cls_shadow->flow_free_start;
+	int lkpid_attr = mvpp2_prs_flow_id_attr_get(lkpid);
 
-	if ((lkpid >= MVPP2_PRS_FL_IP4_TCP_NF_UNTAG && lkpid <= MVPP2_PRS_FL_IP4_UDP_NF_TAG) ||
-	    (lkpid >= MVPP2_PRS_FL_IP4_TCP_FRAG_UNTAG && lkpid <= MVPP2_PRS_FL_IP4_UDP_FRAG_TAG) ||
-	    (lkpid >= MVPP2_PRS_FL_IP4_UNTAG && lkpid <= MVPP2_PRS_FL_IP4_TAG)) {
+	/* IP4 packet */
+	if (lkpid_attr & MVPP2_PRS_FL_ATTR_IP4_BIT) {
 		field_id[0] = MVPP2_CLS_FIELD_IP4SA;
 		field_id[1] = MVPP2_CLS_FIELD_IP4DA;
-	} else {
+	} else if (lkpid_attr & MVPP2_PRS_FL_ATTR_IP6_BIT) {
 		field_id[0] = MVPP2_CLS_FIELD_IP6SA;
 		field_id[1] = MVPP2_CLS_FIELD_IP6DA;
 	}
+	/* L4 port */
 	field_id[2] = MVPP2_CLS_FIELD_L4SIP;
 	field_id[3] = MVPP2_CLS_FIELD_L4DIP;
 
@@ -2994,10 +2995,8 @@ static inline void mvpp2_cls_flow_rss_hash(struct mvpp2_hw *hw, struct mvpp2_cls
 	fe->index = entry_idx;
 
 	/* Update last for UDP NF flow */
-	if (lkpid == MVPP2_PRS_FL_IP4_UDP_NF_UNTAG ||
-	    lkpid == MVPP2_PRS_FL_IP4_UDP_NF_TAG ||
-	    lkpid == MVPP2_PRS_FL_IP6_UDP_NF_UNTAG ||
-	    lkpid == MVPP2_PRS_FL_IP6_UDP_NF_TAG) {
+	if ((lkpid_attr & MVPP2_PRS_FL_ATTR_UDP_BIT) &&
+	    !(lkpid_attr & MVPP2_PRS_FL_ATTR_FRAG_BIT)) {
 		if (!hw->cls_shadow->flow_info[lkpid - MVPP2_PRS_FL_START].flow_entry_rss1) {
 			if (rss_mode == MVPP2_RSS_HASH_2T)
 				mvpp2_cls_sw_flow_eng_set(fe, MVPP2_CLS_ENGINE_C3HA, 0);
@@ -4913,6 +4912,9 @@ int mvpp2_cls_c2_hw_read(struct mvpp2_hw *hw, int index, struct mvpp2_cls_c2_ent
 	/* read hwf_attr 0x1B68 */
 	c2->sram.regs.hwf_attr = mvpp2_read(hw, MVPP2_CLS2_ACT_HWF_ATTR_REG);
 
+	/* read hwf_attr 0x1B6C */
+	c2->sram.regs.rss_attr = mvpp2_read(hw, MVPP2_CLS2_ACT_DUP_ATTR_REG);
+
 	/* read seq_attr 0x1B70 */
 	c2->sram.regs.seq_attr = mvpp2_read(hw, MVPP22_CLS2_ACT_SEQ_ATTR_REG);
 
@@ -4998,10 +5000,10 @@ int mvpp2_cls_c2_sw_dump(struct mvpp2_cls_c2_entry *c2)
 	/*	actions 0x1B60		*/
 	/*------------------------------*/
 
-	printk("ACT_CMD:		COLOR	PRIO	DSCP	GEMID	LOW_Q	HIGH_Q	FWD	POLICER	FID\n");
+	printk("ACT_CMD:		COLOR	PRIO	DSCP	GEMID	LOW_Q	HIGH_Q	FWD	POLICER	FID	RSS\n");
 	printk("			");
 
-	printk("%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t",
+	printk("%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t",
 			((c2->sram.regs.actions & MVPP2_CLS2_ACT_DATA_TBL_COLOR_MASK) >> MVPP2_CLS2_ACT_DATA_TBL_COLOR_OFF),
 			((c2->sram.regs.actions & MVPP2_CLS2_ACT_PRI_MASK) >> MVPP2_CLS2_ACT_PRI_OFF),
 			((c2->sram.regs.actions & MVPP2_CLS2_ACT_DSCP_MASK) >> MVPP2_CLS2_ACT_DSCP_OFF),
@@ -5010,7 +5012,8 @@ int mvpp2_cls_c2_sw_dump(struct mvpp2_cls_c2_entry *c2)
 			((c2->sram.regs.actions & MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_MASK) >> MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_OFF),
 			((c2->sram.regs.actions & MVPP2_CLS2_ACT_FRWD_MASK) >> MVPP2_CLS2_ACT_FRWD_OFF),
 			((c2->sram.regs.actions & MVPP2_CLS2_ACT_PLCR_MASK) >> MVPP2_CLS2_ACT_PLCR_OFF),
-			((c2->sram.regs.actions & MVPP2_CLS2_ACT_FLD_EN_MASK) >> MVPP2_CLS2_ACT_FLD_EN_OFF));
+			((c2->sram.regs.actions & MVPP2_CLS2_ACT_FLD_EN_MASK) >> MVPP2_CLS2_ACT_FLD_EN_OFF),
+			((c2->sram.regs.actions & MVPP2_CLS2_ACT_RSS_MASK) >> MVPP2_CLS2_ACT_RSS_OFF));
 	printk("\n\n");
 
 
@@ -5070,18 +5073,15 @@ int mvpp2_cls_c2_sw_dump(struct mvpp2_cls_c2_entry *c2)
 	int32bit =  ((c2->sram.regs.hwf_attr & MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_MASK) >> MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_OFF);
 	printk("0x%1.1x\t", int32bit);
 	printk("\n\n");
-#if 0
+
 	/*------------------------------*/
-	/*	dup_attr 0x1B6C		*/
+	/*	CLSC2_ATTR2 0x1B6C	*/
 	/*------------------------------*/
-	printk("DUP_ATTR:		FID	COUNT	POLICER [id    bank]\n");
-	printk("			0x%2.2x\t0x%1.1x\t\t[0x%2.2x   0x%1.1x]\n",
-		((c2->sram.regs.dup_attr & MVPP2_CLS2_ACT_DUP_ATTR_DUPID_MASK) >> MVPP2_CLS2_ACT_DUP_ATTR_DUPID_OFF),
-		((c2->sram.regs.dup_attr & MVPP2_CLS2_ACT_DUP_ATTR_DUPCNT_MASK) >> MVPP2_CLS2_ACT_DUP_ATTR_DUPCNT_OFF),
-		((c2->sram.regs.dup_attr & MVPP2_CLS2_ACT_DUP_ATTR_PLCRID_MASK) >> MVPP2_CLS2_ACT_DUP_ATTR_PLCRID_OFF),
-		((c2->sram.regs.dup_attr & MVPP2_CLS2_ACT_DUP_ATTR_PLCRBK_MASK) >> MVPP2_CLS2_ACT_DUP_ATTR_PLCRBK_OFF));
+	printk("RSS_ATTR:		RSS_EN\n");
+	printk("			%d\n",
+		((c2->sram.regs.rss_attr & MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_MASK) >> MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_OFF));
 	printk("\n");
-#endif
+
 	/*------------------------------*/
 	/*	seq_attr 0x1B70		*/
 	/*------------------------------*/
@@ -5880,3 +5880,202 @@ int mvpp2_cls_c2_rule_set(struct mvpp2_port *port)
 	return 0;
 }
 
+/* The function update LSB[cpu_width + cos_width - 1 : cos_width] of queue (queue high and low) on dedicated c2 rule.
+*  used by rss default cpu set */
+void mvpp2_cls_c2_rule_queue_set(struct mvpp2 *pp2, u32 rule_idx, u8 queue)
+{
+	u32 regVal, q_mask, cpu_width, cos_width;
+
+	/* Calculate width, Through ilog2(pp2->cpu_map), the cpu online max id can be got */
+	cpu_width = ilog2(roundup_pow_of_two(pp2->cpu_map));
+	cos_width = ilog2(roundup_pow_of_two(pp2->pp2_cfg.cos_cfg.num_cos_queues));
+
+	q_mask = (1 << cpu_width) - 1;
+
+	/* Write index reg */
+	mvpp2_write(&pp2->hw, MVPP2_CLS2_TCAM_IDX_REG, rule_idx);
+
+	/* Read Reg 0x1B64 */
+	regVal = mvpp2_read(&pp2->hw, MVPP2_CLS2_ACT_QOS_ATTR_REG);
+	/* Update Value */
+	regVal &= (~(q_mask << (MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF + cos_width)));
+	regVal |= ((queue & q_mask) << (MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF + cos_width));
+	/* Write Reg 0x1B64 */
+	mvpp2_write(&pp2->hw, MVPP2_CLS2_ACT_QOS_ATTR_REG, regVal);
+}
+
+/* The function update LSB[cpu_width + cos_width - 1 : cos_width] of queue on dedicated pbit qos table.
+*  used by rss default cpu set */
+void mvpp2_cls_c2_pbit_qos_queue_set(struct mvpp2 *pp2, u8 tbl_id, u8 queue)
+{
+	u32 tbl_line, q_mask, regVal, cpu_width, cos_width;
+
+	/* Calculate width, Through ilog2(pp2->cpu_map), the cpu online max id can be got */
+	cpu_width = ilog2(roundup_pow_of_two(pp2->cpu_map));
+	cos_width = ilog2(roundup_pow_of_two(pp2->pp2_cfg.cos_cfg.num_cos_queues));
+
+	q_mask = (1 << cpu_width) - 1;
+
+	for (tbl_line = 0; tbl_line < MVPP2_QOS_TBL_LINE_NUM_PRI; tbl_line++) {
+		regVal = 0;
+		/* write index reg */
+		regVal |= (tbl_line << MVPP2_CLS2_DSCP_PRI_INDEX_LINE_OFF);
+		regVal |= (MVPP2_QOS_TBL_SEL_PRI << MVPP2_CLS2_DSCP_PRI_INDEX_SEL_OFF);
+		regVal |= (tbl_id << MVPP2_CLS2_DSCP_PRI_INDEX_TBL_ID_OFF);
+		mvpp2_write(&pp2->hw, MVPP2_CLS2_DSCP_PRI_INDEX_REG, regVal);
+
+		/* Read Reg CLSC2_DSCP_PRI */
+		regVal = mvpp2_read(&pp2->hw, MVPP2_CLS2_QOS_TBL_REG);
+		regVal &= (~(q_mask << (MVPP2_CLS2_QOS_TBL_QUEUENUM_OFF + cos_width)));
+		regVal |= ((queue & q_mask) << (MVPP2_CLS2_QOS_TBL_QUEUENUM_OFF + cos_width));
+
+		/* Write Reg CLSC2_DSCP_PRI */
+		mvpp2_write(&pp2->hw, MVPP2_CLS2_QOS_TBL_REG, regVal);
+	}
+}
+
+/* RSS */
+/* The function will set rss table entry */
+int mvpp22_rss_tbl_entry_set(struct mvpp2_hw *hw, struct mvpp22_rss_entry *rss)
+{
+	unsigned int regVal = 0;
+
+	if (!rss || rss->sel > MVPP22_RSS_ACCESS_TBL)
+		return -EINVAL;
+
+	if (rss->sel == MVPP22_RSS_ACCESS_POINTER) {
+		if (rss->u.pointer.rss_tbl_ptr >= MVPP22_RSS_TBL_NUM)
+			return -EINVAL;
+		/* Write index */
+		regVal |= rss->u.pointer.rxq_idx << MVPP22_RSS_IDX_RXQ_NUM_OFF;
+		mvpp2_write(hw, MVPP22_RSS_IDX_REG, regVal);
+		/* Write entry */
+		regVal &= (~MVPP22_RSS_RXQ2RSS_TBL_POINT_MASK);
+		regVal |= rss->u.pointer.rss_tbl_ptr << MVPP22_RSS_RXQ2RSS_TBL_POINT_OFF;
+		mvpp2_write(hw, MVPP22_RSS_RXQ2RSS_TBL_REG, regVal);
+	} else if (rss->sel == MVPP22_RSS_ACCESS_TBL) {
+		if (rss->u.entry.tbl_id >= MVPP22_RSS_TBL_NUM ||
+		    rss->u.entry.tbl_line >= MVPP22_RSS_TBL_LINE_NUM ||
+		    rss->u.entry.width >= MVPP22_RSS_WIDTH_MAX)
+			return -EINVAL;
+		/* Write index */
+		regVal |= (rss->u.entry.tbl_line << MVPP22_RSS_IDX_ENTRY_NUM_OFF |
+			   rss->u.entry.tbl_id << MVPP22_RSS_IDX_TBL_NUM_OFF);
+		mvpp2_write(hw, MVPP22_RSS_IDX_REG, regVal);
+		/* Write entry */
+		regVal &= (~MVPP22_RSS_TBL_ENTRY_MASK);
+		regVal |= (rss->u.entry.rxq << MVPP22_RSS_TBL_ENTRY_OFF);
+		mvpp2_write(hw, MVPP22_RSS_TBL_ENTRY_REG, regVal);
+		regVal &= (~MVPP22_RSS_WIDTH_MASK);
+		regVal |= (rss->u.entry.width << MVPP22_RSS_WIDTH_OFF);
+		mvpp2_write(hw, MVPP22_RSS_WIDTH_REG, regVal);
+	}
+
+	return 0;
+}
+
+/* The function will get rss table entry */
+int mvpp22_rss_tbl_entry_get(struct mvpp2_hw *hw, struct mvpp22_rss_entry *rss)
+{
+	unsigned int regVal = 0;
+
+	if (!rss || rss->sel > MVPP22_RSS_ACCESS_TBL)
+		return -EINVAL;
+
+	if (rss->sel == MVPP22_RSS_ACCESS_POINTER) {
+		/* Read entry */
+		rss->u.pointer.rss_tbl_ptr =
+				mvpp2_read(hw, MVPP22_RSS_RXQ2RSS_TBL_REG) & MVPP22_RSS_RXQ2RSS_TBL_POINT_MASK;
+	} else if (rss->sel == MVPP22_RSS_ACCESS_TBL) {
+		if (rss->u.entry.tbl_id >= MVPP22_RSS_TBL_NUM ||
+		    rss->u.entry.tbl_line >= MVPP22_RSS_TBL_LINE_NUM)
+			return -EINVAL;
+		/* Read index */
+		regVal |= (rss->u.entry.tbl_line << MVPP22_RSS_IDX_ENTRY_NUM_OFF |
+			   rss->u.entry.tbl_id << MVPP22_RSS_IDX_TBL_NUM_OFF);
+		mvpp2_write(hw, MVPP22_RSS_IDX_REG, regVal);
+		/* Read entry */
+		rss->u.entry.rxq = mvpp2_read(hw, MVPP22_RSS_TBL_ENTRY_REG) & MVPP22_RSS_TBL_ENTRY_MASK;
+		rss->u.entry.width = mvpp2_read(hw, MVPP22_RSS_WIDTH_REG) & MVPP22_RSS_WIDTH_MASK;
+	}
+
+	return 0;
+}
+
+int mvpp22_rss_hw_dump(struct mvpp2_hw *hw)
+{
+	int tbl_id, tbl_line, cos_queue;
+
+	struct mvpp22_rss_entry rss_entry;
+
+	memset(&rss_entry, 0, sizeof(struct mvpp22_rss_entry));
+
+	rss_entry.sel = MVPP22_RSS_ACCESS_TBL;
+
+	for (tbl_id = 0; tbl_id < MVPP22_RSS_TBL_NUM; tbl_id++) {
+		printk("\n-------- RSS TABLE %d-----------\n", tbl_id);
+		printk("HASH	QUEUE	WIDTH\n");
+
+		for (tbl_line = 0; tbl_line < MVPP22_RSS_TBL_LINE_NUM; tbl_line++) {
+			rss_entry.u.entry.tbl_id = tbl_id;
+			rss_entry.u.entry.tbl_line = tbl_line;
+			mvpp22_rss_tbl_entry_get(hw, &rss_entry);
+			printk("0x%2.2x\t", rss_entry.u.entry.tbl_line);
+			printk("0x%2.2x\t", rss_entry.u.entry.rxq);
+			printk("0x%2.2x", rss_entry.u.entry.width);
+			printk("\n");
+		}
+	}
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp22_rss_hw_dump);
+
+/* The function allocate a rss table for each phisical rxq, they have same cos priority */
+int mvpp22_rss_rxq_set(struct mvpp2_port *port)
+{
+	int rxq;
+	struct mvpp22_rss_entry rss_entry;
+	int mask = ((1 << ilog2(roundup_pow_of_two(port->priv->pp2_cfg.cos_cfg.num_cos_queues))) - 1);
+
+	if (port->priv->pp2_version != PPV22)
+		return 0;
+
+	memset(&rss_entry, 0, sizeof(struct mvpp22_rss_entry));
+
+	rss_entry.sel = MVPP22_RSS_ACCESS_POINTER;
+
+	for (rxq = 0; rxq < port->num_rx_queues; rxq++) {
+		rss_entry.u.pointer.rxq_idx = port->rxqs[rxq]->id;
+		rss_entry.u.pointer.rss_tbl_ptr = port->rxqs[rxq]->id & mask;
+		if (mvpp22_rss_tbl_entry_set(&port->priv->hw, &rss_entry))
+			return -1;
+	}
+
+	return 0;
+}
+
+void mvpp22_rss_c2_enable(struct mvpp2_port *port, bool en)
+{
+	int lkp_type, regVal;
+	int c2_index[MVPP2_CLS_LKP_MAX];
+
+	/* Get the C2 index from shadow */
+	c2_index[MVPP2_CLS_LKP_VLAN_PRI] = port->priv->hw.c2_shadow->rule_idx_info[port->id].vlan_pri_idx;
+	c2_index[MVPP2_CLS_LKP_DSCP_PRI] = port->priv->hw.c2_shadow->rule_idx_info[port->id].dscp_pri_idx;
+	c2_index[MVPP2_CLS_LKP_DEFAULT] = port->priv->hw.c2_shadow->rule_idx_info[port->id].default_rule_idx;
+
+	for (lkp_type = 0; lkp_type < MVPP2_CLS_LKP_MAX; lkp_type++) {
+		/* For lookup type of MVPP2_CLS_LKP_HASH, there is no corresponding C2 rule, so skip it */
+		if (lkp_type == MVPP2_CLS_LKP_HASH)
+			continue;
+		/* write index reg */
+		mvpp2_write(&port->priv->hw, MVPP2_CLS2_TCAM_IDX_REG, c2_index[lkp_type]);
+		/* Update rss_attr in reg CLSC2_ATTR2 */
+		regVal = mvpp2_read(&port->priv->hw, MVPP2_CLS2_ACT_DUP_ATTR_REG);
+		if (en)
+			regVal |= MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_MASK;
+		else
+			regVal &= (~MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_MASK);
+		mvpp2_write(&port->priv->hw, MVPP2_CLS2_ACT_DUP_ATTR_REG, regVal);
+	}
+}

@@ -1180,6 +1180,31 @@ enum mvpp2_tag_type {
 #define MVPP2_PRS_FL_ATTR_TCP_BIT	BIT(5)
 #define MVPP2_PRS_FL_ATTR_UDP_BIT	BIT(6)
 
+/* PP22 RSS Registers */
+#define MVPP22_RSS_IDX_REG			0x1500
+#define MVPP22_RSS_IDX_ENTRY_NUM_OFF		0
+#define MVPP22_RSS_IDX_ENTRY_NUM_MASK		0x1F
+#define MVPP22_RSS_IDX_TBL_NUM_OFF		8
+#define MVPP22_RSS_IDX_TBL_NUM_MASK		0x700
+#define MVPP22_RSS_IDX_RXQ_NUM_OFF		16
+#define MVPP22_RSS_IDX_RXQ_NUM_MASK		0xFF0000
+#define MVPP22_RSS_RXQ2RSS_TBL_REG		0x1504
+#define MVPP22_RSS_RXQ2RSS_TBL_POINT_OFF	0
+#define MVPP22_RSS_RXQ2RSS_TBL_POINT_MASK	0x7
+#define MVPP22_RSS_TBL_ENTRY_REG		0x1508
+#define MVPP22_RSS_TBL_ENTRY_OFF		0
+#define MVPP22_RSS_TBL_ENTRY_MASK		0xFF
+#define MVPP22_RSS_WIDTH_REG			0x150c
+#define MVPP22_RSS_WIDTH_OFF			0
+#define MVPP22_RSS_WIDTH_MASK			0xF
+#define MVPP22_RSS_HASH_SEL_REG			0x1510
+#define MVPP22_RSS_HASH_SEL_OFF			0
+#define MVPP22_RSS_HASH_SEL_MASK		0x1
+/* RSS consant */
+#define MVPP22_RSS_TBL_NUM			8
+#define MVPP22_RSS_TBL_LINE_NUM			32
+#define MVPP22_RSS_WIDTH_MAX			8
+
 /* MAC entries, shadow udf */
 enum mvpp2_prs_udf {
 	MVPP2_PRS_UDF_MAC_DEF,
@@ -1253,6 +1278,7 @@ enum mvpp2_cls_lkp_type {
 	MVPP2_CLS_LKP_VLAN_PRI,
 	MVPP2_CLS_LKP_DSCP_PRI,
 	MVPP2_CLS_LKP_DEFAULT,
+	MVPP2_CLS_LKP_MAX,
 };
 
 enum mvpp2_cls_fl_pri {
@@ -1800,6 +1826,35 @@ struct mvpp2_buff_hdr {
 #define MVPP2_RX_DESC_POOL(rx_desc)	\
 	((rx_desc->status & MVPP2_RXD_BM_POOL_ID_MASK) >> MVPP2_RXD_BM_POOL_ID_OFFS)
 
+/* RSS related definetions */
+enum mvpp22_rss_access_sel {
+	MVPP22_RSS_ACCESS_POINTER,
+	MVPP22_RSS_ACCESS_TBL,
+};
+
+/* Structure dexcribe RXQ and corresponding rss table */
+struct mvpp22_rss_tbl_ptr {
+	u8 rxq_idx;
+	u8 rss_tbl_ptr;
+};
+
+/* Normal RSS entry */
+struct mvpp22_rss_tbl_entry {
+	u8 tbl_id;
+	u8 tbl_line;
+	u8 width;
+	u8 rxq;
+};
+
+union mvpp22_rss_access_entry {
+	struct mvpp22_rss_tbl_ptr pointer;
+	struct mvpp22_rss_tbl_entry entry;
+};
+
+struct mvpp22_rss_entry {
+	enum mvpp22_rss_access_sel sel;
+	union mvpp22_rss_access_entry u;
+};
 
 #endif /*_MVPP2_HW_TYPE_H_*/
 

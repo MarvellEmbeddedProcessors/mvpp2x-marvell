@@ -440,6 +440,9 @@ struct mvpp2 {
 	/* BM pools */
 	u16 num_pools;
 	struct mvpp2_bm_pool *bm_pools;
+
+	/* RX flow hash indir'n table, in pp22, the table contains the CPU idx according to weight */
+	u32 rx_indir_table[MVPP22_RSS_TBL_LINE_NUM];
 };
 
 struct mvpp2_pcpu_stats {
@@ -578,5 +581,7 @@ void mvpp2_cleanup_txqs(struct mvpp2_port *port);
 
 
 void mvpp2_set_ethtool_ops(struct net_device *netdev);
+
+int mvpp22_rss_rxfh_indir_set(struct mvpp2_port *port);
 #endif /*_MVPP2_H_*/
 
