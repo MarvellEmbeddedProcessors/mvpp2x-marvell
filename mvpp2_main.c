@@ -2202,6 +2202,17 @@ static int mvpp2_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	return ret;
 }
 
+/*of_irq_count is not exported */
+int mvpp2_of_irq_count(struct device_node *dev)
+{
+	struct of_phandle_args irq;
+	int nr = 0;
+
+	while (of_irq_parse_one(dev, nr, &irq) == 0)
+		nr++;
+
+	return nr;
+}
 
 
 /* Device ops */
@@ -2508,7 +2519,7 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 
 	port = netdev_priv(dev);
 
-	port_num_irq = of_irq_count(port_node);
+	port_num_irq = mvpp2_of_irq_count(port_node);
 	if (port_num_irq != priv->pp2xdata->num_port_irq) {
 		dev_err(&pdev->dev, "port(%d)-number of irq's doesn't match hw\n", id);
 		goto err_free_netdev;
@@ -2814,7 +2825,8 @@ static const struct of_device_id mvpp2_match_tbl[] = {
         {
                 .compatible = "marvell,pp22",
                 .data = &pp22_pdata,
-        }
+        },
+	{ }
 };
 
 static void mvpp2_init_config(struct mvpp2_param_config *pp2_cfg, u32 cell_index)
