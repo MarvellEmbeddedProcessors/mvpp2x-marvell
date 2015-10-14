@@ -24,8 +24,9 @@
  * Contact Information:
  * Linux Network Driver <XXX.YYYY@marvell.com>
  */
-
-
+#ifdef ARMADA_390
+#include <linux/phy.h>
+#endif
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>

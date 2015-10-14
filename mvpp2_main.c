@@ -50,6 +50,9 @@
 #include <net/ip.h>
 #include <net/ipv6.h>
 
+#ifdef CONFIG_MV_PP2_FPGA
+#include <linux/pci.h>
+#endif
 
 #include "mvpp2.h"
 #include "mvpp2_hw.h"
@@ -72,6 +75,15 @@ static u8 first_bm_pool = 0;
 static u8 first_addr_space = 0;
 static u8 first_log_rxq_queue = 0;
 
+#ifdef CONFIG_MV_PP2_FPGA
+#define FPGA_PORTS_BASE          0
+#define MV_PP2_FPGA_PERODIC_TIME 10
+#define FPGA_PORT_0_OFFSET       0x14000
+
+static u32 mv_pp2_vfpga_address;
+struct timer_list cpu_poll_timer;
+static void mv_pp22_cpu_timer_callback(unsigned long data);
+#endif
 
 module_param_named(num_cos_queues, mvpp2_num_cos_queues, byte, S_IRUGO);
 MODULE_PARM_DESC(num_cos_queues,"Set number of cos_queues (1-8), def=4");
@@ -552,7 +564,14 @@ static int mvpp2_bm_update_mtu(struct net_device *dev, int mtu)
 	return 0;
 }
 
-
+#ifdef CONFIG_MV_PP2_FPGA
+static void print_regs(struct mvpp2_port *port)
+{
+	int val;
+	val = readl(port->base + 0x10);
+	pr_debug("******* print_reg(%d):[0x%x] = 0x%x\n", __LINE__, (unsigned int)port->base + 0x10, val);
+}
+#endif
 
 /* Set defaults to the MVPP2 port */
 static void mvpp2_defaults_set(struct mvpp2_port *port)
@@ -563,6 +582,17 @@ static void mvpp2_defaults_set(struct mvpp2_port *port)
 	/* Configure port to loopback if needed */
 	if (port->flags & MVPP2_F_LOOPBACK)
 		mvpp2_port_loopback_set(port);
+
+#ifdef CONFIG_MV_PP2_FPGA
+	print_regs(port);
+	writel(0x8be4, port->base);
+	writel(0xc200, port->base + 0x8);
+	writel(0x3, port->base + 0x90);
+
+	writel(0x902A, port->base + 0xC);    /*force link to 100Mb*/
+	writel(0x8be5, port->base);          /*enable port        */
+	print_regs(port);
+#endif
 
 	/* Update TX FIFO MIN Threshold */
 	val = readl(port->base + MVPP2_GMAC_PORT_FIFO_CFG_1_REG);
@@ -1812,7 +1842,9 @@ void mvpp2_start_dev(struct mvpp2_port *port)
 	mvpp2_port_interrupts_enable(port);
 
 	mvpp2_port_enable(port);
+#ifndef CONFIG_MV_PP2_FPGA
 	phy_start(port->phy_dev);
+#endif
 	netif_tx_start_all_queues(port->dev);
 }
 
@@ -1975,19 +2007,21 @@ static int mvpp2_open(struct net_device *dev)
 		goto err_cleanup_rxqs;
 	}
 
-	err = mvpp2_setup_irqs(dev, port);
+#ifndef CONFIG_MV_PP2_FPGA
+	err = request_irq(port->irq, mvpp2_isr, 0, dev->name, port);
 	if (err) {
 		netdev_err(port->dev, "cannot allocate irq's \n");
 		goto err_cleanup_txqs;
 	}
-
+#endif
 	/* In default link is down */
 	netif_carrier_off(port->dev);
 
+#ifndef CONFIG_MV_PP2_FPGA
 	err = mvpp2_phy_connect(port);
 	if (err < 0)
 		goto err_free_irq;
-
+#endif
 	/* Unmask interrupts on all CPUs */
 	on_each_cpu(mvpp2_interrupts_unmask, port, 1);
 
@@ -1997,6 +2031,10 @@ static int mvpp2_open(struct net_device *dev)
 
 	mvpp2_start_dev(port);
 
+#ifdef CONFIG_MV_PP2_FPGA
+	netif_carrier_on(port->dev);
+	netif_tx_start_all_queues(port->dev);
+#endif
 	return 0;
 
 err_free_irq:
@@ -2326,7 +2364,9 @@ static void mvpp22_port_queue_vectors_init(struct mvpp2_port *port)
 		q_vec[cpu].qv_type = MVPP2_PRIVATE;
 		q_vec[cpu].sw_thread_id = first_addr_space+cpu;
 		q_vec[cpu].sw_thread_mask = (1<<q_vec[cpu].sw_thread_id);
+#ifndef CONFIG_MV_PP2_FPGA
 		q_vec[cpu].irq = port->of_irqs[first_addr_space+cpu];
+#endif
 		netif_napi_add(port->dev, &q_vec[cpu].napi, mvpp22_poll,
 			NAPI_POLL_WEIGHT);
 		if (mvpp2_queue_mode == MVPP2_QDIST_SINGLE_MODE) {
@@ -2344,7 +2384,9 @@ static void mvpp22_port_queue_vectors_init(struct mvpp2_port *port)
 		q_vec[cpu].qv_type = MVPP2_SHARED;
 		q_vec[cpu].sw_thread_id = first_addr_space+cpu;
 		q_vec[cpu].sw_thread_mask = (1<<q_vec[cpu].sw_thread_id);
+#ifndef CONFIG_MV_PP2_FPGA
 		q_vec[cpu].irq = port->of_irqs[first_addr_space+cpu];
+#endif
 		netif_napi_add(port->dev, &q_vec[cpu].napi, mvpp22_poll,
 			NAPI_POLL_WEIGHT);
 		q_vec[cpu].first_rx_queue = 0;
@@ -2468,6 +2510,8 @@ err_free_percpu:
 	}
 	return err;
 }
+
+#ifndef CONFIG_MV_PP2_FPGA
 
 /* Ports initialization */
 static int mvpp2_port_probe(struct platform_device *pdev,
@@ -2638,11 +2682,134 @@ err_free_txq_pcpu:
 err_free_stats:
 	free_percpu(port->stats);
 err_free_irq:
+#ifndef CONFIG_MV_PP2_FPGA
 	mvpp2_port_irqs_dispose_mapping(port);
+#endif
 err_free_netdev:
 	free_netdev(dev);
 	return err;
 }
+
+#else
+
+static int mvpp2_port_probe_fpga(struct platform_device *pdev,
+				int port_i,
+			    struct mvpp2 *priv)
+{
+	struct device_node *phy_node;
+	struct mvpp2_port *port;
+	struct mvpp2_port_pcpu *port_pcpu;
+	struct net_device *dev;
+	struct resource *res;
+	const char *dt_mac_addr;
+	const char *mac_from;
+	char hw_mac_addr[ETH_ALEN];
+	u32 id;
+	unsigned int * port_irqs;
+	int features, phy_mode, err=0, i, port_num_irq, cpu;
+	int priv_common_regs_num = 2;
+
+	dev = alloc_etherdev_mqs(sizeof(struct mvpp2_port), mvpp2_txq_number,
+				 mvpp2_rxq_number);
+	if (!dev)
+		return -ENOMEM;
+
+	dev->tx_queue_len = MVPP2_MAX_TXD;
+	dev->watchdog_timeo = 5 * HZ;
+	dev->netdev_ops = &mvpp2_netdev_ops;
+	mvpp2_set_ethtool_ops(dev);
+
+	port = netdev_priv(dev);
+
+	port->priv = priv;
+	port->id = port_i;
+	port->num_tx_queues = mvpp2_txq_number;
+	port->num_rx_queues = mvpp2_rxq_number;
+
+	/*YuvalC: Port first_rxq relative to port->id, not dependent on board topology, i.e. not dynamically allocated */
+	port->first_rxq = (port->id)*(priv->pp2xdata->pp2x_max_port_rxqs) +
+		first_log_rxq_queue;
+	port->phy_node = phy_node;
+	port->phy_interface = phy_mode;
+	port->base = (void *) ((mv_pp2_vfpga_address + FPGA_PORT_0_OFFSET) + ((port->id - 1) * 0x1000));
+
+	if (IS_ERR(port->base)) {
+		err = PTR_ERR(port->base);
+		goto err_free_irq;
+	}
+
+	/* Alloc per-cpu stats */
+	port->stats = netdev_alloc_pcpu_stats(struct mvpp2_pcpu_stats);
+	if (!port->stats) {
+		err = -ENOMEM;
+		goto err_free_irq;
+	}
+
+	mac_from = "random";
+	eth_hw_addr_random(dev);
+
+	port->tx_ring_size = tx_queue_size;
+	port->rx_ring_size = rx_queue_size;
+	port->dev = dev;
+	SET_NETDEV_DEV(dev, &pdev->dev);
+	err = mvpp2_port_init(port);
+	if (err < 0) {
+		dev_err(&pdev->dev, "failed to init port %d\n", port->id);
+		goto err_free_stats;
+	}
+	mvpp2_port_power_up(port);
+
+	port->pcpu = alloc_percpu(struct mvpp2_port_pcpu);
+	if (!port->pcpu) {
+		err = -ENOMEM;
+		goto err_free_txq_pcpu;
+	}
+
+	if (port->priv->pp2xdata->interrupt_tx_done == false) {
+		for_each_present_cpu(cpu) {
+			port_pcpu = per_cpu_ptr(port->pcpu, cpu);
+
+			hrtimer_init(&port_pcpu->tx_done_timer, CLOCK_MONOTONIC,
+				     HRTIMER_MODE_REL_PINNED);
+			port_pcpu->tx_done_timer.function = mvpp2_hr_timer_cb;
+			port_pcpu->timer_scheduled = false;
+
+			tasklet_init(&port_pcpu->tx_done_tasklet, mvpp2_tx_proc_cb,
+				     (unsigned long)dev);
+		}
+	}
+	features = NETIF_F_SG | NETIF_F_IP_CSUM;
+	dev->features = features | NETIF_F_RXCSUM;
+	dev->hw_features |= features | NETIF_F_RXCSUM | NETIF_F_GRO;
+	dev->vlan_features |= features;
+
+	err = register_netdev(dev);
+	if (err < 0) {
+		dev_err(&pdev->dev, "failed to register netdev\n");
+		goto err_free_port_pcpu;
+	}
+	netdev_info(dev, "Using %s mac address %pM\n", mac_from, dev->dev_addr);
+	priv->port_list[port_i - 1] = port;
+	return 0;
+	dev_err(&pdev->dev, "%s failed for port_id(%d)\n", __func__, id);
+
+err_free_port_pcpu:
+	free_percpu(port->pcpu);
+err_free_txq_pcpu:
+	for (i = 0; i < mvpp2_txq_number; i++)
+		free_percpu(port->txqs[i]->pcpu);
+err_free_stats:
+	free_percpu(port->stats);
+err_free_irq:
+#ifndef CONFIG_MV_PP2_FPGA
+	mvpp2_port_irqs_dispose_mapping(port);
+#endif
+err_free_netdev:
+	free_netdev(dev);
+	return err;
+}
+
+#endif
 
 /* Ports removal routine */
 static void mvpp2_port_remove(struct mvpp2_port *port)
@@ -2654,7 +2821,9 @@ static void mvpp2_port_remove(struct mvpp2_port *port)
 	free_percpu(port->stats);
 	for (i = 0; i < port->num_tx_queues; i++)
 		free_percpu(port->txqs[i]->pcpu);
+#ifndef CONFIG_MV_PP2_FPGA
 	mvpp2_port_irqs_dispose_mapping(port);
+#endif
 	free_netdev(port->dev);
 }
 
@@ -2742,9 +2911,11 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 		mvpp2_conf_mbus_windows(dram_target_info, hw);
 
 	/* Disable HW PHY polling */
+#ifndef CONFIG_MV_PP2_FPGA
 	val = readl(hw->lms_base + MVPP2_PHY_AN_CFG0_REG);
 	val |= MVPP2_PHY_AN_STOP_SMI0_MASK;
 	writel(val, hw->lms_base + MVPP2_PHY_AN_CFG0_REG);
+#endif
 
 	/* Allocate and initialize aggregated TXQs */
 	priv->aggr_txqs = devm_kcalloc(&pdev->dev, num_present_cpus(),
@@ -2765,9 +2936,10 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 	/* Rx Fifo Init */
 	mvpp2_rx_fifo_init(hw);
 
-
+#ifndef CONFIG_MV_PP2_FPGA
 	writel(MVPP2_EXT_GLOBAL_CTRL_DEFAULT,
 	       hw->lms_base + MVPP2_MNG_EXTENDED_GLOBAL_CTRL_REG);
+#endif
 
 	/* Allow cache snoop when transmiting packets */
 	mvpp2_write(hw, MVPP21_TX_SNOOP_REG, 0x1);
@@ -2912,7 +3084,9 @@ static int mvpp2_probe(struct platform_device *pdev)
 	struct device_node *port_node;
 	struct mvpp2 *priv;
 	struct mvpp2_hw *hw;
+#ifndef CONFIG_MV_PP2_FPGA
 	struct resource *res;
+#endif
 	const struct of_device_id *match;
 	int port_count, cpu;
 	int i, err;
@@ -2925,7 +3099,11 @@ static int mvpp2_probe(struct platform_device *pdev)
 
 	hw = &priv->hw;
 
+#ifndef CONFIG_MV_PP2_FPGA
 	match = of_match_node(mvpp2_match_tbl, dn);
+#else
+	match = &mvpp2_match_tbl[1];
+#endif
 
 	if (!match)
 		return -ENODEV;
@@ -2933,7 +3111,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 
 	priv->pp2xdata = (const struct mvpp2x_platform_data *) match->data;
 	priv->pp2_version = priv->pp2xdata->pp2x_ver;
-
+#ifndef CONFIG_MV_PP2_FPGA
 	if (priv->pp2xdata->multi_hw_instance) {
 		if (of_property_read_u32(pdev->dev.of_node, "cell-index",
 					  &cell_index)) {
@@ -2941,7 +3119,9 @@ static int mvpp2_probe(struct platform_device *pdev)
 			return -ENODEV;
 		}
 	}
+#endif
 
+#ifndef CONFIG_MV_PP2_FPGA
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	hw->base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(hw->base))
@@ -2953,7 +3133,12 @@ static int mvpp2_probe(struct platform_device *pdev)
 	hw->lms_base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(hw->lms_base))
 		return PTR_ERR(hw->lms_base);
+#else
+	hw->base = (void *)mv_pp2_vfpga_address;
+	pr_debug("mvpp2(%d): mvpp2_probe:mv_pp2_vfpga_address=0x%x\n", __LINE__, mv_pp2_vfpga_address);
+#endif
 
+#ifndef CONFIG_MV_PP2_FPGA
 	hw->pp_clk = devm_clk_get(&pdev->dev, "pp_clk");
 	if (IS_ERR(hw->pp_clk))
 		return PTR_ERR(hw->pp_clk);
@@ -2972,7 +3157,9 @@ static int mvpp2_probe(struct platform_device *pdev)
 
 	/* Get system's tclk rate */
 	hw->tclk = clk_get_rate(hw->pp_clk);
-
+#else
+	hw->tclk = 25000000;
+#endif
 	/* Save cpu_present_mask + populate the per_cpu address space */
 	cpu_map = 0;
 	i = 0;
@@ -2994,12 +3181,16 @@ static int mvpp2_probe(struct platform_device *pdev)
 		goto err_gop_clk;
 	}
 
+#ifndef CONFIG_MV_PP2_FPGA
 	port_count = of_get_available_child_count(dn);
 	if (port_count == 0) {
 		dev_err(&pdev->dev, "no ports enabled\n");
 		err = -ENODEV;
 		goto err_gop_clk;
 	}
+#else
+	port_count = 2;
+#endif
 
 	priv->port_list = devm_kcalloc(&pdev->dev, port_count,
 				      sizeof(struct mvpp2_port *),
@@ -3014,13 +3205,27 @@ static int mvpp2_probe(struct platform_device *pdev)
 	mvpp2_pp2_basic_print(priv);
 
 	/* Initialize ports */
+#ifndef CONFIG_MV_PP2_FPGA
 	for_each_available_child_of_node(dn, port_node) {
 		err = mvpp2_port_probe(pdev, port_node, priv);
 		if (err < 0)
 			goto err_gop_clk;
 	}
-
+#else
+	for(i = 0 ; i < port_count ; i++) {
+		err = mvpp2_port_probe_fpga(pdev, i + 1, priv);
+		if (err < 0)
+			goto err_gop_clk;
+	}
+#endif
 	mvpp2_pp2_ports_print(priv, port_count);
+#ifdef CONFIG_MV_PP2_FPGA
+	init_timer(&cpu_poll_timer);
+	cpu_poll_timer.function = mv_pp22_cpu_timer_callback;
+	cpu_poll_timer.expires  = jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME);
+	cpu_poll_timer.data     = pdev;
+	add_timer(&cpu_poll_timer);
+#endif
 
 	platform_set_drvdata(pdev, priv);
 	return 0;
@@ -3093,10 +3298,100 @@ static int mvpp2_rxq_number_get(void) {
 	return (rx_queue_num);
 }
 
+
+#ifdef CONFIG_MV_PP2_FPGA
+
+static int mv_pp2_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
+{
+	/* code below relevant for FPGA only */
+	if (pci_enable_device(pdev)) {
+		pr_err("mvpp2: can not enable PCI device\n");
+		return -1;
+	}
+
+	if (!(pci_resource_flags(pdev, 0) & IORESOURCE_MEM)) {
+		pr_err("mvpp2: can not find proper PCI device base address\n");
+		return -ENODEV;
+	}
+
+	if (pci_request_regions(pdev, "mv_pp2_pci")) {
+		pr_err("mvpp2: can not obtain PCI resources\n");
+		return -ENODEV;
+	}
+
+	if (pci_set_dma_mask(pdev, DMA_BIT_MASK(32))) {
+		pr_err("mvpp2: no usable DMA configuration\n");
+		return -ENODEV;
+	}
+
+	mv_pp2_vfpga_address = (u32)pci_iomap(pdev, 0, 16 * 1024 * 1024);
+
+	if (!mv_pp2_vfpga_address)
+		pr_err("mvpp2: can not map device registers\n");
+
+	pr_debug("mvpp2: fpga base: VIRT=0x%0x, size=%d KBytes\n", mv_pp2_vfpga_address, 16 * 1024);
+	return 0;
+}
+
+
+static void mv_pp2_pci_remove(struct pci_dev *pdev)
+{
+	pr_info("mvpp2: PCI device removed\n");
+}
+
+static const struct pci_device_id fpga_id_table[] = {
+	{ 0x1234, 0x1234, PCI_ANY_ID, PCI_ANY_ID, 2, 0, 0}, {0}
+};
+
+MODULE_DEVICE_TABLE(pci, fpga_id_table);
+
+static struct resource mvpp2_resources[] = {
+	{
+		.name = MVPP2_DRIVER_NAME,
+/*		.start = __NSS_MGMT_PHYS_BASE + 0x200000,
+		.end   = __NSS_MGMT_PHYS_BASE + 0x200000 + 0x200000 - 1,*/
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct pci_driver mv_pp2_pci_driver = {
+	.name	= "mv_pp2_pci",
+	.id_table = fpga_id_table,
+	.probe		= mv_pp2_pci_probe,
+	.remove		= mv_pp2_pci_remove,
+};
+#endif
+
+static struct platform_device mvpp2_device = {
+	.name           = MVPP2_DRIVER_NAME,
+	.id             = 0,
+	.num_resources	= ARRAY_SIZE(mvpp2_resources),
+	.resource		= mvpp2_resources,
+	.dev            = {
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+		.platform_data = 0,
+	},
+};
+
 static int __init mpp2_module_init(void)
 {
 	int ret;
 
+#ifdef CONFIG_MV_PP2_FPGA
+
+	if(platform_device_register(&mvpp2_device)) {
+		pr_debug("mvpp2(%d): platform_device_register failed\n", __LINE__);
+		return -1;
+	}
+
+	ret = pci_register_driver(&mv_pp2_pci_driver);
+	if (ret < 0) {
+		pr_err("mvpp2: PCI card not found, driver not installed. rc=%d\n", ret);
+		return ret;
+	}
+	mvpp2_num_cos_queues=4;
+
+#endif
 	mvpp2_rxq_number = mvpp2_rxq_number_get();
 	mvpp2_txq_number = mvpp2_num_cos_queues;
 
@@ -3112,10 +3407,41 @@ static int __init mpp2_module_init(void)
 
 static void __exit mpp2_module_exit(void)
 {
+#ifdef CONFIG_MV_PP2_FPGA
+	pci_unregister_driver(&mv_pp2_pci_driver);
+#endif
 	platform_driver_unregister(&mvpp2_driver);
 
 }
 
+#ifdef CONFIG_MV_PP2_FPGA
+
+static void mv_pp22_cpu_timer_callback(unsigned long data)
+{
+	struct platform_device *pdev = (struct platform_device *)data;
+	struct mvpp2 *priv = platform_get_drvdata(pdev);
+	struct device_node *dn = pdev->dev.of_node;
+	struct device_node *port_node;
+	int i = 0;
+	struct mvpp2_port *port;
+	
+	for(i = 0 ; i < 2 ; i++) {
+		port = priv->port_list[i];
+		if (port && netif_carrier_ok(port->dev)) {
+			napi_schedule(&port->q_vector[0].napi);
+		}
+		else if(port) {
+			pr_debug("mvpp2(%d): port=%p netif_carrier_ok=%d\n", __LINE__, port, netif_carrier_ok(port->dev));
+		}
+		else {
+			pr_debug("mvpp2(%d): mv_pp22_cpu_timer_callback. PORT NULL !!!!\n", __LINE__);
+		}
+	}
+	
+	mod_timer(&cpu_poll_timer, jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME + 15000));
+}
+
+#endif
 module_init(mpp2_module_init);
 module_exit(mpp2_module_exit);
 

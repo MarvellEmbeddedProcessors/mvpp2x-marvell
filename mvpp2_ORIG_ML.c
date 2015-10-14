@@ -5423,7 +5423,9 @@ static void mvpp2_start_dev(struct mvpp2_port *port)
 	mvpp2_interrupts_enable(port);
 
 	mvpp2_port_enable(port);
+#ifndef CONFIG_MV_PP2_FPGA
 	phy_start(port->phy_dev);
+#endif
 	netif_tx_start_all_queues(port->dev);
 }
 
@@ -5445,7 +5447,9 @@ static void mvpp2_stop_dev(struct mvpp2_port *port)
 
 	mvpp2_egress_disable(port);
 	mvpp2_port_disable(port);
+#ifndef CONFIG_MV_PP2_FPGA
 	phy_stop(port->phy_dev);
+#endif
 }
 
 /* Return positive if MTU is valid */
@@ -5524,6 +5528,7 @@ static int mvpp2_phy_connect(struct mvpp2_port *port)
 {
 	struct phy_device *phy_dev;
 
+#ifndef CONFIG_MV_PP2_FPGA
 	phy_dev = of_phy_connect(port->dev, port->phy_node, mvpp2_link_event, 0,
 				 port->phy_interface);
 	if (!phy_dev) {
@@ -5532,7 +5537,7 @@ static int mvpp2_phy_connect(struct mvpp2_port *port)
 	}
 	phy_dev->supported &= PHY_GBIT_FEATURES;
 	phy_dev->advertising = phy_dev->supported;
-
+#endif
 	port->phy_dev = phy_dev;
 	port->link    = 0;
 	port->duplex  = 0;
@@ -5543,7 +5548,9 @@ static int mvpp2_phy_connect(struct mvpp2_port *port)
 
 static void mvpp2_phy_disconnect(struct mvpp2_port *port)
 {
+#ifndef CONFIG_MV_PP2_FPGA
 	phy_disconnect(port->phy_dev);
+#endif
 	port->phy_dev = NULL;
 }
 
@@ -5796,14 +5803,16 @@ static int mvpp2_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 {
 	struct mvpp2_port *port = netdev_priv(dev);
 	int ret;
-
+#ifndef CONFIG_MV_PP2_FPGA
 	if (!port->phy_dev)
 		return -ENOTSUPP;
 
 	ret = phy_mii_ioctl(port->phy_dev, ifr, cmd);
 	if (!ret)
 		mvpp2_link_event(dev);
-
+#else
+	ret = 0;
+#endif
 	return ret;
 }
 
