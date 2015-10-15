@@ -1603,6 +1603,7 @@ static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 	aggr_txq = &port->priv->aggr_txqs[smp_processor_id()];
 
 	frags = skb_shinfo(skb)->nr_frags + 1;
+	printk(KERN_EMERG "mvpp2_tx(%d)\n", __LINE__);
 
 	/* Check number of available descriptors */
 	if (mvpp2_aggr_desc_num_check(port->priv, aggr_txq, frags) ||
@@ -1612,6 +1613,7 @@ static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 		goto out;
 	}
 
+	printk(KERN_EMERG "mvpp2_tx(%d)\n", __LINE__);
 	/* Get a descriptor for the first part of the packet */
 	tx_desc = mvpp2_txq_next_desc_get(aggr_txq);
 	tx_desc->phys_txq = txq->id;
@@ -1624,12 +1626,13 @@ static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 		frags = 0;
 		goto out;
 	}
+	printk(KERN_EMERG "mvpp2_tx(%d)\n", __LINE__);
 	tx_desc->packet_offset = buf_phys_addr & MVPP2_TX_DESC_ALIGN;
 	mvpp2x_txdesc_phys_addr_set(port->priv->pp2_version,
 		buf_phys_addr & ~MVPP2_TX_DESC_ALIGN, tx_desc);
 
 	tx_cmd = mvpp2_skb_tx_csum(port, skb);
-
+	printk(KERN_EMERG "mvpp2_tx(%d)\n", __LINE__);
 	if (frags == 1) {
 		/* First and Last descriptor */
 		tx_cmd |= MVPP2_TXD_F_DESC | MVPP2_TXD_L_DESC;
@@ -1650,21 +1653,25 @@ static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 			goto out;
 		}
 	}
-
+	printk(KERN_EMERG "mvpp2_tx(%d)\n", __LINE__);
 	txq_pcpu->reserved_num -= frags;
 	txq_pcpu->count += frags;
 	aggr_txq->count += frags;
 
+	printk(KERN_EMERG "mvpp2_tx(%d)\n", __LINE__);
 	/* Enable transmit */
 	wmb();
 	mvpp2_aggr_txq_pend_desc_add(port, frags);
 
+	printk(KERN_EMERG "mvpp2_tx(%d)\n", __LINE__);
 	if (txq_pcpu->size - txq_pcpu->count < MAX_SKB_FRAGS + 1) {
 		struct netdev_queue *nq = netdev_get_tx_queue(dev, txq_id);
-
+		printk(KERN_EMERG "mvpp2_tx(%d)\n", __LINE__);
 		netif_tx_stop_queue(nq);
 	}
+	printk(KERN_EMERG "mvpp2_tx(%d)\n", __LINE__);
 out:
+	printk(KERN_EMERG "mvpp2_tx(%d)\n", __LINE__);
 	if (frags > 0) {
 		struct mvpp2_pcpu_stats *stats = this_cpu_ptr(port->stats);
 
@@ -1676,10 +1683,12 @@ out:
 		dev->stats.tx_dropped++;
 		dev_kfree_skb_any(skb);
 	}
+	printk(KERN_EMERG "mvpp2_tx(%d)\n", __LINE__);
 	/* PPV21 TX Post-Processing */
 	if (port->priv->pp2xdata->interrupt_tx_done == false)
 		mvpp2_tx_done_post_proc(txq, txq_pcpu, port, frags);
 
+	printk(KERN_EMERG "mvpp2_tx(%d)\n", __LINE__);
 	return NETDEV_TX_OK;
 }
 static inline void mvpp2_cause_misc_handle(struct mvpp2_port *port,
@@ -2008,7 +2017,7 @@ static int mvpp2_open(struct net_device *dev)
 	}
 
 #ifndef CONFIG_MV_PP2_FPGA
-	err = request_irq(port->irq, mvpp2_isr, 0, dev->name, port);
+	err = mvpp2_setup_irqs(dev, port);
 	if (err) {
 		netdev_err(port->dev, "cannot allocate irq's \n");
 		goto err_cleanup_txqs;
@@ -3360,7 +3369,6 @@ static struct pci_driver mv_pp2_pci_driver = {
 	.probe		= mv_pp2_pci_probe,
 	.remove		= mv_pp2_pci_remove,
 };
-#endif
 
 static struct platform_device mvpp2_device = {
 	.name           = MVPP2_DRIVER_NAME,
@@ -3372,6 +3380,8 @@ static struct platform_device mvpp2_device = {
 		.platform_data = 0,
 	},
 };
+
+#endif
 
 static int __init mpp2_module_init(void)
 {
