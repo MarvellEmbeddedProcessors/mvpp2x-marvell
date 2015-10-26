@@ -419,6 +419,7 @@ static inline void mvpp2x_txdesc_phys_addr_set(enum mvppv2_version pp2_ver,
 	}
 }
 
+int mvpp2_prs_hw_read(struct mvpp2_hw *hw, struct mvpp2_prs_entry *pe);
 
 int mvpp2_prs_default_init(struct platform_device *pdev,
 				  struct mvpp2_hw *hw);
@@ -495,6 +496,44 @@ void mvpp2_rx_error(struct mvpp2_port *port,
 void mvpp2_rx_csum(struct mvpp2_port *port, u32 status,
 			  struct sk_buff *skb);
 void mvpp2_get_mac_address(struct mvpp2_port *port, unsigned char *addr);
+
+
+int mvpp2_prs_sw_sram_shift_get(struct mvpp2_prs_entry *pe, int *shift);
+int mvpp2_prs_sw_sram_next_lu_get(struct mvpp2_prs_entry *pe, unsigned int *lu);
+int mvpp2_prs_sram_bit_get(struct mvpp2_prs_entry *pe, int bitNum, unsigned int *bit);
+int mvpp2_prs_sw_sram_lu_done_get(struct mvpp2_prs_entry *pe, unsigned int *bit);
+int mvpp2_prs_sw_sram_flowid_gen_get(struct mvpp2_prs_entry *pe, unsigned int *bit);
+int mvpp2_prs_sw_sram_ri_get(struct mvpp2_prs_entry *pe, unsigned int *bits, unsigned int *enable);
+int mvpp2_prs_sw_sram_ai_get(struct mvpp2_prs_entry *pe, unsigned int *bits, unsigned int *enable);
+int mvpp2_prs_sw_dump(struct mvpp2_prs_entry *pe);
+int mvpp2_prs_hw_dump(struct mvpp2_hw *hw);
+int mvpp2_prs_hw_regs_dump(struct mvpp2_hw *hw);
+int mvpp2_prs_hw_hits_dump(struct mvpp2_hw *hw);
+int mvpp2_cls_hw_lkp_read(struct mvpp2_hw * hw, int lkpid, int way, struct mvpp2_cls_lookup_entry *fe);
+int mvpp2_cls_hw_lkp_print(struct mvpp2_hw * hw, int lkpid, int way);
+int mvpp2_cls_sw_lkp_rxq_get(struct mvpp2_cls_lookup_entry *lkp, int *rxq);
+int mvpp2_cls_sw_lkp_en_get(struct mvpp2_cls_lookup_entry *lkp, int *en);
+int mvpp2_cls_sw_lkp_flow_get(struct mvpp2_cls_lookup_entry *lkp, int *flow_idx);
+int mvpp2_cls_sw_lkp_mod_get(struct mvpp2_cls_lookup_entry *lkp, int *mod_base);
+int mvpp2_cls_hw_flow_read(struct mvpp2_hw * hw, int index, struct mvpp2_cls_flow_entry *fe);
+int mvpp2_cls_sw_flow_dump(struct mvpp2_cls_flow_entry *fe);
+int mvpp2_cls_hw_regs_dump(struct mvpp2_hw * hw);
+int mvpp2_cls_hw_lkp_hit_get(struct mvpp2_hw * hw, int lkpid, int way,  unsigned int *cnt);
+int mvpp2_cls_hw_flow_dump(struct mvpp2_hw * hw);
+int mvpp2_cls_hw_flow_hits_dump(struct mvpp2_hw * hw);
+int mvpp2_cls_hw_lkp_hits_dump(struct mvpp2_hw * hw);
+int mvpp2_cls_hw_lkp_dump(struct mvpp2_hw * hw);
+int mvpp2_cls_c2_qos_hw_read(struct mvpp2_hw *hw, int tbl_id, int tbl_sel, int tbl_line, struct mvpp2_cls_c2_qos_entry *qos);
+int mvpp2_cls_c2_qos_dscp_hw_dump(struct mvpp2_hw *hw);
+int mvpp2_cls_c2_qos_prio_hw_dump(struct mvpp2_hw *hw);
+int mvpp2_cls_c2_hw_read(struct mvpp2_hw *hw, int index, struct mvpp2_cls_c2_entry *c2);
+int mvpp2_cls_c2_sw_words_dump(struct mvpp2_cls_c2_entry *c2);
+int mvpp2_cls_c2_sw_dump(struct mvpp2_cls_c2_entry *c2);
+int mvpp2_cls_c2_hw_dump(struct mvpp2_hw *hw);
+int mvpp2_cls_c2_hit_cntr_clear_all(struct mvpp2_hw *hw);
+int mvpp2_cls_c2_hit_cntr_read(struct mvpp2_hw *hw, int index, u32 *cntr);
+int mvpp2_cls_c2_hit_cntr_dump(struct mvpp2_hw *hw);
+int mvpp2_cls_c2_regs_dump(struct mvpp2_hw *hw);
 
 
 

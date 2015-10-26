@@ -13,9 +13,10 @@ _private*/
 .*
 temp/*
 Makefile
-
+sysfs/mach-mvebu/*
+sysfs/mvebu_net/*
 ~*
-
+IGNORED/*
 .templates/bl_body.template
 .templates/bl_version.template
 .templates/default.txt
@@ -23,3 +24,6 @@ Makefile
 
 
 
+
+
+xilinx_axi_pcie_ep.bit

@@ -40,16 +40,22 @@
 #define MVPP2_DRIVER_NAME "mvpp2"
 #define MVPP2_DRIVER_VERSION "1.0"
 
-
 #define PFX			MVPP2_DRIVER_NAME ": "
-//#define CONFIG_MVPP2_DEBUG
-#ifdef CONFIG_MVPP2_DEBUG
+
+#ifndef REDFINE_DEBUG_ONCE
+
+#define REDFINE_DEBUG_ONCE
+#if defined(DEBUG) || defined(CONFIG_MVPP2_DEBUG)
+#undef DEBUG
 #define DEBUG	1
 #define VERBOSE	1
 #else
 #define DEBUG	0
 #define VERBOSE	0
-#endif /*CONFIG_MVPP2_DEBUG*/
+#endif /*DEBUG||CONFIG_MVPP2_DEBUG*/
+
+#endif /*REDFINE_DEBUG_ONCE*/
+
 
 #if VERBOSE
 #define DBG_MSG(fmt, args...)	printk(KERN_CRIT PFX fmt, ## args)
@@ -60,6 +66,121 @@
 #define DBG_MSG(fmt, args...)	while (0) printk(fmt, ## args)
 #endif /*DEBUG*/
 #endif /*VERBOSE*/
+
+
+#define MV_ETH_SKB_SHINFO_SIZE	SKB_DATA_ALIGN(sizeof(struct skb_shared_info))
+
+
+/* START - Taken from mvPp2Commn.h, need to order TODO */
+/*--------------------------------------------------------------------*/
+/*			PP2 COMMON DEFINETIONS			      */
+/*--------------------------------------------------------------------*/
+
+#define MV_ERROR		(-1)
+#define MV_OK			(0)
+
+#define WAY_MAX			1
+
+
+
+#define DECIMAL_RANGE_VALIDATE(_VALUE_ , _MIN_, _MAX_) {\
+	if (((_VALUE_) > (_MAX_)) || ((_VALUE_) < (_MIN_))) {\
+		printk("%s: value %d (0x%x) is out of range [%d , %d].\n",\
+				__func__, (_VALUE_), (_VALUE_), (_MIN_), (_MAX_));\
+		return MV_ERROR;\
+	} \
+}
+
+#define RANGE_VALIDATE(_VALUE_ , _MIN_, _MAX_) {\
+	if (((_VALUE_) > (_MAX_)) || ((_VALUE_) < (_MIN_))) {\
+		printk("%s: value 0x%X (%d) is out of range [0x%X , 0x%X].\n",\
+				__func__, (_VALUE_), (_VALUE_), (_MIN_), (_MAX_));\
+		return MV_ERROR;\
+	} \
+}
+
+#define BIT_RANGE_VALIDATE(_VALUE_)			RANGE_VALIDATE(_VALUE_ , 0, 1)
+
+#define POS_RANGE_VALIDATE(_VALUE_, _MAX_)		RANGE_VALIDATE(_VALUE_ , 0, _MAX_)
+
+#define PTR_VALIDATE(_ptr_) {\
+	if (_ptr_ == NULL) {\
+		printk("%s: null pointer.\n", __func__);\
+		return MV_ERROR;\
+	} \
+}
+
+#define RET_VALIDATE(_ret_) {\
+	if (_ret_ != MV_OK) {\
+		printk("%s: function call fail.\n", __func__);\
+		return MV_ERROR;\
+	} \
+}
+
+
+#define WARN_OOM(cond) if (cond) { printk("%s: out of memory\n", __func__); return NULL; }
+
+
+/*--------------------------------------------------------------------*/
+/*			PP2 COMMON DEFINETIONS			      */
+/*--------------------------------------------------------------------*/
+#define NOT_IN_USE					(-1)
+#define IN_USE						(1)
+#define DWORD_BITS_LEN					32
+#define DWORD_BYTES_LEN                                 4
+#define RETRIES_EXCEEDED				15000
+#define ONE_BIT_MAX					1
+#define UNI_MAX						7
+#define ETH_PORTS_NUM					7
+
+/*--------------------------------------------------------------------*/
+/*			PNC COMMON DEFINETIONS			      */
+/*--------------------------------------------------------------------*/
+
+/*
+ HW_BYTE_OFFS
+ return HW byte offset in 4 bytes register
+ _offs_: native offset (LE)
+ LE example: HW_BYTE_OFFS(1) = 1
+ BE example: HW_BYTE_OFFS(1) = 2
+*/
+#define SRAM_BIT_TO_BYTE(_bit_)			HW_BYTE_OFFS((_bit_) / 8)
+
+#if 1 //defined(MV_CPU_LE)
+	#define HW_BYTE_OFFS(_offs_)		(_offs_)
+#else
+	#define HW_BYTE_OFFS(_offs_)		((3 - ((_offs_) % 4)) + (((_offs_) / 4) * 4))
+#endif
+
+
+#define TCAM_DATA_BYTE_OFFS_LE(_offs_)		(((_offs_) - ((_offs_) % 2)) * 2 + ((_offs_) % 2))
+#define TCAM_DATA_MASK_OFFS_LE(_offs_)		(((_offs_) * 2) - ((_offs_) % 2)  + 2)
+
+/*
+ TCAM_DATA_BYTE/MASK
+ tcam data devide into 4 bytes registers
+ each register include 2 bytes of data and 2 bytes of mask
+ the next macros calc data/mask offset in 4 bytes register
+ _offs_: native offset (LE) in data bytes array
+ relevant only for TCAM data bytes
+ used by PRS and CLS2
+*/
+#define TCAM_DATA_BYTE(_offs_)			(HW_BYTE_OFFS(TCAM_DATA_BYTE_OFFS_LE(_offs_)))
+#define TCAM_DATA_MASK(_offs_)			(HW_BYTE_OFFS(TCAM_DATA_MASK_OFFS_LE(_offs_)))
+
+#define C2_SRAM_FMT					"%8.8x %8.8x %8.8x %8.8x %8.8x"
+#define C2_SRAM_VAL(p)					p[4], p[3], p[2], p[1], p[0]
+
+
+#define PRS_SRAM_FMT					"%4.4x %8.8x %8.8x %8.8x"
+#define PRS_SRAM_VAL(p)					p[3] & 0xFFFF, p[2], p[1], p[0]
+
+
+/*END - Taken from mvPp2Commn.h, need to order TODO */
+/*--------------------------------------------------------------------*/
+
+
+
 
 
 /* Descriptor ring Macros */
@@ -80,7 +201,7 @@
 #define MVPP2_RX_COAL_USEC		100
 
 /* BM constants */
-#define MVPP2_BM_POOLS_NUM		8
+#define MVPP2_BM_POOLS_NUM		16
 #define MVPP2_BM_POOL_SIZE_MAX		(16*1024 - MVPP2_BM_POOL_PTR_ALIGN/4)
 #define MVPP2_BM_POOL_PTR_ALIGN		128
 
@@ -91,6 +212,11 @@
 
 
 #define MVPP2_ALL_BUFS			0
+
+
+#define RX_TOTAL_SIZE(buf_size)		((buf_size) + MV_ETH_SKB_SHINFO_SIZE)
+#define RX_TRUE_SIZE(total_size)	roundup_pow_of_two(total_size)
+
 
 
 enum mvppv2_version {
@@ -294,6 +420,7 @@ struct mvpp2 {
 	struct mvpp2_aggr_tx_queue *aggr_txqs;
 
 	/* BM pools */
+	u16 num_pools;
 	struct mvpp2_bm_pool *bm_pools;
 };
 
@@ -391,6 +518,25 @@ struct mvpp2x_platform_data {
 	void (*mvpp2x_port_isr_rx_group_cfg)(struct mvpp2_port *);
 };
 
+
+static inline int mvpp2_max_check(int value, int limit, char *name)
+{
+	if ((value < 0) || (value >= limit)) {
+		printk("%s %d is out of range [0..%d]\n",
+			name ? name : "value", value, (limit - 1));
+		return 1;
+	}
+	return 0;
+}
+
+struct mvpp2_pool_attributes {
+	char description[32];
+	int pkt_size;
+	int buf_num;
+};
+
+
+extern struct mvpp2_pool_attributes mvpp2_pools[];
 
 int mvpp2_check_ringparam_valid(struct net_device *dev,
 				       struct ethtool_ringparam *ring);

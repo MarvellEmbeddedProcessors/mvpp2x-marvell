@@ -5,11 +5,12 @@ $(error KDIR is not set. must declare kernel directory. example: export KDIR=~/l
 endif
 
 obj-m := mvpp2x.o
-mvpp2x-objs := mvpp2_ethtool.o mvpp2_hw.o mvpp2_main.o
+mvpp2x-objs := mvpp2_ethtool.o mvpp2_hw.o mvpp2_main.o mvpp2_debug.o
 
 ccflags-y := -I$(M)
 ccflags-y += -I${KDIR}/include
-ccflags-y += -DDEBUG
+ccflags-y += -DDEBUG -DCONFIG_MV_PP2_FPGA -DARMADA_390
+
 
 all:
 	make -C ${KDIR} M=$(M) modules

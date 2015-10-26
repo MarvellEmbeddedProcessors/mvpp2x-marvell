@@ -39,6 +39,7 @@
 
 #include "mvpp2.h"
 #include "mvpp2_hw.h"
+#include "mvpp2_debug.h"
 
 
 
@@ -91,7 +92,7 @@ static int mvpp2_prs_hw_write(struct mvpp2_hw *hw, struct mvpp2_prs_entry *pe)
 }
 
 /* Read tcam entry from hw */
-static int mvpp2_prs_hw_read(struct mvpp2_hw *hw, struct mvpp2_prs_entry *pe)
+int mvpp2_prs_hw_read(struct mvpp2_hw *hw, struct mvpp2_prs_entry *pe)
 {
 	int i;
 
@@ -116,9 +117,11 @@ static int mvpp2_prs_hw_read(struct mvpp2_hw *hw, struct mvpp2_prs_entry *pe)
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_prs_hw_read);
+
 
 /* Invalidate tcam hw entry */
-static void mvpp2_prs_hw_inv(struct mvpp2_hw *hw, int index)
+void mvpp2_prs_hw_inv(struct mvpp2_hw *hw, int index)
 {
 	/* Write index - indirect access */
 	mvpp2_write(hw, MVPP2_PRS_TCAM_IDX_REG, index);
@@ -3002,6 +3005,1354 @@ int mvpp2_prs_default_init(struct platform_device *pdev,
 
 	return 0;
 }
+
+int mvpp2_prs_sw_sram_shift_get(struct mvpp2_prs_entry *pe, int *shift)
+{
+	int sign;
+
+	PTR_VALIDATE(pe);
+	PTR_VALIDATE(shift);
+
+	sign = pe->sram.byte[MVPP2_PRS_SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_SHIFT_SIGN_BIT)] & (1 << (MVPP2_PRS_SRAM_SHIFT_SIGN_BIT % 8));
+	*shift = ((int)(pe->sram.byte[MVPP2_PRS_SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_SHIFT_OFFS)])) & MVPP2_PRS_SRAM_SHIFT_MASK;
+
+	if (sign == 1)
+		*shift *= -1;
+
+	return MV_OK;
+}
+
+int mvpp2_prs_sw_sram_offset_get(struct mvpp2_prs_entry *pe, unsigned int *type, int *offset, unsigned int *op)
+{
+	int sign;
+
+	PTR_VALIDATE(pe);
+	PTR_VALIDATE(offset);
+	PTR_VALIDATE(type);
+
+	*type = pe->sram.byte[MVPP2_PRS_SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_UDF_TYPE_OFFS)] >> (MVPP2_PRS_SRAM_UDF_TYPE_OFFS % 8);
+	*type &= MVPP2_PRS_SRAM_UDF_TYPE_MASK;
+
+
+	*offset = (pe->sram.byte[MVPP2_PRS_SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_UDF_OFFS)] >> (MVPP2_PRS_SRAM_UDF_OFFS % 8)) & 0x7f;
+	*offset |= (pe->sram.byte[MVPP2_PRS_SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_UDF_OFFS + MVPP2_PRS_SRAM_UDF_OFFS)] <<
+			(8 - (MVPP2_PRS_SRAM_UDF_OFFS % 8))) & 0x80;
+
+	*op = (pe->sram.byte[MVPP2_PRS_SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_OP_SEL_SHIFT_OFFS)] >> (MVPP2_PRS_SRAM_OP_SEL_SHIFT_OFFS % 8)) & 0x7;
+	*op |= (pe->sram.byte[MVPP2_PRS_SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_OP_SEL_SHIFT_OFFS + MVPP2_PRS_SRAM_OP_SEL_SHIFT_OFFS)] <<
+			(8 - (MVPP2_PRS_SRAM_OP_SEL_SHIFT_OFFS % 8))) & 0x18;
+
+	/* if signed bit is tes */
+	sign = pe->sram.byte[MVPP2_PRS_SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_UDF_SIGN_BIT)] & (1 << (MVPP2_PRS_SRAM_UDF_SIGN_BIT % 8));
+	if (sign != 0)
+		*offset = 1-(*offset);
+
+	return MV_OK;
+}
+
+int mvpp2_prs_sw_sram_next_lu_get(struct mvpp2_prs_entry *pe, unsigned int *lu)
+{
+	PTR_VALIDATE(pe);
+	PTR_VALIDATE(lu);
+
+	*lu = pe->sram.byte[MVPP2_PRS_SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_NEXT_LU_OFFS)];
+	*lu = ((*lu) >> MVPP2_PRS_SRAM_NEXT_LU_OFFS % 8);
+	*lu &= MVPP2_PRS_SRAM_NEXT_LU_MASK;
+	return MV_OK;
+}
+
+
+int mvpp2_prs_sram_bit_get(struct mvpp2_prs_entry *pe, int bitNum, unsigned int *bit)
+{
+	PTR_VALIDATE(pe);
+
+	*bit = pe->sram.byte[MVPP2_PRS_SRAM_BIT_TO_BYTE(bitNum)]  & (1 << (bitNum % 8));
+	*bit = (*bit) >> (bitNum % 8);
+	return MV_OK;
+}
+
+int mvpp2_prs_sw_sram_lu_done_get(struct mvpp2_prs_entry *pe, unsigned int *bit)
+{
+	return mvpp2_prs_sram_bit_get(pe, MVPP2_PRS_SRAM_LU_DONE_BIT, bit);
+}
+
+int mvpp2_prs_sw_sram_flowid_gen_get(struct mvpp2_prs_entry *pe, unsigned int *bit)
+{
+	return mvpp2_prs_sram_bit_get(pe, MVPP2_PRS_SRAM_LU_GEN_BIT, bit);
+
+}
+
+/* return RI and RI_UPDATE */
+int mvpp2_prs_sw_sram_ri_get(struct mvpp2_prs_entry *pe, unsigned int *bits, unsigned int *enable)
+{
+	PTR_VALIDATE(pe);
+	PTR_VALIDATE(bits);
+	PTR_VALIDATE(enable);
+
+	*bits = pe->sram.word[MVPP2_PRS_SRAM_RI_OFFS/32];
+	*enable = pe->sram.word[MVPP2_PRS_SRAM_RI_CTRL_OFFS/32];
+	return MV_OK;
+}
+
+int mvpp2_prs_sw_sram_ai_get(struct mvpp2_prs_entry *pe, unsigned int *bits, unsigned int *enable)
+{
+
+	PTR_VALIDATE(pe);
+	PTR_VALIDATE(bits);
+	PTR_VALIDATE(enable);
+
+	*bits = (pe->sram.byte[SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_AI_OFFS)] >> (MVPP2_PRS_SRAM_AI_OFFS % 8)) |
+		(pe->sram.byte[SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_AI_OFFS+MVPP2_PRS_SRAM_AI_CTRL_BITS)] << (8 - (MVPP2_PRS_SRAM_AI_OFFS % 8)));
+
+	*enable = (pe->sram.byte[SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_AI_CTRL_OFFS)] >> (MVPP2_PRS_SRAM_AI_CTRL_OFFS % 8)) |
+			(pe->sram.byte[SRAM_BIT_TO_BYTE(MVPP2_PRS_SRAM_AI_CTRL_OFFS+MVPP2_PRS_SRAM_AI_CTRL_BITS)] <<
+				(8 - (MVPP2_PRS_SRAM_AI_CTRL_OFFS % 8)));
+
+	*bits &= MVPP2_PRS_SRAM_AI_MASK;
+	*enable &= MVPP2_PRS_SRAM_AI_MASK;
+
+	return MV_OK;
+}
+
+static int mvpp2_prs_hw_tcam_cnt_dump(struct mvpp2_hw *hw, int tid, unsigned int *cnt)
+{
+	unsigned int regVal;
+
+	POS_RANGE_VALIDATE(tid, MVPP2_PRS_TCAM_SRAM_SIZE - 1);
+
+	/* write index */
+	mvpp2_write(hw, MVPP2_PRS_TCAM_HIT_IDX_REG, tid);
+
+	regVal = mvpp2_read(hw, MVPP2_PRS_TCAM_HIT_CNT_REG);
+	regVal &= MVPP2_PRS_TCAM_HIT_CNT_MASK;
+
+	if (cnt)
+		*cnt = regVal;
+	else
+		printk("HIT COUNTER: %d\n", regVal);
+
+	return MV_OK;
+}
+
+
+static int mvpp2_prs_sw_sram_ri_dump(struct mvpp2_prs_entry *pe)
+{
+	unsigned int data, mask;
+	int i, bitsOffs = 0;
+	char bits[100];
+
+	PTR_VALIDATE(pe);
+
+	mvpp2_prs_sw_sram_ri_get(pe, &data, &mask);
+	if (mask == 0)
+		return(0);
+
+	printk("\n       ");
+
+	printk("S_RI=");
+	for (i = (MVPP2_PRS_SRAM_RI_CTRL_BITS-1); i > -1 ; i--)
+		if (mask & (1 << i)) {
+			printk("%d", ((data & (1 << i)) != 0));
+			bitsOffs += sprintf(bits + bitsOffs, "%d:", i);
+		} else
+			printk("x");
+
+	bits[bitsOffs] = '\0';
+	printk(" %s", bits);
+
+	return(0);
+}
+
+static int mvpp2_prs_sw_sram_ai_dump(struct mvpp2_prs_entry *pe)
+{
+	int i, bitsOffs = 0;
+	unsigned int data, mask;
+	char bits[30];
+
+	PTR_VALIDATE(pe);
+
+	mvpp2_prs_sw_sram_ai_get(pe, &data, &mask);
+
+	if (mask == 0)
+		return(0);
+
+	printk("\n       ");
+
+	printk("S_AI=");
+	for (i = (MVPP2_PRS_SRAM_AI_CTRL_BITS-1); i > -1 ; i--)
+		if (mask & (1 << i)) {
+			printk("%d", ((data & (1 << i)) != 0));
+			bitsOffs += sprintf(bits + bitsOffs, "%d:", i);
+		} else
+			printk("x");
+	bits[bitsOffs] = '\0';
+	printk(" %s", bits);
+	return(0);
+}
+
+
+int mvpp2_prs_sw_dump(struct mvpp2_prs_entry *pe)
+{
+	u32 op, type, lu, done, flowid;
+	int	shift, offset, i;
+
+	PTR_VALIDATE(pe);
+
+	/* hw entry id */
+	printk("[%4d] ", pe->index);
+
+	i = MVPP2_PRS_TCAM_WORDS - 1;
+	printk("%1.1x ", pe->tcam.word[i--] & 0xF);
+
+	while (i >= 0)
+		printk("%4.4x ", (pe->tcam.word[i--]) & 0xFFFF);
+
+	printk("| ");
+
+	printk(PRS_SRAM_FMT, PRS_SRAM_VAL(pe->sram.word));
+
+	printk("\n       ");
+
+	i = MVPP2_PRS_TCAM_WORDS - 1;
+	printk("%1.1x ", (pe->tcam.word[i--] >> 16) & 0xF);
+
+	while (i >= 0)
+		printk("%4.4x ", ((pe->tcam.word[i--]) >> 16)  & 0xFFFF);
+
+	printk("| ");
+
+	mvpp2_prs_sw_sram_shift_get(pe, &shift);
+	printk("SH=%d ", shift);
+
+	mvpp2_prs_sw_sram_offset_get(pe, &type, &offset, &op);
+	if (offset != 0 || ((op >> MVPP2_PRS_SRAM_OP_SEL_SHIFT_BITS) != 0))
+		printk("UDFT=%u UDFO=%d ", type, offset);
+
+	printk("op=%u ", op);
+
+	mvpp2_prs_sw_sram_next_lu_get(pe, &lu);
+	printk("LU=%u ", lu);
+
+	mvpp2_prs_sw_sram_lu_done_get(pe, &done);
+	printk("%s ", done ? "DONE" : "N_DONE");
+
+	/*flow id generation bit*/
+	mvpp2_prs_sw_sram_flowid_gen_get(pe, &flowid);
+	printk("%s ", flowid ? "FIDG" : "N_FIDG");
+
+	(pe->tcam.word[MVPP2_PRS_TCAM_INV_WORD] & MVPP2_PRS_TCAM_INV_MASK) ? printk(" [inv]") : 0;
+
+	if (mvpp2_prs_sw_sram_ri_dump(pe))
+		return(MV_ERROR);
+
+	if (mvpp2_prs_sw_sram_ai_dump(pe))
+		return(MV_ERROR);
+
+	printk("\n");
+
+	return(0);
+
+}
+
+int mvpp2_prs_hw_dump(struct mvpp2_hw *hw)
+{
+	int index;
+	struct mvpp2_prs_entry pe;
+
+
+	printk("%s\n",__func__);
+	pr_crit("%s\n",__func__);
+
+	for (index = 0; index < MVPP2_PRS_TCAM_SRAM_SIZE; index++) {
+		pe.index = index;
+		mvpp2_prs_hw_read(hw, &pe);
+		if ((pe.tcam.word[MVPP2_PRS_TCAM_INV_WORD] & MVPP2_PRS_TCAM_INV_MASK) == MVPP2_PRS_TCAM_ENTRY_VALID) {
+			mvpp2_prs_sw_dump(&pe);
+			mvpp2_prs_hw_tcam_cnt_dump(hw, index, NULL);
+			printk("-------------------------------------------------------------------------\n");
+		}
+	}
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_prs_hw_dump);
+
+
+int mvpp2_prs_hw_regs_dump(struct mvpp2_hw *hw)
+{
+	int i;
+	char reg_name[100];
+
+	mvpp2_print_reg(hw, MVPP2_PRS_INIT_LOOKUP_REG, "MVPP2_PRS_INIT_LOOKUP_REG");
+	mvpp2_print_reg(hw, MVPP2_PRS_INIT_OFFS_REG(0), "MVPP2_PRS_INIT_OFFS_0_3_REG");
+	mvpp2_print_reg(hw, MVPP2_PRS_INIT_OFFS_REG(4), "MVPP2_PRS_INIT_OFFS_4_7_REG");
+	mvpp2_print_reg(hw, MVPP2_PRS_MAX_LOOP_REG(0), "MVPP2_PRS_MAX_LOOP_0_3_REG");
+	mvpp2_print_reg(hw, MVPP2_PRS_MAX_LOOP_REG(4), "MVPP2_PRS_MAX_LOOP_4_7_REG");
+
+	//mvpp2_print_reg(hw, MVPP2_PRS_INTR_CAUSE_REG, "MVPP2_PRS_INTR_CAUSE_REG");
+	//mvpp2_print_reg(hw, MVPP2_PRS_INTR_MASK_REG, "MVPP2_PRS_INTR_MASK_REG");
+	mvpp2_print_reg(hw, MVPP2_PRS_TCAM_IDX_REG, "MVPP2_PRS_TCAM_IDX_REG");
+
+	for (i = 0; i < MVPP2_PRS_TCAM_WORDS; i++) {
+		sprintf(reg_name, "MVPP2_PRS_TCAM_DATA_%d_REG", i);
+		mvpp2_print_reg(hw, MVPP2_PRS_TCAM_DATA_REG(i), reg_name);
+	}
+	mvpp2_print_reg(hw, MVPP2_PRS_SRAM_IDX_REG, "MVPP2_PRS_SRAM_IDX_REG");
+
+	for (i = 0; i < MVPP2_PRS_SRAM_WORDS; i++) {
+		sprintf(reg_name, "MVPP2_PRS_SRAM_DATA_%d_REG", i);
+		mvpp2_print_reg(hw, MVPP2_PRS_SRAM_DATA_REG(i), reg_name);
+	}
+
+	mvpp2_print_reg(hw, MVPP2_PRS_EXP_REG, "MVPP2_PRS_EXP_REG");
+	mvpp2_print_reg(hw, MVPP2_PRS_TCAM_CTRL_REG, "MVPP2_PRS_TCAM_CTRL_REG");
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_prs_hw_regs_dump);
+
+
+int mvpp2_prs_hw_hits_dump(struct mvpp2_hw *hw)
+{
+	int index;
+	unsigned int cnt;
+	struct mvpp2_prs_entry pe;
+
+	for (index = 0; index < MVPP2_PRS_TCAM_SRAM_SIZE; index++) {
+		pe.index = index;
+		mvpp2_prs_hw_read(hw, &pe);
+		if ((pe.tcam.word[MVPP2_PRS_TCAM_INV_WORD] & MVPP2_PRS_TCAM_INV_MASK) == MVPP2_PRS_TCAM_ENTRY_VALID) {
+			mvpp2_prs_hw_tcam_cnt_dump(hw, index, &cnt);
+			if (cnt == 0)
+				continue;
+			mvpp2_prs_sw_dump(&pe);
+			printk("INDEX: %d       HITS: %d\n", index, cnt);
+			printk("-------------------------------------------------------------------------\n");
+		}
+	}
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_prs_hw_hits_dump);
+
+//#include "mvPp2ClsHw.h"
+
+
+
+
+/******************************************************************************/
+/***************** Classifier Top Public lkpid table APIs ********************/
+/******************************************************************************/
+
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_hw_lkp_read(struct mvpp2_hw * hw, int lkpid, int way,
+	struct mvpp2_cls_lookup_entry *fe)
+{
+	unsigned int regVal = 0;
+
+	PTR_VALIDATE(fe);
+
+	POS_RANGE_VALIDATE(way, WAY_MAX);
+	POS_RANGE_VALIDATE(lkpid, MVPP2_CLS_FLOWS_TBL_SIZE);
+
+	/* write index reg */
+	regVal = (way << MVPP2_CLS_LKP_INDEX_WAY_OFFS) | (lkpid << MVPP2_CLS_LKP_INDEX_LKP_OFFS);
+	mvpp2_write(hw, MVPP2_CLS_LKP_INDEX_REG, regVal);
+
+	fe->way = way;
+	fe->lkpid = lkpid;
+
+	fe->data = mvpp2_read(hw, MVPP2_CLS_LKP_TBL_REG);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_hw_lkp_read);
+
+
+int mvpp2_cls_hw_lkp_print(struct mvpp2_hw * hw, int lkpid, int way)
+{
+	unsigned int uint32bit;
+	int int32bit;
+	struct mvpp2_cls_lookup_entry lkp;
+
+	POS_RANGE_VALIDATE(way, WAY_MAX);
+	POS_RANGE_VALIDATE(lkpid, MVPP2_CLS_FLOWS_TBL_SIZE);
+
+	mvpp2_cls_hw_lkp_read(hw, lkpid, way, &lkp);
+
+	printk(" 0x%2.2x  %1.1d\t", lkp.lkpid, lkp.way);
+	mvpp2_cls_sw_lkp_rxq_get(&lkp, &int32bit);
+	printk("0x%2.2x\t", int32bit);
+	mvpp2_cls_sw_lkp_en_get(&lkp, &int32bit);
+	printk("%1.1d\t", int32bit);
+	mvpp2_cls_sw_lkp_flow_get(&lkp, &int32bit);
+	printk("0x%3.3x\t", int32bit);
+	mvpp2_cls_sw_lkp_mod_get(&lkp, &int32bit);
+	printk(" 0x%2.2x\t", int32bit);
+	mvpp2_cls_hw_lkp_hit_get(hw, lkp.lkpid, way, &uint32bit);
+	printk(" 0x%8.8x\n", uint32bit);
+	printk("\n");
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_hw_lkp_print);
+
+
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_sw_lkp_rxq_get(struct mvpp2_cls_lookup_entry *lkp, int *rxq)
+{
+
+	PTR_VALIDATE(lkp);
+	PTR_VALIDATE(rxq);
+
+	*rxq =  (lkp->data & MVPP2_FLOWID_RXQ_MASK) >> MVPP2_FLOWID_RXQ;
+	return MV_OK;
+}
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_sw_lkp_en_get(struct mvpp2_cls_lookup_entry *lkp, int *en)
+{
+	PTR_VALIDATE(lkp);
+	PTR_VALIDATE(en);
+
+	*en = (lkp->data & MVPP2_FLOWID_EN_MASK) >> MVPP2_FLOWID_EN;
+	return MV_OK;
+}
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_sw_lkp_flow_get(struct mvpp2_cls_lookup_entry *lkp, int *flow_idx)
+{
+	PTR_VALIDATE(lkp);
+	PTR_VALIDATE(flow_idx);
+
+	*flow_idx = (lkp->data & MVPP2_FLOWID_FLOW_MASK) >> MVPP2_FLOWID_FLOW;
+	return MV_OK;
+}
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_sw_lkp_mod_get(struct mvpp2_cls_lookup_entry *lkp, int *mod_base)
+{
+	PTR_VALIDATE(lkp);
+	PTR_VALIDATE(mod_base);
+
+	*mod_base = (lkp->data & MVPP2_FLOWID_MODE_MASK) >> MVPP2_FLOWID_MODE;
+	return MV_OK;
+}
+
+/******************************************************************************/
+/***************** Classifier Top Public flows table APIs  ********************/
+/******************************************************************************/
+
+
+
+int mvpp2_cls_hw_flow_read(struct mvpp2_hw * hw, int index, struct mvpp2_cls_flow_entry *fe)
+{
+	PTR_VALIDATE(fe);
+
+	POS_RANGE_VALIDATE(index, MVPP2_CLS_FLOWS_TBL_SIZE);
+
+	fe->index = index;
+
+	/*write index*/
+	mvpp2_write(hw, MVPP2_CLS_FLOW_INDEX_REG, index);
+
+	fe->data[0] = mvpp2_read(hw, MVPP2_CLS_FLOW_TBL0_REG);
+	fe->data[1] = mvpp2_read(hw, MVPP2_CLS_FLOW_TBL1_REG);
+	fe->data[2] = mvpp2_read(hw, MVPP2_CLS_FLOW_TBL2_REG);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_hw_flow_read);
+
+
+/*-------------------------------------------------------------------------------*/
+/*PPv2.1 new feature MAS 3.18*/
+
+/*-------------------------------------------------------------------------------*/
+
+
+
+int mvpp2_cls_sw_flow_hek_get(struct mvpp2_cls_flow_entry *fe, int *num_of_fields, int field_ids[])
+{
+	int index;
+
+	PTR_VALIDATE(fe);
+	PTR_VALIDATE(num_of_fields);
+	PTR_VALIDATE(field_ids);
+
+	*num_of_fields = (fe->data[1] & MVPP2_FLOW_FIELDS_NUM_MASK) >> MVPP2_FLOW_FIELDS_NUM;
+
+
+	for (index = 0; index < (*num_of_fields); index++)
+		field_ids[index] = ((fe->data[2] & MVPP2_FLOW_FIELED_MASK(index)) >>  MVPP2_FLOW_FIELED_ID(index));
+
+	return MV_OK;
+}
+
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_sw_flow_port_get(struct mvpp2_cls_flow_entry *fe, int *type, int *portid)
+{
+	PTR_VALIDATE(fe);
+	PTR_VALIDATE(type);
+	PTR_VALIDATE(portid);
+
+	*type = (fe->data[0] & MVPP2_FLOW_PORT_TYPE_MASK) >> MVPP2_FLOW_PORT_TYPE;
+	*portid = (fe->data[0] & MVPP2_FLOW_PORT_ID_MASK) >> MVPP2_FLOW_PORT_ID;
+
+	return MV_OK;
+}
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_sw_flow_engine_get(struct mvpp2_cls_flow_entry *fe, int *engine, int *is_last)
+{
+	PTR_VALIDATE(fe);
+	PTR_VALIDATE(engine);
+	PTR_VALIDATE(is_last);
+
+	*engine = (fe->data[0] & MVPP2_FLOW_ENGINE_MASK) >> MVPP2_FLOW_ENGINE;
+	*is_last = fe->data[0] & MVPP2_FLOW_LAST_MASK;
+
+	return MV_OK;
+}
+
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_sw_flow_extra_get(struct mvpp2_cls_flow_entry *fe, int *type, int *prio)
+{
+	PTR_VALIDATE(fe);
+	PTR_VALIDATE(type);
+	PTR_VALIDATE(prio);
+
+	*type = (fe->data[1] & MVPP2_FLOW_LKP_TYPE_MASK) >> MVPP2_FLOW_LKP_TYPE;
+	*prio = (fe->data[1] & MVPP2_FLOW_FIELED_PRIO_MASK) >> MVPP2_FLOW_FIELED_PRIO;
+
+	return MV_OK;
+}
+
+
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_sw_flow_dump(struct mvpp2_cls_flow_entry *fe)
+{
+	int	int32bit_1, int32bit_2, i;
+	int	fieldsArr[MVPP2_CLS_FLOWS_TBL_FIELDS_MAX];
+	int	status = MV_OK;
+
+	PTR_VALIDATE(fe);
+	printk("INDEX: F[0] F[1] F[2] F[3] PRT[T  ID] ENG LAST LKP_TYP  PRIO\n");
+
+	/*index*/
+	printk("0x%3.3x  ", fe->index);
+
+	/*filed[0] filed[1] filed[2] filed[3]*/
+	status |= mvpp2_cls_sw_flow_hek_get(fe, &int32bit_1, fieldsArr);
+
+	for (i = 0 ; i < MVPP2_CLS_FLOWS_TBL_FIELDS_MAX; i++)
+		if (i < int32bit_1)
+			printk("0x%2.2x ", fieldsArr[i]);
+		else
+			printk(" NA  ");
+
+	/*port_type port_id*/
+	status |= mvpp2_cls_sw_flow_port_get(fe, &int32bit_1, &int32bit_2);
+	printk("[%1d  0x%3.3x]  ", int32bit_1, int32bit_2);
+
+	/* engine_num last_bit*/
+	status |= mvpp2_cls_sw_flow_engine_get(fe, &int32bit_1, &int32bit_2);
+	printk("%1d   %1d    ", int32bit_1, int32bit_2);
+
+	/* lookup_type priority*/
+	status |= mvpp2_cls_sw_flow_extra_get(fe, &int32bit_1, &int32bit_2);
+	printk("0x%2.2x    0x%2.2x", int32bit_1, int32bit_2);
+
+	printk("\n");
+	printk("\n");
+	printk("       PPPEO   VLAN   MACME   UDF7   SELECT SEQ_CTRL\n");
+	printk("         %1d      %1d      %1d       %1d      %1d      %1d\n",
+			(fe->data[0] & MVPP2_FLOW_PPPOE_MASK) >> MVPP2_FLOW_PPPOE,
+			(fe->data[0] & MVPP2_FLOW_VLAN_MASK) >> MVPP2_FLOW_VLAN,
+			(fe->data[0] & MVPP2_FLOW_MACME_MASK) >> MVPP2_FLOW_MACME,
+			(fe->data[0] & MVPP2_FLOW_UDF7_MASK) >> MVPP2_FLOW_UDF7,
+			(fe->data[0] & MVPP2_FLOW_PORT_ID_SEL_MASK) >> MVPP2_FLOW_PORT_ID_SEL,
+			(fe->data[1] & MVPP2_FLOW_SEQ_CTRL_MASK) >> MVPP2_FLOW_SEQ_CTRL);
+	printk("\n");
+
+	return MV_OK;
+}
+
+/*-------------------------------------------------------------------------------*/
+
+
+
+/*-------------------------------------------------------------------------------*/
+/*	Classifier Top Public length change table APIs   			 */
+/*-------------------------------------------------------------------------------*/
+
+
+/*-------------------------------------------------------------------------------*/
+/*			additional cls debug APIs				 */
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_hw_regs_dump(struct mvpp2_hw * hw)
+{
+	int i = 0;
+	char reg_name[100];
+
+	mvpp2_print_reg(hw, MVPP2_CLS_MODE_REG, "MVPP2_CLS_MODE_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS_PORT_WAY_REG, "MVPP2_CLS_PORT_WAY_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS_LKP_INDEX_REG, "MVPP2_CLS_LKP_INDEX_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS_LKP_TBL_REG, "MVPP2_CLS_LKP_TBL_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS_FLOW_INDEX_REG, "MVPP2_CLS_FLOW_INDEX_REG");
+
+	mvpp2_print_reg(hw, MVPP2_CLS_FLOW_TBL0_REG, "MVPP2_CLS_FLOW_TBL0_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS_FLOW_TBL1_REG, "MVPP2_CLS_FLOW_TBL1_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS_FLOW_TBL2_REG, "MVPP2_CLS_FLOW_TBL2_REG");
+
+
+	mvpp2_print_reg(hw, MVPP2_CLS_PORT_SPID_REG, "MVPP2_CLS_PORT_SPID_REG");
+
+	for (i = 0; i < MVPP2_CLS_SPID_UNI_REGS; i++) {
+		sprintf(reg_name, "MVPP2_CLS_SPID_UNI_%d_REG", i);
+		mvpp2_print_reg(hw, (MVPP2_CLS_SPID_UNI_BASE_REG + (4 * i)), reg_name);
+	}
+	for (i = 0; i < MVPP2_CLS_GEM_VIRT_REGS_NUM; i++) {
+		/* indirect access */
+		mvpp2_write(hw, MVPP2_CLS_GEM_VIRT_INDEX_REG, i);
+		sprintf(reg_name, "MVPP2_CLS_GEM_VIRT_%d_REG", i);
+		mvpp2_print_reg(hw, MVPP2_CLS_GEM_VIRT_REG, reg_name);
+	}
+	for (i = 0; i < MVPP2_CLS_UDF_BASE_REGS; i++)	{
+		sprintf(reg_name, "MVPP2_CLS_UDF_REG_%d_REG", i);
+		mvpp2_print_reg(hw, MVPP2_CLS_UDF_REG(i), reg_name);
+	}
+	for (i = 0; i < 16; i++) {
+		sprintf(reg_name, "MVPP2_CLS_MTU_%d_REG", i);
+		mvpp2_print_reg(hw, MVPP2_CLS_MTU_REG(i), reg_name);
+	}
+	for (i = 0; i < MVPP2_MAX_PORTS; i++) {
+		sprintf(reg_name, "MVPP2_CLS_OVER_RXQ_LOW_%d_REG", i);
+		mvpp2_print_reg(hw, MVPP2_CLS_OVERSIZE_RXQ_LOW_REG(i), reg_name);
+	}
+	for (i = 0; i < MVPP2_MAX_PORTS; i++) {
+		sprintf(reg_name, "MVPP2_CLS_SWFWD_P2HQ_%d_REG", i);
+		mvpp2_print_reg(hw, MVPP2_CLS_SWFWD_P2HQ_REG(i), reg_name);
+	}
+
+	mvpp2_print_reg(hw, MVPP2_CLS_SWFWD_PCTRL_REG, "MVPP2_CLS_SWFWD_PCTRL_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS_SEQ_SIZE_REG, "MVPP2_CLS_SEQ_SIZE_REG");
+
+	for (i = 0; i < MVPP2_MAX_PORTS; i++) {
+		sprintf(reg_name, "MVPP2_CLS_PCTRL_%d_REG", i);
+		mvpp2_print_reg(hw, MV_PP2_CLS_PCTRL_REG(i), reg_name);
+	}
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_hw_regs_dump);
+/*-------------------------------------------------------------------------------*/
+static int mvpp2_cls_hw_flow_hit_get(struct mvpp2_hw * hw, int index,  unsigned int *cnt)
+{
+
+	POS_RANGE_VALIDATE(index, MVPP2_CLS_FLOWS_TBL_SIZE);
+
+	/*set index */
+	mvpp2_write(hw, MVPP2_CNT_IDX_REG, MVPP2_CNT_IDX_FLOW(index));
+
+	if (cnt)
+		*cnt = mvpp2_read(hw, MVPP2_CLS_FLOW_TBL_HIT_REG);
+	else
+		printk("HITS = %d\n", mvpp2_read(hw, MVPP2_CLS_FLOW_TBL_HIT_REG));
+
+	return MV_OK;
+
+}
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_hw_lkp_hit_get(struct mvpp2_hw * hw, int lkpid, int way,  unsigned int *cnt)
+{
+
+	BIT_RANGE_VALIDATE(way);
+	POS_RANGE_VALIDATE(lkpid, MVPP2_CLS_LKP_TBL_SIZE);
+
+	/*set index */
+	mvpp2_write(hw, MVPP2_CNT_IDX_REG, MVPP2_CNT_IDX_LKP(lkpid, way));
+
+	if (cnt)
+		*cnt = mvpp2_read(hw, MVPP2_CLS_LKP_TBL_HIT_REG);
+	else
+		printk("HITS: %d\n", mvpp2_read(hw, MVPP2_CLS_LKP_TBL_HIT_REG));
+
+	return MV_OK;
+
+}
+/*-------------------------------------------------------------------------------*/
+int mvpp2_cls_hw_flow_dump(struct mvpp2_hw * hw)
+{
+	int index;
+
+	struct mvpp2_cls_flow_entry fe;
+
+	for (index = 0; index < MVPP2_CLS_FLOWS_TBL_SIZE ; index++) {
+		mvpp2_cls_hw_flow_read(hw, index, &fe);
+		mvpp2_cls_sw_flow_dump(&fe);
+		mvpp2_cls_hw_flow_hit_get(hw, index, NULL);
+		printk("------------------------------------------------------------------\n");
+	}
+	return MV_OK;
+
+}
+EXPORT_SYMBOL(mvpp2_cls_hw_flow_dump);
+
+
+/*-------------------------------------------------------------------------------*/
+/*PPv2.1 new counters MAS 3.20*/
+int mvpp2_cls_hw_flow_hits_dump(struct mvpp2_hw * hw)
+{
+	int index;
+	unsigned int cnt;
+	struct mvpp2_cls_flow_entry fe;
+
+	for (index = 0; index < MVPP2_CLS_FLOWS_TBL_SIZE ; index++) {
+		mvpp2_cls_hw_flow_hit_get(hw, index, &cnt);
+		if (cnt != 0) {
+			mvpp2_cls_hw_flow_read(hw, index, &fe);
+			mvpp2_cls_sw_flow_dump(&fe);
+			printk("HITS = %d\n", cnt);
+			printk("\n");
+		}
+	}
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_hw_flow_hits_dump);
+
+
+/*-------------------------------------------------------------------------------*/
+/*PPv2.1 new counters MAS 3.20*/
+int mvpp2_cls_hw_lkp_hits_dump(struct mvpp2_hw * hw)
+{
+	int index, way, entryInd;
+	unsigned int cnt;
+
+	printk("< ID  WAY >:	HITS\n");
+	for (index = 0; index < MVPP2_CLS_LKP_TBL_SIZE ; index++)
+		for (way = 0; way < 2 ; way++)	{
+			entryInd = (way << MVPP2_CLS_LKP_INDEX_WAY_OFFS) | index;
+			mvpp2_cls_hw_lkp_hit_get(hw, index, way,  &cnt);
+			if (cnt != 0)
+				printk(" 0x%2.2x  %1.1d\t0x%8.8x\n", index, way, cnt);
+	}
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_hw_lkp_hits_dump);
+
+/*-------------------------------------------------------------------------------*/
+/*PPv2.1 new counters MAS 3.20*/
+int mvpp2_cls_hw_lkp_dump(struct mvpp2_hw * hw)
+{
+	int index, way, int32bit, ind;
+	unsigned int uint32bit;
+
+	struct mvpp2_cls_lookup_entry lkp;
+
+	printk("< ID  WAY >:	RXQ	EN	FLOW	MODE_BASE  HITS\n");
+	for (index = 0; index < MVPP2_CLS_LKP_TBL_SIZE ; index++)
+		for (way = 0; way < 2 ; way++)	{
+			ind = (way << MVPP2_CLS_LKP_INDEX_WAY_OFFS) | index;
+			mvpp2_cls_hw_lkp_read(hw, index, way, &lkp);
+			printk(" 0x%2.2x  %1.1d\t", lkp.lkpid, lkp.way);
+			mvpp2_cls_sw_lkp_rxq_get(&lkp, &int32bit);
+			printk("0x%2.2x\t", int32bit);
+			mvpp2_cls_sw_lkp_en_get(&lkp, &int32bit);
+			printk("%1.1d\t", int32bit);
+			mvpp2_cls_sw_lkp_flow_get(&lkp, &int32bit);
+			printk("0x%3.3x\t", int32bit);
+			mvpp2_cls_sw_lkp_mod_get(&lkp, &int32bit);
+			printk(" 0x%2.2x\t", int32bit);
+			mvpp2_cls_hw_lkp_hit_get(hw, index, way, &uint32bit);
+			printk(" 0x%8.8x\n", uint32bit);
+			printk("\n");
+
+		}
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_hw_lkp_dump);
+
+
+
+/*-------------------------------------------------------------------------------*/
+/*		Classifier C2 engine QoS table Public APIs			 */
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_c2_qos_hw_read(struct mvpp2_hw *hw, int tbl_id, int tbl_sel, int tbl_line, struct mvpp2_cls_c2_qos_entry *qos)
+{
+	unsigned int regVal = 0;
+
+	PTR_VALIDATE(qos);
+
+	POS_RANGE_VALIDATE(tbl_sel, 1); /* one bit */
+	if (tbl_sel == 1) {
+		/*dscp*/
+		/* TODO define 8=DSCP_TBL_NUM  64=DSCP_TBL_LINES */
+		POS_RANGE_VALIDATE(tbl_id, MVPP2_QOS_TBL_NUM_DSCP);
+		POS_RANGE_VALIDATE(tbl_line, MVPP2_QOS_TBL_LINE_NUM_DSCP);
+	} else {
+		/*pri*/
+		/* TODO define 64=PRI_TBL_NUM  8=PRI_TBL_LINES */
+		POS_RANGE_VALIDATE(tbl_id, MVPP2_QOS_TBL_NUM_PRI);
+		POS_RANGE_VALIDATE(tbl_line, MVPP2_QOS_TBL_LINE_NUM_PRI);
+	}
+
+	qos->tbl_id = tbl_id;
+	qos->tbl_sel = tbl_sel;
+	qos->tbl_line = tbl_line;
+
+	/* write index reg */
+	regVal |= (tbl_line << MVPP2_CLS2_DSCP_PRI_INDEX_LINE_OFF);
+	regVal |= (tbl_sel << MVPP2_CLS2_DSCP_PRI_INDEX_SEL_OFF);
+	regVal |= (tbl_id << MVPP2_CLS2_DSCP_PRI_INDEX_TBL_ID_OFF);
+
+	mvpp2_write(hw, MVPP2_CLS2_DSCP_PRI_INDEX_REG, regVal);
+
+	/* read data reg*/
+	qos->data = mvpp2_read(hw, MVPP2_CLS2_QOS_TBL_REG);
+
+	return MV_OK;
+}
+/*-------------------------------------------------------------------------------*/
+
+
+int mvPp2ClsC2QosPrioGet(struct mvpp2_cls_c2_qos_entry *qos, int *prio)
+{
+	PTR_VALIDATE(qos);
+	PTR_VALIDATE(prio);
+
+	*prio = (qos->data & MVPP2_CLS2_QOS_TBL_PRI_MASK) >> MVPP2_CLS2_QOS_TBL_PRI_OFF ;
+	return MV_OK;
+}
+/*-------------------------------------------------------------------------------*/
+
+int mvPp2ClsC2QosDscpGet(struct mvpp2_cls_c2_qos_entry *qos, int *dscp)
+{
+	PTR_VALIDATE(qos);
+	PTR_VALIDATE(dscp);
+
+	*dscp = (qos->data & MVPP2_CLS2_QOS_TBL_DSCP_MASK) >> MVPP2_CLS2_QOS_TBL_DSCP_OFF;
+	return MV_OK;
+}
+/*-------------------------------------------------------------------------------*/
+
+int mvPp2ClsC2QosColorGet(struct mvpp2_cls_c2_qos_entry *qos, int *color)
+{
+	PTR_VALIDATE(qos);
+	PTR_VALIDATE(color);
+
+	*color = (qos->data & MVPP2_CLS2_QOS_TBL_COLOR_MASK) >> MVPP2_CLS2_QOS_TBL_COLOR_OFF;
+	return MV_OK;
+}
+/*-------------------------------------------------------------------------------*/
+
+int mvPp2ClsC2QosGpidGet(struct mvpp2_cls_c2_qos_entry *qos, int *gpid)
+{
+	PTR_VALIDATE(qos);
+	PTR_VALIDATE(gpid);
+
+	*gpid = (qos->data & MVPP2_CLS2_QOS_TBL_GEMPORT_MASK) >> MVPP2_CLS2_QOS_TBL_GEMPORT_OFF;
+	return MV_OK;
+}
+/*-------------------------------------------------------------------------------*/
+
+int mvPp2ClsC2QosQueueGet(struct mvpp2_cls_c2_qos_entry *qos, int *queue)
+{
+	PTR_VALIDATE(qos);
+	PTR_VALIDATE(queue);
+
+	*queue = (qos->data & MVPP2_CLS2_QOS_TBL_QUEUENUM_MASK) >> MVPP2_CLS2_QOS_TBL_QUEUENUM_OFF;
+	return MV_OK;
+}
+
+
+/*-------------------------------------------------------------------------------*/
+
+int mvPp2ClsC2QosSwDump(struct mvpp2_cls_c2_qos_entry *qos)
+{
+	int int32bit;
+	int status = 0;
+
+	PTR_VALIDATE(qos);
+
+	printk("TABLE	SEL	LINE	PRI	DSCP	COLOR	GEM_ID	QUEUE\n");
+
+	/* table id */
+	printk("0x%2.2x\t", qos->tbl_id);
+
+	/* table sel */
+	printk("0x%1.1x\t", qos->tbl_sel);
+
+	/* table line */
+	printk("0x%2.2x\t", qos->tbl_line);
+
+	/* priority */
+	status |= mvPp2ClsC2QosPrioGet(qos, &int32bit);
+	printk("0x%1.1x\t", int32bit);
+
+	/* dscp */
+	status |= mvPp2ClsC2QosDscpGet(qos, &int32bit);
+	printk("0x%2.2x\t", int32bit);
+
+	/* color */
+	status |= mvPp2ClsC2QosColorGet(qos, &int32bit);
+	printk("0x%1.1x\t", int32bit);
+
+	/* gem port id */
+	status |= mvPp2ClsC2QosGpidGet(qos, &int32bit);
+	printk("0x%3.3x\t", int32bit);
+
+	/* queue */
+	status |= mvPp2ClsC2QosQueueGet(qos, &int32bit);
+	printk("0x%2.2x", int32bit);
+
+	printk("\n");
+
+	return status;
+}
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_c2_qos_dscp_hw_dump(struct mvpp2_hw *hw)
+{
+	int tbl_id, tbl_line, int32bit;
+	struct mvpp2_cls_c2_qos_entry qos;
+
+	for (tbl_id = 0; tbl_id < MVPP2_CLS_C2_QOS_DSCP_TBL_NUM; tbl_id++) {
+
+		printk("\n------------ DSCP TABLE %d ------------\n", tbl_id);
+		printk("LINE	DSCP	COLOR	GEM_ID	QUEUE\n");
+		for (tbl_line = 0; tbl_line < MVPP2_CLS_C2_QOS_DSCP_TBL_SIZE; tbl_line++) {
+			mvpp2_cls_c2_qos_hw_read(hw, tbl_id, 1/*DSCP*/, tbl_line, &qos);
+			printk("0x%2.2x\t", qos.tbl_line);
+			mvPp2ClsC2QosDscpGet(&qos, &int32bit);
+			printk("0x%2.2x\t", int32bit);
+			mvPp2ClsC2QosColorGet(&qos, &int32bit);
+			printk("0x%1.1x\t", int32bit);
+			mvPp2ClsC2QosGpidGet(&qos, &int32bit);
+			printk("0x%3.3x\t", int32bit);
+			mvPp2ClsC2QosQueueGet(&qos, &int32bit);
+			printk("0x%2.2x", int32bit);
+			printk("\n");
+		}
+	}
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_qos_dscp_hw_dump);
+
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_c2_qos_prio_hw_dump(struct mvpp2_hw *hw)
+{
+	int tbl_id, tbl_line, int32bit;
+
+	struct mvpp2_cls_c2_qos_entry qos;
+
+	for (tbl_id = 0; tbl_id < MVPP2_CLS_C2_QOS_PRIO_TBL_NUM; tbl_id++) {
+
+		printk("\n-------- PRIORITY TABLE %d -----------\n", tbl_id);
+		printk("LINE	PRIO	COLOR	GEM_ID	QUEUE\n");
+
+		for (tbl_line = 0; tbl_line < MVPP2_CLS_C2_QOS_PRIO_TBL_SIZE; tbl_line++) {
+			mvpp2_cls_c2_qos_hw_read(hw, tbl_id, 0/*PRIO*/, tbl_line, &qos);
+			printk("0x%2.2x\t", qos.tbl_line);
+			mvPp2ClsC2QosPrioGet(&qos, &int32bit);
+			printk("0x%1.1x\t", int32bit);
+			mvPp2ClsC2QosColorGet(&qos, &int32bit);
+			printk("0x%1.1x\t", int32bit);
+			mvPp2ClsC2QosGpidGet(&qos, &int32bit);
+			printk("0x%3.3x\t", int32bit);
+			mvPp2ClsC2QosQueueGet(&qos, &int32bit);
+			printk("0x%2.2x", int32bit);
+			printk("\n");
+		}
+	}
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_qos_prio_hw_dump);
+
+/*-------------------------------------------------------------------------------*/
+
+/*-------------------------------------------------------------------------------*/
+/*		Classifier C2 engine TCAM table Public APIs	    		 */
+
+/*-------------------------------------------------------------------------------*/
+
+/*
+ note: error is not returned if entry is invalid
+ user should check c2->valid afer returned from this func
+*/
+int mvpp2_cls_c2_hw_read(struct mvpp2_hw *hw, int index, struct mvpp2_cls_c2_entry *c2)
+{
+	unsigned int regVal;
+	int	TcmIdx;
+
+	PTR_VALIDATE(c2);
+
+	c2->index = index;
+
+	/* write index reg */
+	mvpp2_write(hw, MVPP2_CLS2_TCAM_IDX_REG, index);
+
+	/* read inValid bit*/
+	regVal = mvpp2_read(hw, MVPP2_CLS2_TCAM_INV_REG);
+	c2->inv = (regVal & MVPP2_CLS2_TCAM_INV_INVALID_MASK) >> MVPP2_CLS2_TCAM_INV_INVALID_OFF;
+
+	if (c2->inv)
+		return MV_OK;
+
+	for (TcmIdx = 0; TcmIdx < MVPP2_CLS_C2_TCAM_WORDS; TcmIdx++)
+		c2->tcam.words[TcmIdx] = mvpp2_read(hw, MVPP2_CLS2_TCAM_DATA_REG(TcmIdx));
+
+	/* read action_tbl 0x1B30 */
+	c2->sram.regs.action_tbl = mvpp2_read(hw, MVPP2_CLS2_ACT_DATA_REG);
+
+	/* read actions 0x1B60 */
+	c2->sram.regs.actions = mvpp2_read(hw, MVPP2_CLS2_ACT_REG);
+
+	/* read qos_attr 0x1B64 */
+	c2->sram.regs.qos_attr = mvpp2_read(hw, MVPP2_CLS2_ACT_QOS_ATTR_REG);
+
+	/* read hwf_attr 0x1B68 */
+	c2->sram.regs.hwf_attr = mvpp2_read(hw, MVPP2_CLS2_ACT_HWF_ATTR_REG);
+
+	/* read seq_attr 0x1B70 */
+	c2->sram.regs.seq_attr = mvpp2_read(hw, MVPP22_CLS2_ACT_SEQ_ATTR_REG);
+
+	return MV_OK;
+}
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_c2_sw_words_dump(struct mvpp2_cls_c2_entry *c2)
+{
+	int i;
+
+	PTR_VALIDATE(c2);
+
+	/* TODO check size */
+	/* hw entry id */
+	printk("[0x%3.3x] ", c2->index);
+
+	i = MVPP2_CLS_C2_TCAM_WORDS - 1 ;
+
+	while (i >= 0)
+		printk("%4.4x ", (c2->tcam.words[i--]) & 0xFFFF);
+
+	printk("| ");
+
+	printk(C2_SRAM_FMT, C2_SRAM_VAL(c2->sram.words));
+
+	/*tcam inValid bit*/
+	printk(" %s", (c2->inv == 1) ? "[inv]" : "[valid]");
+
+	printk("\n        ");
+
+	i = MVPP2_CLS_C2_TCAM_WORDS - 1;
+
+	while (i >= 0)
+		printk("%4.4x ", ((c2->tcam.words[i--] >> 16)  & 0xFFFF));
+
+	printk("\n");
+
+	return MV_OK;
+}
+
+
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_c2_sw_dump(struct mvpp2_cls_c2_entry *c2)
+{
+	int id, sel, type, gemid, low_q, high_q, color, int32bit;
+
+	PTR_VALIDATE(c2);
+
+	mvpp2_cls_c2_sw_words_dump(c2);
+	printk("\n");
+
+	/*------------------------------*/
+	/*	action_tbl 0x1B30	*/
+	/*------------------------------*/
+
+	id =  ((c2->sram.regs.action_tbl & (MVPP2_CLS2_ACT_DATA_TBL_ID_MASK)) >> MVPP2_CLS2_ACT_DATA_TBL_ID_OFF);
+	sel =  ((c2->sram.regs.action_tbl & (MVPP2_CLS2_ACT_DATA_TBL_SEL_MASK)) >> MVPP2_CLS2_ACT_DATA_TBL_SEL_OFF);
+	type =	((c2->sram.regs.action_tbl & (MVPP2_CLS2_ACT_DATA_TBL_PRI_DSCP_MASK)) >> MVPP2_CLS2_ACT_DATA_TBL_PRI_DSCP_OFF);
+	gemid = ((c2->sram.regs.action_tbl & (MVPP2_CLS2_ACT_DATA_TBL_GEM_ID_MASK)) >> MVPP2_CLS2_ACT_DATA_TBL_GEM_ID_OFF);
+	low_q = ((c2->sram.regs.action_tbl & (MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_MASK)) >> MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_OFF);
+	high_q = ((c2->sram.regs.action_tbl & (MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_MASK)) >> MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_OFF);
+	color =  ((c2->sram.regs.action_tbl & (MVPP2_CLS2_ACT_DATA_TBL_COLOR_MASK)) >> MVPP2_CLS2_ACT_DATA_TBL_COLOR_OFF);
+
+	printk("FROM_QOS_%s_TBL[%2.2d]:  ", sel ? "DSCP" : "PRI", id);
+	type ? printk("%s	", sel ? "DSCP" : "PRIO") : 0;
+	color ? printk("COLOR	") : 0;
+	gemid ? printk("GEMID	") : 0;
+	low_q ? printk("LOW_Q	") : 0;
+	high_q ? printk("HIGH_Q	") : 0;
+	printk("\n");
+
+	printk("FROM_ACT_TBL:		");
+	(type == 0) ? printk("%s 	", sel ? "DSCP" : "PRI") : 0;
+	(gemid == 0) ? printk("GEMID	") : 0;
+	(low_q == 0) ? printk("LOW_Q	") : 0;
+	(high_q == 0) ? printk("HIGH_Q	") : 0;
+	(color == 0) ? printk("COLOR	") : 0;
+	printk("\n\n");
+
+	/*------------------------------*/
+	/*	actions 0x1B60		*/
+	/*------------------------------*/
+
+	printk("ACT_CMD:		COLOR	PRIO	DSCP	GEMID	LOW_Q	HIGH_Q	FWD	POLICER	FID\n");
+	printk("			");
+
+	printk("%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t",
+			((c2->sram.regs.actions & MVPP2_CLS2_ACT_DATA_TBL_COLOR_MASK) >> MVPP2_CLS2_ACT_DATA_TBL_COLOR_OFF),
+			((c2->sram.regs.actions & MVPP2_CLS2_ACT_PRI_MASK) >> MVPP2_CLS2_ACT_PRI_OFF),
+			((c2->sram.regs.actions & MVPP2_CLS2_ACT_DSCP_MASK) >> MVPP2_CLS2_ACT_DSCP_OFF),
+			((c2->sram.regs.actions & MVPP2_CLS2_ACT_DATA_TBL_GEM_ID_MASK) >> MVPP2_CLS2_ACT_DATA_TBL_GEM_ID_OFF),
+			((c2->sram.regs.actions & MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_MASK) >> MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_OFF),
+			((c2->sram.regs.actions & MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_MASK) >> MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_OFF),
+			((c2->sram.regs.actions & MVPP2_CLS2_ACT_FRWD_MASK) >> MVPP2_CLS2_ACT_FRWD_OFF),
+			((c2->sram.regs.actions & MVPP2_CLS2_ACT_PLCR_MASK) >> MVPP2_CLS2_ACT_PLCR_OFF),
+			((c2->sram.regs.actions & MVPP2_CLS2_ACT_FLD_EN_MASK) >> MVPP2_CLS2_ACT_FLD_EN_OFF));
+	printk("\n\n");
+
+
+	/*------------------------------*/
+	/*	qos_attr 0x1B64		*/
+	/*------------------------------*/
+	printk("ACT_ATTR:		PRIO	DSCP	GEMID	LOW_Q	HIGH_Q	QUEUE\n");
+	printk("		");
+	/* modify priority */
+	int32bit =  ((c2->sram.regs.qos_attr & MVPP2_CLS2_ACT_QOS_ATTR_PRI_MASK) >> MVPP2_CLS2_ACT_QOS_ATTR_PRI_OFF);
+	printk("	%1.1d\t", int32bit);
+
+	/* modify dscp */
+	int32bit =  ((c2->sram.regs.qos_attr & MVPP2_CLS2_ACT_QOS_ATTR_DSCP_MASK) >> MVPP2_CLS2_ACT_QOS_ATTR_DSCP_OFF);
+	printk("0x%2.2d\t", int32bit);
+
+	/* modify gemportid */
+	int32bit =  ((c2->sram.regs.qos_attr & MVPP2_CLS2_ACT_QOS_ATTR_GEM_MASK) >> MVPP2_CLS2_ACT_QOS_ATTR_GEM_OFF);
+	printk("0x%4.4x\t", int32bit);
+
+	/* modify low Q */
+	int32bit =  ((c2->sram.regs.qos_attr & MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK) >> MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF);
+	printk("0x%1.1d\t", int32bit);
+
+	/* modify high Q */
+	int32bit =  ((c2->sram.regs.qos_attr & MVPP2_CLS2_ACT_QOS_ATTR_QH_MASK) >> MVPP2_CLS2_ACT_QOS_ATTR_QH_OFF);
+	printk("0x%2.2x\t", int32bit);
+
+	/*modify queue*/
+	int32bit = ((c2->sram.regs.qos_attr & (MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK | MVPP2_CLS2_ACT_QOS_ATTR_QH_MASK)));
+	int32bit >>= MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF;
+
+	printk("0x%2.2x\t", int32bit);
+	printk("\n\n");
+
+
+
+	/*------------------------------*/
+	/*	hwf_attr 0x1B68		*/
+	/*------------------------------*/
+	printk("HWF_ATTR:		IPTR	DPTR	CHKSM   MTU_IDX\n");
+	printk("			");
+
+	/* HWF modification instraction pointer */
+	int32bit =  ((c2->sram.regs.hwf_attr & MVPP2_CLS2_ACT_HWF_ATTR_IPTR_MASK) >> MVPP2_CLS2_ACT_HWF_ATTR_IPTR_OFF);
+	printk("0x%1.1x\t", int32bit);
+
+	/* HWF modification data pointer */
+	int32bit =  ((c2->sram.regs.hwf_attr & MVPP2_CLS2_ACT_HWF_ATTR_DPTR_MASK) >> MVPP2_CLS2_ACT_HWF_ATTR_DPTR_OFF);
+	printk("0x%4.4x\t", int32bit);
+
+	/* HWF modification instraction pointer */
+	int32bit =  ((c2->sram.regs.hwf_attr & MVPP2_CLS2_ACT_HWF_ATTR_L4CHK_MASK) >>  MVPP2_CLS2_ACT_HWF_ATTR_L4CHK_OFF);
+	printk("%s\t", int32bit ? "ENABLE " : "DISABLE");
+
+	/* mtu index */
+	int32bit =  ((c2->sram.regs.hwf_attr & MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_MASK) >> MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_OFF);
+	printk("0x%1.1x\t", int32bit);
+	printk("\n\n");
+#if 0
+	/*------------------------------*/
+	/*	dup_attr 0x1B6C		*/
+	/*------------------------------*/
+	printk("DUP_ATTR:		FID	COUNT	POLICER [id    bank]\n");
+	printk("			0x%2.2x\t0x%1.1x\t\t[0x%2.2x   0x%1.1x]\n",
+		((c2->sram.regs.dup_attr & MVPP2_CLS2_ACT_DUP_ATTR_DUPID_MASK) >> MVPP2_CLS2_ACT_DUP_ATTR_DUPID_OFF),
+		((c2->sram.regs.dup_attr & MVPP2_CLS2_ACT_DUP_ATTR_DUPCNT_MASK) >> MVPP2_CLS2_ACT_DUP_ATTR_DUPCNT_OFF),
+		((c2->sram.regs.dup_attr & MVPP2_CLS2_ACT_DUP_ATTR_PLCRID_MASK) >> MVPP2_CLS2_ACT_DUP_ATTR_PLCRID_OFF),
+		((c2->sram.regs.dup_attr & MVPP2_CLS2_ACT_DUP_ATTR_PLCRBK_MASK) >> MVPP2_CLS2_ACT_DUP_ATTR_PLCRBK_OFF));
+	printk("\n");
+#endif
+	/*------------------------------*/
+	/*	seq_attr 0x1B70		*/
+	/*------------------------------*/
+	/*PPv2.1 new feature MAS 3.14*/
+	printk("SEQ_ATTR:		ID	MISS\n");
+	printk("			0x%2.2x    0x%2.2x\n",
+			((c2->sram.regs.seq_attr & MVPP21_CLS2_ACT_SEQ_ATTR_ID_MASK) >> MVPP21_CLS2_ACT_SEQ_ATTR_ID),
+			((c2->sram.regs.seq_attr & MVPP21_CLS2_ACT_SEQ_ATTR_MISS_MASK) >> MVPP21_CLS2_ACT_SEQ_ATTR_MISS_OFF));
+
+	printk("\n\n");
+
+
+	return MV_OK;
+}
+
+/*-------------------------------------------------------------------------------*/
+int 	mvpp2_cls_c2_hw_dump(struct mvpp2_hw *hw)
+{
+	int index;
+	unsigned cnt;
+
+	struct mvpp2_cls_c2_entry c2;
+
+	memset(&c2, 0, sizeof(c2));
+
+	for (index = 0; index < MVPP2_CLS_C2_TCAM_SIZE; index++) {
+		mvpp2_cls_c2_hw_read(hw, index, &c2);
+		if (c2.inv == 0) {
+			mvpp2_cls_c2_sw_dump(&c2);
+			mvpp2_cls_c2_hit_cntr_read(hw, index, &cnt);
+			printk("HITS: %d\n", cnt);
+			printk("-----------------------------------------------------------------\n");
+		}
+	}
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_hw_dump);
+
+/*-------------------------------------------------------------------------------*/
+
+/*-------------------------------------------------------------------------------*/
+
+int mvPp2ClsC2TcamByteGet(struct mvpp2_cls_c2_entry *c2, unsigned int offs, unsigned char *byte, unsigned char *enable)
+{
+	PTR_VALIDATE(c2);
+	PTR_VALIDATE(byte);
+	PTR_VALIDATE(enable);
+
+	POS_RANGE_VALIDATE(offs, 8);
+
+	*byte = c2->tcam.bytes[TCAM_DATA_BYTE(offs)];
+	*enable = c2->tcam.bytes[TCAM_DATA_MASK(offs)];
+	return MV_OK;
+}
+/*-------------------------------------------------------------------------------*/
+/*
+return EQUALS if tcam_data[off]&tcam_mask[off] = byte
+*/
+/*-------------------------------------------------------------------------------*/
+/*		Classifier C2 engine Hit counters Public APIs		    	 */
+/*-------------------------------------------------------------------------------*/
+
+
+int mvpp2_cls_c2_hit_cntr_is_busy(struct mvpp2_hw *hw)
+{
+	unsigned int regVal;
+
+	regVal = mvpp2_read(hw, MVPP2_CLS2_HIT_CTR_REG);
+	regVal &= MVPP2_CLS2_HIT_CTR_CLR_DONE_MASK;
+	regVal >>= MVPP2_CLS2_HIT_CTR_CLR_DONE_OFF;
+
+	return (1 - (int)regVal);
+}
+
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_c2_hit_cntr_clear_all(struct mvpp2_hw *hw)
+{
+	int iter = 0;
+
+	/* wrirte clear bit*/
+	mvpp2_write(hw, MVPP2_CLS2_HIT_CTR_CLR_REG, (1 << MVPP2_CLS2_HIT_CTR_CLR_CLR_OFF));
+
+	while (mvpp2_cls_c2_hit_cntr_is_busy(hw))
+		if (iter++ >= RETRIES_EXCEEDED) {
+			printk("%s:Error - retries exceeded.\n", __func__);
+			return MV_ERROR;
+		}
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_hit_cntr_clear_all);
+
+
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_c2_hit_cntr_read(struct mvpp2_hw *hw, int index, u32 *cntr)
+{
+	unsigned int value = 0;
+
+	/* write index reg */
+	mvpp2_write(hw, MVPP2_CLS2_TCAM_IDX_REG, index);
+
+	value = mvpp2_read(hw, MVPP2_CLS2_HIT_CTR_REG);
+
+	if (cntr)
+		*cntr = value;
+	else
+		printk("INDEX: 0x%8.8X	VAL: 0x%8.8X\n", index, value);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_hit_cntr_read);
+
+
+/*-------------------------------------------------------------------------------*/
+int mvpp2_cls_c2_hit_cntr_dump(struct mvpp2_hw *hw)
+{
+	int i;
+	unsigned int cnt;
+
+	for (i = 0; i < MVPP2_CLS_C2_TCAM_SIZE; i++) {
+		mvpp2_cls_c2_hit_cntr_read(hw, i, &cnt);
+		if (cnt != 0)
+			printk("INDEX: 0x%8.8X	VAL: 0x%8.8X\n", i, cnt);
+	}
+
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_hit_cntr_dump);
+
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_c2_regs_dump(struct mvpp2_hw *hw)
+{
+	int i;
+	char reg_name[100];
+
+	mvpp2_print_reg(hw, MVPP2_CLS2_TCAM_IDX_REG, "MVPP2_CLS2_TCAM_IDX_REG");
+
+	for (i = 0; i < MVPP2_CLS_C2_TCAM_WORDS; i++) {
+		printk(reg_name, "MVPP2_CLS2_TCAM_DATA_%d_REG", i);
+		mvpp2_print_reg(hw, MVPP2_CLS2_TCAM_DATA_REG(i), reg_name);
+	}
+
+	mvpp2_print_reg(hw, MVPP2_CLS2_TCAM_INV_REG, "MVPP2_CLS2_TCAM_INV_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS2_ACT_DATA_REG, "MVPP2_CLS2_ACT_DATA_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS2_DSCP_PRI_INDEX_REG, "MVPP2_CLS2_DSCP_PRI_INDEX_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS2_QOS_TBL_REG, "MVPP2_CLS2_QOS_TBL_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS2_ACT_REG, "MVPP2_CLS2_ACT_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS2_ACT_QOS_ATTR_REG, "MVPP2_CLS2_ACT_QOS_ATTR_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS2_ACT_HWF_ATTR_REG, "MVPP2_CLS2_ACT_HWF_ATTR_REG");
+	mvpp2_print_reg(hw, MVPP2_CLS2_ACT_DUP_ATTR_REG, "MVPP2_CLS2_ACT_DUP_ATTR_REG");
+	mvpp2_print_reg(hw, MVPP22_CLS2_ACT_SEQ_ATTR_REG, "MVPP22_CLS2_ACT_SEQ_ATTR_REG");
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_regs_dump);
+
+
 
 
 

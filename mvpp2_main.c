@@ -56,6 +56,8 @@
 
 #include "mvpp2.h"
 #include "mvpp2_hw.h"
+#include "mvpp2_debug.h"
+
 
 
 
@@ -137,14 +139,8 @@ static int mvpp2_rxq_number;
 static int mvpp2_txq_number;
 
 
-struct mvpp2_pool_attributes {
-	char description[32];
-	int pkt_size;
-	int buf_num;
-};
 
-
-static struct mvpp2_pool_attributes mvpp2_pools[] = {
+struct mvpp2_pool_attributes mvpp2_pools[] = {
 	{
 		.description =  "short",
 		/*.pkt_size    = 	MVPP2_BM_SHORT_PKT_SIZE, */
@@ -161,6 +157,9 @@ static struct mvpp2_pool_attributes mvpp2_pools[] = {
 		.buf_num     =  MVPP2_BM_JUMBO_BUF_NUM,
 	}
 };
+
+
+
 
 static void mvpp2_txq_inc_get(struct mvpp2_txq_pcpu *txq_pcpu)
 {
@@ -322,6 +321,7 @@ static int mvpp2_bm_pools_init(struct platform_device *pdev,
 		if (err)
 			goto err_unroll_pools;
 	}
+	priv->num_pools = num_pools;
 	return 0;
 
 err_unroll_pools:
@@ -2730,7 +2730,7 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 	port->phy_node = phy_node;
 	port->phy_interface = phy_mode;
 	port->base = (void *) ((mv_pp2_vfpga_address + FPGA_PORT_0_OFFSET) + ((port->id) * 0x1000));
-	pr_debug("mvpp2(%d): mvpp2_port_probe: port_id-%d mv_pp2_vfpga_address=0x%x port->base=0x%x\n", 
+	pr_debug("mvpp2(%d): mvpp2_port_probe: port_id-%d mv_pp2_vfpga_address=0x%x port->base=0x%x\n",
 		   __LINE__, port->id, mv_pp2_vfpga_address, port->base);
 
 	if (IS_ERR(port->base)) {
@@ -3020,8 +3020,17 @@ static void mvpp2_init_config(struct mvpp2_param_config *pp2_cfg, u32 cell_index
 	pp2_cfg->rss_cfg.rss_mode = rss_mode;
 }
 
-static void mvpp2_pp2_basic_print(struct mvpp2 *priv)
+void mvpp2_pp2_basic_print(struct platform_device *pdev, struct mvpp2 *priv)
 {
+
+	printk("%s\n",__func__);
+
+	DBG_MSG("pdev->name(%s) pdev->id(%d)\n", pdev->name, pdev->id);
+	DBG_MSG("dev.init_name(%s) dev.id(%d)\n", pdev->dev.init_name, pdev->dev.id);
+	DBG_MSG("dev.kobj.name(%s)\n", pdev->dev.kobj.name);
+	DBG_MSG("dev->bus.name(%s) pdev.dev->bus.dev_name(%s)\n",
+		pdev->dev.bus->name, pdev->dev.bus->dev_name);
+
 	DBG_MSG("pp2_ver(%d)\n", priv->pp2_version);
 	DBG_MSG("cpu_map(%x)\n", priv->cpu_map);
 	DBG_MSG("queue_mode(%d)\n", priv->pp2_cfg.queue_mode);
@@ -3029,8 +3038,9 @@ static void mvpp2_pp2_basic_print(struct mvpp2 *priv)
 	DBG_MSG("jumbo_pool(%d)\n", priv->pp2_cfg.jumbo_pool);
 	DBG_MSG("cell_index(%d)\n", priv->pp2_cfg.cell_index);
 }
+EXPORT_SYMBOL(mvpp2_pp2_basic_print);
 
-static void mvpp2_pp2_port_print(struct mvpp2_port *port)
+void mvpp2_pp2_port_print(struct mvpp2_port *port)
 {
 	int i;
 
@@ -3063,6 +3073,7 @@ static void mvpp2_pp2_port_print(struct mvpp2_port *port)
 	}
 
 }
+EXPORT_SYMBOL(mvpp2_pp2_port_print);
 
 static void mvpp2_pp2_ports_print(struct mvpp2 *priv, int port_count)
 {
@@ -3075,7 +3086,7 @@ static void mvpp2_pp2_ports_print(struct mvpp2 *priv, int port_count)
 		mvpp2_pp2_port_print(port);
 	}
 }
-
+EXPORT_SYMBOL(mvpp2_pp2_ports_print);
 
 
 static int mvpp2_probe(struct platform_device *pdev)
@@ -3202,7 +3213,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 
 	/*Init PP2 Configuration */
 	mvpp2_init_config(&priv->pp2_cfg, cell_index);
-	mvpp2_pp2_basic_print(priv);
+	mvpp2_pp2_basic_print(pdev, priv);
 
 	/* Initialize ports */
 #ifndef CONFIG_MV_PP2_FPGA
@@ -3251,7 +3262,7 @@ static int mvpp2_remove(struct platform_device *pdev)
 		i++;
 	}
 
-	for (i = 0; i < mvpp2_num_pools_get(priv); i++) {
+	for (i = 0; i < priv->num_pools; i++) {
 		struct mvpp2_bm_pool *bm_pool = &priv->bm_pools[i];
 
 		mvpp2_bm_pool_destroy(pdev, hw, bm_pool);
@@ -3369,6 +3380,7 @@ static struct platform_device mvpp2_device = {
 	.dev            = {
 		.coherent_dma_mask = DMA_BIT_MASK(32),
 		.platform_data = 0,
+		.init_name = "f10f0000.ethernet",
 	},
 };
 
@@ -3425,7 +3437,7 @@ static void mv_pp22_cpu_timer_callback(unsigned long data)
 	struct device_node *port_node;
 	int i = 0;
 	struct mvpp2_port *port;
-	
+
 	for(i = 0 ; i < 2 ; i++) {
 		port = priv->port_list[i];
 		if (port && netif_carrier_ok(port->dev)) {
@@ -3438,7 +3450,7 @@ static void mv_pp22_cpu_timer_callback(unsigned long data)
 			pr_debug("mvpp2(%d): mv_pp22_cpu_timer_callback. PORT NULL !!!!\n", __LINE__);
 		}
 	}
-	
+
 	mod_timer(&cpu_poll_timer, jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME));
 }
 
