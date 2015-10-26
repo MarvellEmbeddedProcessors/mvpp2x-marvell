@@ -2729,7 +2729,7 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 		first_log_rxq_queue;
 	port->phy_node = phy_node;
 	port->phy_interface = phy_mode;
-	port->base = (void *) ((mv_pp2_vfpga_address + FPGA_PORT_0_OFFSET) + ((port->id - 1) * 0x1000));
+	port->base = (void *) ((mv_pp2_vfpga_address + FPGA_PORT_0_OFFSET) + ((port->id) * 0x1000));
 	pr_debug("mvpp2(%d): mvpp2_port_probe: port_id-%d mv_pp2_vfpga_address=0x%x port->base=0x%x\n", 
 		   __LINE__, port->id, mv_pp2_vfpga_address, port->base);
 
@@ -2789,7 +2789,7 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 		goto err_free_port_pcpu;
 	}
 	netdev_info(dev, "Using %s mac address %pM\n", mac_from, dev->dev_addr);
-	priv->port_list[port_i - 1] = port;
+	priv->port_list[port_i] = port;
 	return 0;
 	dev_err(&pdev->dev, "%s failed for port_id(%d)\n", __func__, id);
 
@@ -3213,7 +3213,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 	}
 #else
 	for(i = 0 ; i < port_count ; i++) {
-		err = mvpp2_port_probe_fpga(pdev, i + 1, priv);
+		err = mvpp2_port_probe_fpga(pdev, i, priv);
 		if (err < 0)
 			goto err_gop_clk;
 	}
@@ -3439,7 +3439,7 @@ static void mv_pp22_cpu_timer_callback(unsigned long data)
 		}
 	}
 	
-	mod_timer(&cpu_poll_timer, jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME + 15000));
+	mod_timer(&cpu_poll_timer, jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME));
 }
 
 #endif

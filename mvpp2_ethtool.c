@@ -101,7 +101,7 @@ static int mvpp2_ethtool_get_settings(struct net_device *dev,
 #ifdef CONFIG_MV_PP2_FPGA
 	int val;
 	unsigned int addr;
-	int port_id = port->id - 1;
+	int port_id = port->id;
 	pr_emerg(KERN_EMERG "\n\n\n\nmvpp2_ethtool_get_drvinfo(%d):dev->name=%s port->id=%d\n", __LINE__, dev->name, port->id);
 
 	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_GOOD_FRAMES_SENT;
