@@ -30,19 +30,36 @@
 
 #include <linux/kernel.h>
 #include <linux/skbuff.h>
+#include <linux/printk.h>
+
 #include <linux/platform_device.h>
 
+#if 1
+void mvpp2_write(struct mvpp2_hw *hw, u32 offset, u32 data);
+u32 mvpp2_read(struct mvpp2_hw *hw, u32 offset);
 
+#else
 static inline void mvpp2_write(struct mvpp2_hw *hw, u32 offset, u32 data)
 {
+#if 1
+	if (smp_processor_id() != 0)
+		pr_emerg_once("Received mvpp2_write(%d) from CPU1 !!\n", offset);
+#endif
+	pr_info("mvpp2_write(%p) \n", hw->cpu_base[smp_processor_id()] + offset);
 	writel(data, hw->cpu_base[smp_processor_id()] + offset);
 }
 
 static inline u32 mvpp2_read(struct mvpp2_hw *hw, u32 offset)
 {
+#if 1
+	if (smp_processor_id() != 0)
+		pr_emerg_once("Received mvpp2_read(%d) from CPU1 !!\n", offset);
+#endif
+	pr_info("mvpp2_read(%p) \n", hw->cpu_base[smp_processor_id()] + offset);
+
 	return readl(hw->cpu_base[smp_processor_id()] + offset);
 }
-
+#endif
 static inline void mvpp22_thread_write(struct mvpp2_hw *hw, u32 sw_thread,
 	u32 offset, u32 data)
 {

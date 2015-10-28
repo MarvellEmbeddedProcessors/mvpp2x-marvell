@@ -2710,6 +2710,7 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 				 mvpp2_rxq_number);
 	if (!dev)
 		return -ENOMEM;
+	MVPP2_PRINT_LINE();
 
 	dev->tx_queue_len = MVPP2_MAX_TXD;
 	dev->watchdog_timeo = 5 * HZ;
@@ -2731,6 +2732,7 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 	port->base = (void *) ((mv_pp2_vfpga_address + FPGA_PORT_0_OFFSET) + ((port->id) * 0x1000));
 	pr_debug("mvpp2(%d): mvpp2_port_probe: port_id-%d mv_pp2_vfpga_address=0x%x port->base=0x%x\n",
 		   __LINE__, port->id, mv_pp2_vfpga_address, port->base);
+	MVPP2_PRINT_LINE();
 
 	if (IS_ERR(port->base)) {
 		err = PTR_ERR(port->base);
@@ -2743,6 +2745,7 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 		err = -ENOMEM;
 		goto err_free_irq;
 	}
+	MVPP2_PRINT_LINE();
 
 
 	mac_from = "hardware";
@@ -2765,26 +2768,34 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 		goto err_free_stats;
 	}
 	mvpp2_port_power_up(port);
+	MVPP2_PRINT_LINE();
 
 	port->pcpu = alloc_percpu(struct mvpp2_port_pcpu);
 	if (!port->pcpu) {
 		err = -ENOMEM;
 		goto err_free_txq_pcpu;
 	}
+	MVPP2_PRINT_LINE();
 
 	if (port->priv->pp2xdata->interrupt_tx_done == false) {
 		for_each_present_cpu(cpu) {
 			port_pcpu = per_cpu_ptr(port->pcpu, cpu);
+			MVPP2_PRINT_LINE();
 
 			hrtimer_init(&port_pcpu->tx_done_timer, CLOCK_MONOTONIC,
 				     HRTIMER_MODE_REL_PINNED);
 			port_pcpu->tx_done_timer.function = mvpp2_hr_timer_cb;
 			port_pcpu->timer_scheduled = false;
+			MVPP2_PRINT_LINE();
 
 			tasklet_init(&port_pcpu->tx_done_tasklet, mvpp2_tx_proc_cb,
 				     (unsigned long)dev);
+
+			MVPP2_PRINT_LINE();
 		}
 	}
+
+	MVPP2_PRINT_LINE();
 	features = NETIF_F_SG | NETIF_F_IP_CSUM;
 	dev->features = features | NETIF_F_RXCSUM;
 	dev->hw_features |= features | NETIF_F_RXCSUM | NETIF_F_GRO;
@@ -2795,6 +2806,8 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 		dev_err(&pdev->dev, "failed to register netdev\n");
 		goto err_free_port_pcpu;
 	}
+
+	MVPP2_PRINT_LINE();
 	netdev_info(dev, "Using %s mac address %pM\n", mac_from, dev->dev_addr);
 	priv->port_list[port_i] = port;
 	return 0;
@@ -3031,6 +3044,10 @@ void mvpp2_pp2_basic_print(struct platform_device *pdev, struct mvpp2 *priv)
 {
 
 	printk("%s\n",__func__);
+
+
+	DBG_MSG("num_present_cpus(%d) num_active_cpus(%d) num_online_cpus(%d)\n",
+		num_present_cpus(), num_active_cpus(),num_online_cpus());
 
 	DBG_MSG("pdev->name(%s) pdev->id(%d)\n", pdev->name, pdev->id);
 	DBG_MSG("dev.init_name(%s) dev.id(%d)\n", pdev->dev.init_name, pdev->dev.id);

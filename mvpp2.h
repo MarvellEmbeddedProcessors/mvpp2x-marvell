@@ -32,6 +32,8 @@
 #endif
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>
+#include <linux/string.h>
+
 #include "mvpp2_hw_type.h"
 
 
@@ -179,8 +181,8 @@
 /*END - Taken from mvPp2Commn.h, need to order TODO */
 /*--------------------------------------------------------------------*/
 
-
-
+#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#define MVPP2_PRINT_LINE()	pr_crit("Passed: %s:%d\n", __FILENAME__, __LINE__)
 
 
 /* Descriptor ring Macros */
