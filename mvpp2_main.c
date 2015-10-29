@@ -2745,8 +2745,16 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 		goto err_free_irq;
 	}
 
-	mac_from = "random";
-	eth_hw_addr_random(dev);
+
+	mac_from = "hardware";
+	hw_mac_addr[0] = 0x02;
+	hw_mac_addr[1] = 0x68;
+	hw_mac_addr[2] = 0xb3;
+	hw_mac_addr[3] = 0x29;
+	hw_mac_addr[4] = 0xda;
+	hw_mac_addr[5] = 0x98 | port_i;
+
+	ether_addr_copy(dev->dev_addr, hw_mac_addr);
 
 	port->tx_ring_size = tx_queue_size;
 	port->rx_ring_size = rx_queue_size;
