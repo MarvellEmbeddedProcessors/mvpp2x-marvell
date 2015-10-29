@@ -1178,10 +1178,6 @@ void mvpp2_cleanup_irqs(struct mvpp2_port *port)
 static irqreturn_t mvpp2_isr(int irq, void *dev_id)
 {
 	struct queue_vector *q_vec = (struct queue_vector *)dev_id;
-#ifdef CONFIG_MV_PP2_FPGA
-	pr_debug("mvpp2: %s: handle irq\n",	__func__);
-	return IRQ_HANDLED;
-#endif
 	mvpp2_qvector_interrupt_disable(q_vec);
 	napi_schedule(&q_vec->napi);
 
@@ -2008,11 +2004,13 @@ static int mvpp2_open(struct net_device *dev)
 		goto err_cleanup_rxqs;
 	}
 
+#ifndef CONFIG_MV_PP2_FPGA
 	err = mvpp2_setup_irqs(dev, port);
 	if (err) {
 		netdev_err(port->dev, "cannot allocate irq's \n");
 		goto err_cleanup_txqs;
 	}
+#endif
 	/* In default link is down */
 	netif_carrier_off(port->dev);
 
