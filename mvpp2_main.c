@@ -54,6 +54,13 @@
 #include <linux/pci.h>
 #endif
 
+#define TEST_FPGA_MODE
+#ifdef TEST_FPGA_MODE
+#define TEST_NUM_CPUS 1
+#endif
+
+
+
 #include "mvpp2.h"
 #include "mvpp2_hw.h"
 #include "mvpp2_debug.h"
@@ -837,7 +844,13 @@ static int mvpp2_rxq_init(struct mvpp2_port *port,
 
 	/* Set Rx descriptors queue starting address - indirect access */
 	mvpp2_write(hw, MVPP2_RXQ_NUM_REG, rxq->id);
-	mvpp2_write(hw, MVPP21_RXQ_DESC_ADDR_REG, rxq->descs_phys);
+
+	MVPP2_PRINT_LINE();
+	if (port->priv->pp2_version == PPV21)
+		mvpp2_write(hw, MVPP21_RXQ_DESC_ADDR_REG, rxq->descs_phys);
+	else
+		mvpp2_write(hw, MVPP22_RXQ_DESC_ADDR_REG, (rxq->descs_phys>> MVPP22_RXQ_DESC_ADDR_SHIFT));
+	MVPP2_PRINT_LINE();
 	mvpp2_write(hw, MVPP2_RXQ_DESC_SIZE_REG, rxq->size);
 	mvpp2_write(hw, MVPP2_RXQ_INDEX_REG, 0);
 
@@ -2019,12 +2032,15 @@ static int mvpp2_open(struct net_device *dev)
 	if (err < 0)
 		goto err_free_irq;
 #endif
+
+#ifndef CONFIG_MV_PP2_FPGA
+
 	/* Unmask interrupts on all CPUs */
 	on_each_cpu(mvpp2_interrupts_unmask, port, 1);
 
 	/* Unmask shared interrupts */
 	mvpp2_shared_thread_interrupts_unmask(port);
-
+#endif
 
 	mvpp2_start_dev(port);
 
@@ -2354,13 +2370,31 @@ static void mvpp22_port_queue_vectors_init(struct mvpp2_port *port)
 	int cpu;
 	struct queue_vector *q_vec = &port->q_vector[0];
 
+#ifdef TEST_FPGA_MODE
+	for (cpu = 0;cpu < TEST_NUM_CPUS;cpu++) {
+		q_vec[cpu].parent = port;
+		q_vec[cpu].qv_type = MVPP2_PRIVATE;
+		q_vec[cpu].sw_thread_id = 0;
+		q_vec[cpu].sw_thread_mask = 1<<q_vec[cpu].sw_thread_id;
+		q_vec[cpu].pending_cause_rx = 0;
+#ifndef CONFIG_MV_PP2_FPGA
+		q_vec[cpu].irq = port->of_irqs[first_addr_space+cpu];
+#endif
+		netif_napi_add(port->dev, &q_vec[cpu].napi, mvpp22_poll,
+			NAPI_POLL_WEIGHT);
 
+		q_vec[cpu].num_rx_queues = port->num_rx_queues;
+		q_vec[cpu].first_rx_queue = 0;
+		port->num_qvector++;
+	}
+#else
 	/* Each cpu has zero private rx_queues */
 	for (cpu = 0;cpu < num_present_cpus();cpu++) {
 		q_vec[cpu].parent = port;
 		q_vec[cpu].qv_type = MVPP2_PRIVATE;
 		q_vec[cpu].sw_thread_id = first_addr_space+cpu;
 		q_vec[cpu].sw_thread_mask = (1<<q_vec[cpu].sw_thread_id);
+		q_vec[cpu].pending_cause_rx = 0;
 #ifndef CONFIG_MV_PP2_FPGA
 		q_vec[cpu].irq = port->of_irqs[first_addr_space+cpu];
 #endif
@@ -2381,6 +2415,7 @@ static void mvpp22_port_queue_vectors_init(struct mvpp2_port *port)
 		q_vec[cpu].qv_type = MVPP2_SHARED;
 		q_vec[cpu].sw_thread_id = first_addr_space+cpu;
 		q_vec[cpu].sw_thread_mask = (1<<q_vec[cpu].sw_thread_id);
+		q_vec[cpu].pending_cause_rx = 0;
 #ifndef CONFIG_MV_PP2_FPGA
 		q_vec[cpu].irq = port->of_irqs[first_addr_space+cpu];
 #endif
@@ -2391,6 +2426,7 @@ static void mvpp22_port_queue_vectors_init(struct mvpp2_port *port)
 
 		port->num_qvector++;
 	}
+#endif
 
 }
 
@@ -2769,6 +2805,7 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 	}
 	mvpp2_port_power_up(port);
 	MVPP2_PRINT_LINE();
+	mvpp2_ingress_enable(port); //Enable here, because there is no link event
 
 	port->pcpu = alloc_percpu(struct mvpp2_port_pcpu);
 	if (!port->pcpu) {
@@ -2977,6 +3014,17 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 	/* Classifier default initialization */
 	mvpp2_cls_init(hw);
 
+
+	/*NEW : Disable all rx_queues */
+	/*TBD - this is TEMP_HACK */
+	if (pp2_ver == PPV22) {
+		for (i = 0; i < 128; i++) {
+			val = mvpp2_read(hw, MVPP2_RXQ_CONFIG_REG(i));
+			val |= MVPP2_RXQ_DISABLE_MASK;
+			mvpp2_write(hw, MVPP2_RXQ_CONFIG_REG(i), val);
+		}
+	}
+
 	return 0;
 }
 
@@ -3000,7 +3048,7 @@ static const struct mvpp2x_platform_data pp22_pdata = {
 	.mvpp2x_rxq_short_pool_set = mvpp22_rxq_short_pool_set,
 	.mvpp2x_rxq_long_pool_set = mvpp22_rxq_long_pool_set,
 	.multi_addr_space = true,
-	.interrupt_tx_done = true,
+	.interrupt_tx_done = false,
 	.multi_hw_instance = true,
 	.mvpp2x_port_queue_vectors_init = mvpp22_port_queue_vectors_init,
 	.mvpp2x_port_isr_rx_group_cfg = mvpp22_port_isr_rx_group_cfg,
@@ -3048,6 +3096,7 @@ void mvpp2_pp2_basic_print(struct platform_device *pdev, struct mvpp2 *priv)
 
 	DBG_MSG("num_present_cpus(%d) num_active_cpus(%d) num_online_cpus(%d)\n",
 		num_present_cpus(), num_active_cpus(),num_online_cpus());
+	DBG_MSG("cpu_map(%x)\n", priv->cpu_map);
 
 	DBG_MSG("pdev->name(%s) pdev->id(%d)\n", pdev->name, pdev->id);
 	DBG_MSG("dev.init_name(%s) dev.id(%d)\n", pdev->dev.init_name, pdev->dev.id);
@@ -3056,11 +3105,11 @@ void mvpp2_pp2_basic_print(struct platform_device *pdev, struct mvpp2 *priv)
 		pdev->dev.bus->name, pdev->dev.bus->dev_name);
 
 	DBG_MSG("pp2_ver(%d)\n", priv->pp2_version);
-	DBG_MSG("cpu_map(%x)\n", priv->cpu_map);
 	DBG_MSG("queue_mode(%d)\n", priv->pp2_cfg.queue_mode);
-	DBG_MSG("first_bm_pool(%d)\n", priv->pp2_cfg.first_bm_pool);
-	DBG_MSG("jumbo_pool(%d)\n", priv->pp2_cfg.jumbo_pool);
-	DBG_MSG("cell_index(%d)\n", priv->pp2_cfg.cell_index);
+	DBG_MSG("first_bm_pool(%d) jumbo_pool(%d)\n", priv->pp2_cfg.first_bm_pool, priv->pp2_cfg.jumbo_pool);
+	DBG_MSG("cell_index(%d) num_ports(%d)\n", priv->pp2_cfg.cell_index, priv->num_ports);
+
+	DBG_MSG("hw->base(%p)\n", priv->hw.base);
 }
 EXPORT_SYMBOL(mvpp2_pp2_basic_print);
 
@@ -3099,13 +3148,17 @@ void mvpp2_pp2_port_print(struct mvpp2_port *port)
 }
 EXPORT_SYMBOL(mvpp2_pp2_port_print);
 
-static void mvpp2_pp2_ports_print(struct mvpp2 *priv, int port_count)
+static void mvpp2_pp2_ports_print(struct mvpp2 *priv)
 {
 	int i;
 	struct mvpp2_port *port;
-	for (i=0;i<port_count;i++) {
-		if (priv->port_list[i] == NULL)
+
+	for (i = 0; i < priv->num_ports; i++) {
+		if (priv->port_list[i] == NULL) {
+
+			DBG_MSG("\t port_list[%d]= NULL!\n");
 			continue;
+		}
 		port = priv->port_list[i];
 		mvpp2_pp2_port_print(port);
 	}
@@ -3143,7 +3196,12 @@ static int mvpp2_probe(struct platform_device *pdev)
 	if (!match)
 		return -ENODEV;
 
+#ifdef TEST_FPGA_MODE // Single CPU, FPGA, Test
+	mvpp2_queue_mode = MVPP2_QDIST_MULTI_MODE;
+#endif
 
+
+MVPP2_PRINT_LINE();
 	priv->pp2xdata = (const struct mvpp2x_platform_data *) match->data;
 	priv->pp2_version = priv->pp2xdata->pp2x_ver;
 #ifndef CONFIG_MV_PP2_FPGA
@@ -3155,6 +3213,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 		}
 	}
 #endif
+MVPP2_PRINT_LINE();
 
 #ifndef CONFIG_MV_PP2_FPGA
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -3172,6 +3231,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 	hw->base = (void *)mv_pp2_vfpga_address;
 	pr_debug("mvpp2(%d): mvpp2_probe:mv_pp2_vfpga_address=0x%x\n", __LINE__, mv_pp2_vfpga_address);
 #endif
+MVPP2_PRINT_LINE();
 
 #ifndef CONFIG_MV_PP2_FPGA
 	hw->pp_clk = devm_clk_get(&pdev->dev, "pp_clk");
@@ -3207,6 +3267,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 		}
 	}
 	priv->cpu_map = cpu_map;
+	MVPP2_PRINT_LINE();
 
 
 	/* Initialize network controller */
@@ -3215,6 +3276,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to initialize controller\n");
 		goto err_gop_clk;
 	}
+	MVPP2_PRINT_LINE();
 
 #ifndef CONFIG_MV_PP2_FPGA
 	port_count = of_get_available_child_count(dn);
@@ -3226,6 +3288,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 #else
 	port_count = 2;
 #endif
+	MVPP2_PRINT_LINE();
 
 	priv->port_list = devm_kcalloc(&pdev->dev, port_count,
 				      sizeof(struct mvpp2_port *),
@@ -3234,6 +3297,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 		err = -ENOMEM;
 		goto err_gop_clk;
 	}
+	priv->num_ports = port_count;
 
 	/*Init PP2 Configuration */
 	mvpp2_init_config(&priv->pp2_cfg, cell_index);
@@ -3253,7 +3317,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 			goto err_gop_clk;
 	}
 #endif
-	mvpp2_pp2_ports_print(priv, port_count);
+	mvpp2_pp2_ports_print(priv);
 #ifdef CONFIG_MV_PP2_FPGA
 	init_timer(&cpu_poll_timer);
 	cpu_poll_timer.function = mv_pp22_cpu_timer_callback;
@@ -3278,12 +3342,11 @@ static int mvpp2_remove(struct platform_device *pdev)
 	struct mvpp2_hw *hw = &priv->hw;
 	struct device_node *dn = pdev->dev.of_node;
 	struct device_node *port_node;
-	int i = 0;
+	int i;
 
-	for_each_available_child_of_node(dn, port_node) {
+	for(i = 0; i < priv->num_ports; i++) {
 		if (priv->port_list[i])
-			mvpp2_port_remove(priv->port_list[i]);
-		i++;
+		mvpp2_port_remove(priv->port_list[i]);
 	}
 
 	for (i = 0; i < priv->num_pools; i++) {
@@ -3462,7 +3525,7 @@ static void mv_pp22_cpu_timer_callback(unsigned long data)
 	int i = 0;
 	struct mvpp2_port *port;
 
-	for(i = 0 ; i < 2 ; i++) {
+	for(i = 0 ; i < priv->num_ports; i++) {
 		port = priv->port_list[i];
 		if (port && netif_carrier_ok(port->dev)) {
 			napi_schedule(&port->q_vector[0].napi);

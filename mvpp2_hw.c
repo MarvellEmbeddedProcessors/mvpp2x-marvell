@@ -60,27 +60,62 @@
 
 /* Utility/helper methods */
 
+#define MVPP2_REG_BUF_SIZE (sizeof(last_used)/sizeof(last_used[0]))
 
 void mvpp2_write(struct mvpp2_hw *hw, u32 offset, u32 data)
 {
+	static void *last_used[20] = {0};
+	static int next_write = 0;
+	int i;
+	void * reg_ptr = hw->cpu_base[smp_processor_id()] + offset;
 #if 1
 	if (smp_processor_id() != 0)
 		pr_emerg_once("Received mvpp2_write(%d) from CPU1 !!\n", offset);
 #endif
-	pr_info("mvpp2_write(%p) \n", hw->cpu_base[smp_processor_id()] + offset);
+	for (i=0;i<MVPP2_REG_BUF_SIZE;i++) {
+		if (last_used[i] == reg_ptr)
+			break;
+	}
+	if (i == MVPP2_REG_BUF_SIZE) {
+		pr_notice("NEW REG: mvpp2_write(%p) \n", reg_ptr);
+		last_used[next_write] = reg_ptr;
+		next_write++;
+		next_write = next_write%MVPP2_REG_BUF_SIZE;
+	} else {
+		pr_info("mvpp2_write(%p) \n", hw->cpu_base[smp_processor_id()] + offset);
+	}
+
 	writel(data, hw->cpu_base[smp_processor_id()] + offset);
 }
+EXPORT_SYMBOL(mvpp2_write);
+
 
 u32 mvpp2_read(struct mvpp2_hw *hw, u32 offset)
 {
+	static void *last_used[20] = {0};
+	static int next_write = 0;
+	int i;
+	void * reg_ptr = hw->cpu_base[smp_processor_id()] + offset;
 #if 1
 	if (smp_processor_id() != 0)
 		pr_emerg_once("Received mvpp2_read(%d) from CPU1 !!\n", offset);
 #endif
-	pr_info("mvpp2_read(%p) \n", hw->cpu_base[smp_processor_id()] + offset);
+	for (i=0;i<MVPP2_REG_BUF_SIZE;i++) {
+		if (last_used[i] == reg_ptr)
+			break;
+	}
+	if (i == MVPP2_REG_BUF_SIZE) {
+		pr_notice("NEW REG: mvpp2_read(%p) \n", reg_ptr);
+		last_used[next_write] = reg_ptr;
+		next_write++;
+		next_write = next_write%MVPP2_REG_BUF_SIZE;
+	} else {
+		pr_info("mvpp2_read(%p) \n", reg_ptr);
+	}
 
-	return readl(hw->cpu_base[smp_processor_id()] + offset);
+	return readl(reg_ptr);
 }
+EXPORT_SYMBOL(mvpp2_read);
 
 
 

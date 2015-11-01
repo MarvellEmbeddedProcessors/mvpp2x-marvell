@@ -416,6 +416,7 @@ struct mvpp2 {
 	struct mvpp2_param_config pp2_cfg;
 
 	/* List of pointers to port structures */
+	u16 num_ports;
 	struct mvpp2_port **port_list;
 
 	/* Aggregated TXQs */
@@ -465,6 +466,13 @@ struct mvpp2_port {
 	/* Per-port registers' base address */
 	void __iomem *base;
 
+	/* Index of port's first physical RXQ */
+	u8 first_rxq;
+
+	/* port's  number of rx_queues */
+	u8 num_rx_queues;
+	/* port's  number of tx_queues */
+	u8 num_tx_queues;
 
 	struct mvpp2_rx_queue **rxqs; /*Each Port has up tp 32 rxq_queues.*/
 	struct mvpp2_tx_queue **txqs;
@@ -494,13 +502,6 @@ struct mvpp2_port {
 	struct mvpp2_bm_pool *pool_long; /* Pointer to the pool_id (long or jumbo) */
 	struct mvpp2_bm_pool *pool_short; /* Pointer to the short pool_id */
 
-	/* Index of port's first physical RXQ */
-	u8 first_rxq;
-
-	/* port's  number of rx_queues */
-	u8 num_rx_queues;
-	/* port's  number of tx_queues */
-	u8 num_tx_queues;
 
 	u32 num_qvector;
 	/* q_vector is the parameter that will be passed to mv_pp2_isr(int irq, void *dev_id=q_vector)  */
@@ -530,6 +531,17 @@ static inline int mvpp2_max_check(int value, int limit, char *name)
 	}
 	return 0;
 }
+
+static inline struct mvpp2_port * mvpp2_port_struct_get(struct mvpp2 *priv, int port) {
+	int i;
+
+	for (i = 0; i < priv->num_ports; i++) {
+		if (priv->port_list[i]->id == port)
+			return(priv->port_list[i]);
+	}
+	return(NULL);
+}
+
 
 struct mvpp2_pool_attributes {
 	char description[32];

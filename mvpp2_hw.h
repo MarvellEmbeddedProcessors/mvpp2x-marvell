@@ -117,6 +117,16 @@ static inline int mvpp2_rxq_received(struct mvpp2_port *port, int rxq_id)
 	return val & MVPP2_RXQ_OCCUPIED_MASK;
 }
 
+
+/* Get number of Rx descriptors occupied by received packets */
+static inline int mvpp2_rxq_free(struct mvpp2_port *port, int rxq_id)
+{
+	u32 val = mvpp2_read(&(port->priv->hw), MVPP2_RXQ_STATUS_REG(rxq_id));
+
+	return val & MVPP2_RXQ_NON_OCCUPIED_MASK;
+}
+
+
 /* Update Rx queue status with the number of occupied and available
  * Rx descriptor slots.
  */
@@ -139,7 +149,7 @@ mvpp2_rxq_next_desc_get(struct mvpp2_rx_queue *rxq)
 
 	rxq->next_desc_to_proc = MVPP2_QUEUE_NEXT_DESC(rxq, rx_desc);
 	prefetch(rxq->descs + rxq->next_desc_to_proc);
-	return rxq->descs + rx_desc;
+	return (rxq->descs + rx_desc);
 }
 
 /* Mask the current CPU's Rx/Tx interrupts */
@@ -289,9 +299,10 @@ static inline void mvpp2_port_interrupts_enable(struct mvpp2_port *port)
 
 	for (i=0;i<port->num_qvector;i++)
 		sw_thread_mask |= q_vec[i].sw_thread_mask;
-
+#ifndef CONFIG_MV_PP2_FPGA
 	mvpp2_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
 		    MVPP2_ISR_ENABLE_INTERRUPT(sw_thread_mask));
+#endif
 }
 
 static inline void mvpp2_port_interrupts_disable(struct mvpp2_port *port)
@@ -310,9 +321,10 @@ static inline void mvpp2_port_interrupts_disable(struct mvpp2_port *port)
 static inline void mvpp2_qvector_interrupt_enable(struct queue_vector *q_vec)
 {
 	struct mvpp2_port *port = q_vec->parent;
-
+#ifndef CONFIG_MV_PP2_FPGA
 	mvpp2_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
 		    MVPP2_ISR_ENABLE_INTERRUPT(q_vec->sw_thread_mask));
+#endif
 }
 
 static inline void mvpp2_qvector_interrupt_disable(struct queue_vector *q_vec)
