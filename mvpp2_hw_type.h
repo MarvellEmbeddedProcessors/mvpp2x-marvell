@@ -273,6 +273,10 @@
 
 /*-------------------------------------------------------------------------------*/
 
+#define MVPP2_RX_PKT_FULLQ_DROP_REG		0x7220
+#define MVPP2_RX_PKT_EARLY_DROP_REG		0x7224
+#define MVPP2_RX_PKT_BM_DROP_REG		0x7228
+#define MVPP2_RX_DESC_ENQ_REG			0x7120
 
 
 #define MVPP2_CNT_IDX_REG			0x7040

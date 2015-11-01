@@ -49,6 +49,8 @@ static ssize_t mv_cls_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo idx way    > lkp_hw_read        - read lookup ID table entry from HW <idx,way>.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo id         > flow_hw_read       - read flow table entry <id> from HW.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset val > mvpp2_reg_write    - Write mvpp2 register.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset     > mvpp2_reg_read     - Read mvpp2 register.\n");
 
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
 
@@ -89,6 +91,7 @@ static ssize_t mv_cls_store_unsigned(struct device *dev,
 	const char    *name = attr->attr.name;
 	unsigned int  err = 0, a = 0, b = 0, c = 0, d = 0;
 	unsigned long flags;
+	u32 val;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -101,6 +104,16 @@ static ssize_t mv_cls_store_unsigned(struct device *dev,
 		mvpp2_cls_hw_lkp_read(sysfs_cur_hw, a, b, &lkp_entry);
 	else if (!strcmp(name, "flow_hw_read"))
 		mvpp2_cls_hw_flow_read(sysfs_cur_hw, a, &flow_entry);
+	else if (!strcmp(name, "mvpp2_reg_read")) {
+		val = mvpp2_read(sysfs_cur_hw, a);
+		printk("mvpp2_read(0x%x)=%0x%x\n", a, val);
+	}
+	else if (!strcmp(name, "mvpp2_reg_write")) {
+		mvpp2_write(sysfs_cur_hw, a, b);
+		val = mvpp2_read(sysfs_cur_hw, a);
+		printk("mvpp2_write_read(0x%x)=%0x%x\n", a, val);
+	}
+
 	else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
@@ -123,6 +136,10 @@ static DEVICE_ATTR(help,			S_IRUSR, mv_cls_show, NULL);
 static DEVICE_ATTR(hw_regs,		S_IRUSR, mv_cls_show, NULL);
 static DEVICE_ATTR(lkp_hw_read,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
 static DEVICE_ATTR(flow_hw_read,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(mvpp2_reg_read,	S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(mvpp2_reg_write,	S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+
+
 
 
 
@@ -134,6 +151,8 @@ static struct attribute *cls_attrs[] = {
 	&dev_attr_hw_regs.attr,
 	&dev_attr_lkp_hw_read.attr,
 	&dev_attr_flow_hw_read.attr,
+	&dev_attr_mvpp2_reg_read.attr,
+	&dev_attr_mvpp2_reg_write.attr,
 	&dev_attr_help.attr,
 	NULL
 };

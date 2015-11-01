@@ -99,16 +99,28 @@ static int mv_pp2_sysfs_init(void)
 	mvpp2_pp2_basic_print(pp2_plat_dev, priv);
 	sysfs_cur_priv = priv;
 	sysfs_cur_hw = &priv->hw;
+
 	mv_pp2_prs_high_sysfs_init(&pd->kobj);
 	mv_pp2_cls_sysfs_init(&pd->kobj);
 	mv_pp2_cls2_sysfs_init(&pd->kobj);
-	mv_pp2_bm_sysfs_init(&pd->kobj);
 	//mv_pp2_cls3_sysfs_init(&pd->kobj);
 	//mv_pp2_cls4_sysfs_init(&pd->kobj);
 	//mv_pp2_wol_sysfs_init(&pd->kobj);
 	//mv_pp2_plcr_sysfs_init(&pd->kobj);
 	//mv_pp2_pme_sysfs_init(&pd->kobj);
 	//mv_pp2_mc_sysfs_init(&pd->kobj);
+
+	mv_pp2_bm_sysfs_init(&pd->kobj);
+	mv_pp2_rx_sysfs_init(&pd->kobj);
+
+//	mv_pp2_tx_sysfs_init(gbe_kobj);
+//	mv_pp2_tx_sched_sysfs_init(gbe_kobj);
+//	mv_pp2_qos_sysfs_init(gbe_kobj);
+//	mv_pp2_gbe_pme_sysfs_init(gbe_kobj);
+//#ifdef CONFIG_MV_PP2_HWF
+//	mv_pp2_gbe_hwf_sysfs_init(gbe_kobj);
+//#endif
+
 
 
 //	mv_pp2_gbe_sysfs_init(&pd->kobj);

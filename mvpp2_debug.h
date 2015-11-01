@@ -41,4 +41,15 @@ void mvpp2_bm_pool_drop_count(struct mvpp2_hw *hw, int pool);
 void mvpp2_pool_status(struct mvpp2 *priv, int log_pool_num);
 
 
+void mvPp2RxDmaRegsPrint(struct mvpp2 *priv, bool print_all, int start, int stop);
+void mvPp2RxqShow(struct mvpp2 *priv, int port, int rxq, int mode);
+void mvPp2PhysRxqRegs(struct mvpp2 *pp2, int rxq);
+void mvPp2PortRxqRegs(struct mvpp2 *pp2, int port, int rxq);
+void mvpp22_isr_rx_group_regs(struct mvpp2_hw *hw, int port);
+
+void mvPp2V1RxqDbgCntrs(struct mvpp2 *priv, int port, int rxq);
+void mvPp2RxFifoRegs(struct mvpp2_hw *hw, int port);
+
+
+
 #endif /* _MVPP2_DEBUG_H_ */
