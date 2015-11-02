@@ -40,7 +40,7 @@ static ssize_t mv_pp2_help(char *b)
 
 	o += sprintf(b+o, "cat                    rxDmaRegs   - show RX DMA registers\n");
 	o += sprintf(b+o, "echo [p]             > rxFifoRegs  - show RX FIFO registers for port <p>\n");
-	o += sprintf(b+o, "echo [p]             > rx_group_regs - show RX Group registers for port <p>\n");
+	o += sprintf(b+o, "echo [p] [0|1]       > rx_group_regs - show RX Group registers for port <p>\n");
 	//o += sprintf(b+o, "echo [p] v           > rxWeight    - set weight for poll function, <v> - weight [0..255]\n");
 	o += sprintf(b+o, "echo [rxq]           > gRxqRegs    - show RXQ registers for global <rxq>\n");
 	o += sprintf(b+o, "echo [p] [rxq]       > rxqCounters - show RXQ counters for <p/rxq>.\n");
@@ -95,7 +95,7 @@ static ssize_t mv_pp2_port_store(struct device *dev,
 		mvPp2RxFifoRegs(sysfs_cur_hw, p);
 	} else if (!strcmp(name, "rx_group_regs")) {
 		if (sysfs_cur_priv->pp2_version == PPV22)
-			mvpp22_isr_rx_group_regs(sysfs_cur_hw, p);
+			mvpp22_isr_rx_group_regs(sysfs_cur_priv, p, v);
 		else
 			printk("PPV22 isr_group - TBD\n");
 	} else if (!strcmp(name, "rxqCounters")) {

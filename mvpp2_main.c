@@ -80,7 +80,7 @@ static u8 first_log_rxq_queue = 0;
 
 #ifdef CONFIG_MV_PP2_FPGA
 #define FPGA_PORTS_BASE          0
-#define MV_PP2_FPGA_PERODIC_TIME 10
+#define MV_PP2_FPGA_PERODIC_TIME 100
 #define FPGA_PORT_0_OFFSET       0x104000
 
 u32 mv_pp2_vfpga_address;
@@ -3512,13 +3512,13 @@ static void mv_pp22_cpu_timer_callback(unsigned long data)
 	for(i = 0 ; i < priv->num_ports; i++) {
 		port = priv->port_list[i];
 		if (port && netif_carrier_ok(port->dev)) {
-			for(j = 0 ; j < num_active_cpus(); i++) {
+			for(j = 0 ; j < num_active_cpus(); j++) {
 				if (j==smp_processor_id())
 					napi_schedule(&port->q_vector[j].napi);
 				else {
-					err = smp_call_function_single(j, napi_schedule, &port->q_vector[j].napi, 0);
-					if (!err)
-						pr_crit("%s:napi_schedule error:\n", __func__);
+					err = smp_call_function_single(j, napi_schedule, &port->q_vector[j].napi, 1);
+					if (err)
+						pr_crit("napi_schedule error: %s\n", __func__);
 				}
 			}
 		}

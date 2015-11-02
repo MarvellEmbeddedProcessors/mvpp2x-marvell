@@ -190,6 +190,7 @@
 	(((index) < (q)->last_desc) ? ((index) + 1) : 0)
 
 /* Various constants */
+#define MVPP2_MAX_SW_THREADS	9
 #define MVPP2_MAX_CPUS		4
 #define MVPP2_MAX_SHARED	1
 

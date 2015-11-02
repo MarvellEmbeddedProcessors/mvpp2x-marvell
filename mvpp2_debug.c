@@ -280,12 +280,26 @@ void mvPp2PortRxqRegs(struct mvpp2 *pp2, int port, int rxq)
 EXPORT_SYMBOL(mvPp2PortRxqRegs);
 
 
-void mvpp22_isr_rx_group_regs(struct mvpp2_hw *hw, int port)
+void mvpp22_isr_rx_group_regs(struct mvpp2 *priv, int port, bool print_all)
 {
-	int val, i;
+	int val, i, num_threads, cpu_offset, cpu;
+	struct mvpp2_hw *hw = &priv->hw;
+	struct mvpp2_port *pp_port;
 
-	for (i=0;i<num_active_cpus();i++) {
-		printk("\n[PPv2 RxQ GroupConfig registers: port=%d cpu=%d]\n", port, i);
+
+	pp_port = mvpp2_port_struct_get(priv, port);
+	if (!pp_port) {
+		pr_crit("Input Error\n %s",__func__);
+		return;
+	}
+
+	if(print_all)
+		num_threads = MVPP2_MAX_SW_THREADS;
+	else
+		num_threads = pp_port->num_qvector;
+
+	for (i=0;i<num_threads;i++) {
+		printk("\n[PPv2 RxQ GroupConfig registers: port=%d cpu=%d]", port, i);
 
 		val = (port << MVPP22_ISR_RXQ_GROUP_INDEX_GROUP_OFFSET) | i;
 		mvpp2_write(hw, MVPP22_ISR_RXQ_GROUP_INDEX_REG, val);
@@ -296,6 +310,22 @@ void mvpp22_isr_rx_group_regs(struct mvpp2_hw *hw, int port)
 //		start_queue  = reg_val & MVPP22_ISR_RXQ_SUB_GROUP_STARTQ_MASK;
 //		sub_group_size = reg_val & MVPP22_ISR_RXQ_SUB_GROUP_SIZE_MASK;
 	}
+	printk("\n[PPv2 Port Interrupt Enable register : port=%d]\n", port);
+	mvpp2_print_reg(hw, MVPP2_ISR_ENABLE_REG(port), "MVPP2_ISR_ENABLE_REG");
+
+
+	printk("\n[PPv2 Eth Occupied Interrupt registers: port=%d]\n", port);
+	for (i=0;i<num_threads;i++) {
+		if (print_all)
+			cpu = i;
+		else
+			cpu = pp_port->q_vector[i].sw_thread_id;
+		cpu_offset = cpu*MVPP2_ADDR_SPACE_SIZE;
+		printk("cpu=%d]\n", cpu);
+		mvpp2_print_reg(hw, cpu_offset + MVPP2_ISR_RX_TX_CAUSE_REG(port), "MVPP2_ISR_RX_TX_CAUSE_REG");
+		mvpp2_print_reg(hw, cpu_offset + MVPP2_ISR_RX_TX_MASK_REG(port), "MVPP2_ISR_RX_TX_MASK_REG");
+	}
+
 }
 EXPORT_SYMBOL(mvpp22_isr_rx_group_regs);
 
