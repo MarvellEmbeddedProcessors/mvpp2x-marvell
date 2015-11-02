@@ -70,7 +70,7 @@ void mvpp2_write(struct mvpp2_hw *hw, u32 offset, u32 data)
 	void * reg_ptr = hw->cpu_base[smp_processor_id()] + offset;
 #if 1
 	if (smp_processor_id() != 0)
-		pr_emerg_once("Received mvpp2_write(%d) from CPU1 !!\n", offset);
+		pr_emerg("mvpp2_write(%d) from CPU1, caller is %pS !!\n", offset, __builtin_return_address(0));
 #endif
 	for (i=0;i<MVPP2_REG_BUF_SIZE;i++) {
 		if (last_used[i] == reg_ptr)
@@ -98,7 +98,7 @@ u32 mvpp2_read(struct mvpp2_hw *hw, u32 offset)
 	void * reg_ptr = hw->cpu_base[smp_processor_id()] + offset;
 #if 1
 	if (smp_processor_id() != 0)
-		pr_emerg_once("Received mvpp2_read(%d) from CPU1 !!\n", offset);
+		pr_emerg("Received mvpp2_read(%d) from CPU1, caller is %pS !!\n", offset, __builtin_return_address(0));
 #endif
 	for (i=0;i<MVPP2_REG_BUF_SIZE;i++) {
 		if (last_used[i] == reg_ptr)

@@ -54,12 +54,6 @@
 #include <linux/pci.h>
 #endif
 
-#define TEST_FPGA_MODE
-#ifdef TEST_FPGA_MODE
-#define TEST_NUM_CPUS 1
-#endif
-
-
 
 #include "mvpp2.h"
 #include "mvpp2_hw.h"
@@ -70,7 +64,7 @@
 
 /* Declaractions */
 u8 mvpp2_num_cos_queues = 4;
-static bool mvpp2_queue_mode = 0;
+static bool mvpp2_queue_mode = MVPP2_QDIST_MULTI_MODE;
 static bool rss_mode = 0;
 static u8 default_cpu = 0;
 static bool cos_classifer = 0;
@@ -689,7 +683,7 @@ static int mvpp2_txq_reserved_desc_num_proc(struct mvpp2 *priv,
 	desc_count += req;
 
 	if (desc_count >
-	   (txq->size - (num_present_cpus() * MVPP2_CPU_DESC_CHUNK)))
+	   (txq->size - (num_active_cpus() * MVPP2_CPU_DESC_CHUNK)))
 		return -ENOMEM;
 
 	txq_pcpu->reserved_num += mvpp2_txq_alloc_reserved_desc(priv, txq, req);
@@ -2370,26 +2364,8 @@ static void mvpp22_port_queue_vectors_init(struct mvpp2_port *port)
 	int cpu;
 	struct queue_vector *q_vec = &port->q_vector[0];
 
-#ifdef TEST_FPGA_MODE
-	for (cpu = 0;cpu < TEST_NUM_CPUS;cpu++) {
-		q_vec[cpu].parent = port;
-		q_vec[cpu].qv_type = MVPP2_PRIVATE;
-		q_vec[cpu].sw_thread_id = 0;
-		q_vec[cpu].sw_thread_mask = 1<<q_vec[cpu].sw_thread_id;
-		q_vec[cpu].pending_cause_rx = 0;
-#ifndef CONFIG_MV_PP2_FPGA
-		q_vec[cpu].irq = port->of_irqs[first_addr_space+cpu];
-#endif
-		netif_napi_add(port->dev, &q_vec[cpu].napi, mvpp22_poll,
-			NAPI_POLL_WEIGHT);
-
-		q_vec[cpu].num_rx_queues = port->num_rx_queues;
-		q_vec[cpu].first_rx_queue = 0;
-		port->num_qvector++;
-	}
-#else
 	/* Each cpu has zero private rx_queues */
-	for (cpu = 0;cpu < num_present_cpus();cpu++) {
+	for (cpu = 0;cpu < num_active_cpus();cpu++) {
 		q_vec[cpu].parent = port;
 		q_vec[cpu].qv_type = MVPP2_PRIVATE;
 		q_vec[cpu].sw_thread_id = first_addr_space+cpu;
@@ -2400,12 +2376,12 @@ static void mvpp22_port_queue_vectors_init(struct mvpp2_port *port)
 #endif
 		netif_napi_add(port->dev, &q_vec[cpu].napi, mvpp22_poll,
 			NAPI_POLL_WEIGHT);
-		if (mvpp2_queue_mode == MVPP2_QDIST_SINGLE_MODE) {
-			q_vec[cpu].first_rx_queue = 0;
-			q_vec[cpu].num_rx_queues = 0;
-		} else {
+		if (mvpp2_queue_mode == MVPP2_QDIST_MULTI_MODE) {
 			q_vec[cpu].num_rx_queues = mvpp2_num_cos_queues;
 			q_vec[cpu].first_rx_queue = cpu*mvpp2_num_cos_queues;
+		} else {
+			q_vec[cpu].first_rx_queue = 0;
+			q_vec[cpu].num_rx_queues = 0;
 		}
 		port->num_qvector++;
 	}
@@ -2426,8 +2402,6 @@ static void mvpp22_port_queue_vectors_init(struct mvpp2_port *port)
 
 		port->num_qvector++;
 	}
-#endif
-
 }
 
 static void mvpp21x_port_isr_rx_group_cfg(struct mvpp2_port *port)
@@ -2437,13 +2411,31 @@ static void mvpp21x_port_isr_rx_group_cfg(struct mvpp2_port *port)
 
 static void mvpp22_port_isr_rx_group_cfg(struct mvpp2_port *port)
 {
-	int cpu;
-	u8 cur_rx_queue;
+	int i;
+//	u8 cur_rx_queue;
 	struct mvpp2_hw *hw = &port->priv->hw;
 
-	if (mvpp2_queue_mode == MVPP2_QDIST_SINGLE_MODE) {
+	for (i = 0; i < port->num_qvector;i++) {
+		if (port->q_vector[i].num_rx_queues != 0) {
+			mvpp22_isr_rx_group_write(hw, port->id,
+				port->q_vector[i].sw_thread_id,
+				port->q_vector[i].first_rx_queue,
+				port->q_vector[i].num_rx_queues);
+		}
+	}
+#if 0
+	if (mvpp2_queue_mode == MVPP2_QDIST_MULTI_MODE) {
+		/* Each cpu has num_cos_queues private rx_queues */
+		cur_rx_queue = first_log_rxq_queue;
+		for (cpu = 0;cpu < num_active_cpus();cpu++) {
+			mvpp22_isr_rx_group_write(hw, port->id,
+				first_addr_space+cpu,cur_rx_queue,
+				mvpp2_num_cos_queues);
+			cur_rx_queue += mvpp2_num_cos_queues;
+		}
+	} else {
 		/* Each cpu has zero private rx_queues */
-		for (cpu = 0;cpu < num_present_cpus();cpu++) {
+		for (cpu = 0;cpu < num_active_cpus();cpu++) {
 			mvpp22_isr_rx_group_write(hw, port->id,
 				first_addr_space+cpu, 0, 0);
 		}
@@ -2451,16 +2443,9 @@ static void mvpp22_port_isr_rx_group_cfg(struct mvpp2_port *port)
 		mvpp22_isr_rx_group_write(hw, port->id,
 			first_addr_space+cpu, first_log_rxq_queue,
 			port->num_rx_queues);
-	} else {
-		/* Each cpu has num_cos_queues private rx_queues */
-		cur_rx_queue = first_log_rxq_queue;
-		for (cpu = 0;cpu < num_present_cpus();cpu++) {
-			mvpp22_isr_rx_group_write(hw, port->id,
-				first_addr_space+cpu,cur_rx_queue,
-				mvpp2_num_cos_queues);
-			cur_rx_queue += mvpp2_num_cos_queues;
-		}
+
 	}
+#endif
 }
 
 
@@ -2766,7 +2751,7 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 	port->phy_node = phy_node;
 	port->phy_interface = phy_mode;
 	port->base = (void *) ((mv_pp2_vfpga_address + FPGA_PORT_0_OFFSET) + ((port->id) * 0x1000));
-	pr_debug("mvpp2(%d): mvpp2_port_probe: port_id-%d mv_pp2_vfpga_address=0x%x port->base=0x%x\n",
+	DBG_MSG("mvpp2(%d): mvpp2_port_probe: port_id-%d mv_pp2_vfpga_address=0x%x port->base=0x%p\n",
 		   __LINE__, port->id, mv_pp2_vfpga_address, port->base);
 	MVPP2_PRINT_LINE();
 
@@ -2975,7 +2960,7 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 #endif
 
 	/* Allocate and initialize aggregated TXQs */
-	priv->aggr_txqs = devm_kcalloc(&pdev->dev, num_present_cpus(),
+	priv->aggr_txqs = devm_kcalloc(&pdev->dev, num_active_cpus(),
 				       sizeof(struct mvpp2_aggr_tx_queue),
 				       GFP_KERNEL);
 	if (!priv->aggr_txqs)
@@ -3155,8 +3140,7 @@ static void mvpp2_pp2_ports_print(struct mvpp2 *priv)
 
 	for (i = 0; i < priv->num_ports; i++) {
 		if (priv->port_list[i] == NULL) {
-
-			DBG_MSG("\t port_list[%d]= NULL!\n");
+			pr_emerg("\t port_list[%d]= NULL!\n", i);
 			continue;
 		}
 		port = priv->port_list[i];
@@ -3391,7 +3375,7 @@ static int mvpp2_rxq_number_get(void) {
 	if (mvpp2_queue_mode == MVPP2_QDIST_SINGLE_MODE)
 		rx_queue_num = mvpp2_num_cos_queues;
 	else
-		rx_queue_num = mvpp2_num_cos_queues * num_present_cpus();
+		rx_queue_num = mvpp2_num_cos_queues * num_active_cpus();
 
 	return (rx_queue_num);
 }
@@ -3522,13 +3506,21 @@ static void mv_pp22_cpu_timer_callback(unsigned long data)
 	struct mvpp2 *priv = platform_get_drvdata(pdev);
 	struct device_node *dn = pdev->dev.of_node;
 	struct device_node *port_node;
-	int i = 0;
+	int i = 0, j, err;
 	struct mvpp2_port *port;
 
 	for(i = 0 ; i < priv->num_ports; i++) {
 		port = priv->port_list[i];
 		if (port && netif_carrier_ok(port->dev)) {
-			napi_schedule(&port->q_vector[0].napi);
+			for(j = 0 ; j < num_active_cpus(); i++) {
+				if (j==smp_processor_id())
+					napi_schedule(&port->q_vector[j].napi);
+				else {
+					err = smp_call_function_single(j, napi_schedule, &port->q_vector[j].napi, 0);
+					if (!err)
+						pr_crit("%s:napi_schedule error:\n", __func__);
+				}
+			}
 		}
 		else if(port) {
 			pr_debug("mvpp2(%d): port=%p netif_carrier_ok=%d\n", __LINE__, port, netif_carrier_ok(port->dev));
