@@ -1017,6 +1017,7 @@ enum mvpp2_tag_type {
 /* Sram result info bits assignment */
 #define MVPP2_PRS_RI_MAC_ME_MASK		0x1
 #define MVPP2_PRS_RI_DSA_MASK			0x2
+#define MVPP2_PRS_RI_VLAN_OFFS			2
 #define MVPP2_PRS_RI_VLAN_MASK			0xc
 #define MVPP2_PRS_RI_VLAN_NONE			0x0
 #define MVPP2_PRS_RI_VLAN_SINGLE		BIT(2)
@@ -1024,6 +1025,7 @@ enum mvpp2_tag_type {
 #define MVPP2_PRS_RI_VLAN_TRIPLE		(BIT(2) | BIT(3))
 #define MVPP2_PRS_RI_CPU_CODE_MASK		0x70
 #define MVPP2_PRS_RI_CPU_CODE_RX_SPEC		BIT(4)
+#define MVPP2_PRS_RI_L2_CAST_OFFS		9
 #define MVPP2_PRS_RI_L2_CAST_MASK		0x600
 #define MVPP2_PRS_RI_L2_UCAST			0x0
 #define MVPP2_PRS_RI_L2_MCAST			BIT(9)
@@ -1351,7 +1353,66 @@ enum mvpp2_bm_pool_log_num {
 #define MVPP2_RXD_L3_IP4		BIT(28)
 #define MVPP2_RXD_L3_IP6		BIT(30)
 #define MVPP2_RXD_BUF_HDR		BIT(31)
-
+/* Sub fields of "parserInfo" field */
+#define MVPP2_RXD_LKP_ID_OFFS		0
+#define MVPP2_RXD_LKP_ID_BITS		6
+#define MVPP2_RXD_LKP_ID_MASK		(((1 << MVPP2_RXD_LKP_ID_BITS) - 1) << MVPP2_RXD_LKP_ID_OFFS)
+#define MVPP2_RXD_CPU_CODE_OFFS		6
+#define MVPP2_RXD_CPU_CODE_BITS		3
+#define MVPP2_RXD_CPU_CODE_MASK		(((1 << MVPP2_RXD_CPU_CODE_BITS) - 1) << MVPP2_RXD_CPU_CODE_OFFS)
+#define MVPP2_RXD_PPPOE_BIT		9
+#define MVPP2_RXD_PPPOE_MASK		(1 << MVPP2_RXD_PPPOE_BIT)
+#define MVPP2_RXD_L3_CAST_OFFS		10
+#define MVPP2_RXD_L3_CAST_BITS		2
+#define MVPP2_RXD_L3_CAST_MASK		(((1 << MVPP2_RXD_L3_CAST_BITS) - 1) << MVPP2_RXD_L3_CAST_OFFS)
+#define MVPP2_RXD_L2_CAST_OFFS		12
+#define MVPP2_RXD_L2_CAST_BITS		2
+#define MVPP2_RXD_L2_CAST_MASK		(((1 << MVPP2_RXD_L2_CAST_BITS) - 1) << MVPP2_RXD_L2_CAST_OFFS)
+#define MVPP2_RXD_VLAN_INFO_OFFS	14
+#define MVPP2_RXD_VLAN_INFO_BITS	2
+#define MVPP2_RXD_VLAN_INFO_MASK	(((1 << MVPP2_RXD_VLAN_INFO_BITS) - 1) << MVPP2_RXD_VLAN_INFO_OFFS)
+/* Bits of "bmQset" field */
+#define MVPP2_RXD_BUFF_QSET_NUM_OFFS	0
+#define MVPP2_RXD_BUFF_QSET_NUM_MASK	(0x7f << MVPP2_RXD_BUFF_QSET_NUM_OFFS)
+#define MVPP2_RXD_BUFF_TYPE_OFFS	7
+#define MVPP2_RXD_BUFF_TYPE_MASK	(0x1 << MVPP2_RXD_BUFF_TYPE_OFFS)
+/* Bits of "status" field */
+#define MVPP2_RXD_L3_OFFSET_OFFS	0
+#define MVPP2_RXD_L3_OFFSET_MASK	(0x7F << MVPP2_RXD_L3_OFFSET_OFFS)
+#define MVPP2_RXD_IP_HLEN_OFFS		8
+#define MVPP2_RXD_IP_HLEN_MASK		(0x1F << MVPP2_RXD_IP_HLEN_OFFS)
+#define MVPP2_RXD_ES_BIT		15
+#define MVPP2_RXD_ES_MASK		(1 << MVPP2_RXD_ES_BIT)
+#define MVPP2_RXD_HWF_SYNC_BIT		21
+#define MVPP2_RXD_HWF_SYNC_MASK		(1 << MVPP2_RXD_HWF_SYNC_BIT)
+#define MVPP2_RXD_L4_CHK_OK_BIT		22
+#define MVPP2_RXD_L4_CHK_OK_MASK	(1 << MVPP2_RXD_L4_CHK_OK_BIT)
+#define MVPP2_RXD_IP_FRAG_BIT		23
+#define MVPP2_RXD_IP_FRAG_MASK		(1 << MVPP2_RXD_IP_FRAG_BIT)
+#define MVPP2_RXD_IP4_HEADER_ERR_BIT	24
+#define MVPP2_RXD_IP4_HEADER_ERR_MASK	(1 << MVPP2_RXD_IP4_HEADER_ERR_BIT)
+#define MVPP2_RXD_L4_OFFS		25
+#define MVPP2_RXD_L4_MASK		(7 << MVPP2_RXD_L4_OFFS)
+/* Value 0 - N/A, 3-7 - User Defined */
+#define MVPP2_RXD_L3_OFFS		28
+#define MVPP2_RXD_L3_MASK		(7 << MVPP2_RXD_L3_OFFS)
+/* Value 0 - N/A, 6-7 - User Defined */
+#define MVPP2_RXD_L3_IP4_OPT		(2 << MVPP2_RXD_L3_OFFS)
+#define MVPP2_RXD_L3_IP4_OTHER		(3 << MVPP2_RXD_L3_OFFS)
+#define MVPP2_RXD_L3_IP6_EXT		(5 << MVPP2_RXD_L3_OFFS)
+#define MVPP2_RXD_BUF_HDR_BIT		31
+#define MVPP2_RXD_BUF_HDR_MASK		(1 << MVPP2_RXD_BUF_HDR_BIT)
+/* status field MACROs */
+#define MVPP2_RXD_L3_IS_IP4(status)		(((status) & MVPP2_RXD_L3_MASK) == MVPP2_RXD_L3_IP4)
+#define MVPP2_RXD_L3_IS_IP4_OPT(status)		(((status) & MVPP2_RXD_L3_MASK) == MVPP2_RXD_L3_IP4_OPT)
+#define MVPP2_RXD_L3_IS_IP4_OTHER(status)	(((status) & MVPP2_RXD_L3_MASK) == MVPP2_RXD_L3_IP4_OTHER)
+#define MVPP2_RXD_L3_IS_IP6(status)		(((status) & MVPP2_RXD_L3_MASK) == MVPP2_RXD_L3_IP6)
+#define MVPP2_RXD_L3_IS_IP6_EXT(status)		(((status) & MVPP2_RXD_L3_MASK) == MVPP2_RXD_L3_IP6_EXT)
+#define MVPP2_RXD_L4_IS_UDP(status)		(((status) & MVPP2_RXD_L4_MASK) == MVPP2_RXD_L4_UDP)
+#define MVPP2_RXD_L4_IS_TCP(status)		(((status) & MVPP2_RXD_L4_MASK) == MVPP2_RXD_L4_TCP)
+#define MVPP2_RXD_IP4_HDR_ERR(status)		((status) & MVPP2_RXD_IP4_HEADER_ERR_MASK)
+#define MVPP2_RXD_IP4_FRG(status)		((status) & MVPP2_RXD_IP_FRAG_MASK)
+#define MVPP2_RXD_L4_CHK_OK(status)		((status) & MVPP2_RXD_L4_CHK_OK_MASK)
 
 struct pp21_specific_tx_desc {
 	u32 buf_phys_addr;	/* physical addr of transmitted buffer	*/
