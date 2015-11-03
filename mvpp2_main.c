@@ -1636,7 +1636,7 @@ static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 		buf_phys_addr & ~MVPP2_TX_DESC_ALIGN, tx_desc);
 
 	tx_cmd = mvpp2_skb_tx_csum(port, skb);
-	pr_debug(KERN_EMERG "mvpp2_tx(%d): trace\n", __LINE__);
+	pr_debug("mvpp2_tx(%d): trace\n", __LINE__);
 	if (frags == 1) {
 		/* First and Last descriptor */
 		tx_cmd |= MVPP2_TXD_F_DESC | MVPP2_TXD_L_DESC;
@@ -2413,15 +2413,19 @@ static void mvpp22_port_isr_rx_group_cfg(struct mvpp2_port *port)
 {
 	int i;
 //	u8 cur_rx_queue;
-	struct mvpp2_hw *hw = &port->priv->hw;
+	struct mvpp2_hw *hw = &(port->priv->hw);
 
 	for (i = 0; i < port->num_qvector;i++) {
+		MVPP2_PRINT_LINE();
 		if (port->q_vector[i].num_rx_queues != 0) {
+			MVPP2_PRINT_LINE();
 			mvpp22_isr_rx_group_write(hw, port->id,
 				port->q_vector[i].sw_thread_id,
 				port->q_vector[i].first_rx_queue,
 				port->q_vector[i].num_rx_queues);
 		}
+
+		MVPP2_PRINT_LINE();
 	}
 #if 0
 	if (mvpp2_queue_mode == MVPP2_QDIST_MULTI_MODE) {
@@ -2946,11 +2950,13 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 		dev_err(&pdev->dev, "invalid num_cos_queue parameter\n");
 		return -EINVAL;
 	}
+	MVPP2_PRINT_LINE();
 
 	/* MBUS windows configuration */
 	dram_target_info = mv_mbus_dram_info();
 	if (dram_target_info)
 		mvpp2_conf_mbus_windows(dram_target_info, hw);
+	MVPP2_PRINT_LINE();
 
 	/* Disable HW PHY polling */
 #ifndef CONFIG_MV_PP2_FPGA
@@ -2958,6 +2964,7 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 	val |= MVPP2_PHY_AN_STOP_SMI0_MASK;
 	writel(val, hw->lms_base + MVPP2_PHY_AN_CFG0_REG);
 #endif
+	MVPP2_PRINT_LINE();
 
 	/* Allocate and initialize aggregated TXQs */
 	priv->aggr_txqs = devm_kcalloc(&pdev->dev, num_active_cpus(),
@@ -2974,31 +2981,38 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 		if (err < 0)
 			return err;
 	}
+	MVPP2_PRINT_LINE();
 
 	/* Rx Fifo Init */
 	mvpp2_rx_fifo_init(hw);
+	MVPP2_PRINT_LINE();
 
 #ifndef CONFIG_MV_PP2_FPGA
 	writel(MVPP2_EXT_GLOBAL_CTRL_DEFAULT,
 	       hw->lms_base + MVPP2_MNG_EXTENDED_GLOBAL_CTRL_REG);
 #endif
+	MVPP2_PRINT_LINE();
 
 	/* Allow cache snoop when transmiting packets */
 	mvpp2_write(hw, MVPP21_TX_SNOOP_REG, 0x1);
+	MVPP2_PRINT_LINE();
 
 	/* Buffer Manager initialization */
 	err = mvpp2_bm_init(pdev, priv);
 	if (err < 0)
 		return err;
+	MVPP2_PRINT_LINE();
 
 	/* Parser default initialization */
 	err = mvpp2_prs_default_init(pdev, hw);
 	if (err < 0)
 		return err;
+	MVPP2_PRINT_LINE();
 
 	/* Classifier default initialization */
 	mvpp2_cls_init(hw);
 
+	MVPP2_PRINT_LINE();
 
 	/*NEW : Disable all rx_queues */
 	/*TBD - this is TEMP_HACK */
@@ -3009,6 +3023,7 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 			mvpp2_write(hw, MVPP2_RXQ_CONFIG_REG(i), val);
 		}
 	}
+	MVPP2_PRINT_LINE();
 
 	return 0;
 }
@@ -3242,7 +3257,7 @@ MVPP2_PRINT_LINE();
 	/* Save cpu_present_mask + populate the per_cpu address space */
 	cpu_map = 0;
 	i = 0;
-	for_each_present_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		cpu_map |= (1<<cpu);
 		hw->cpu_base[cpu] = hw->base;
 		if (priv->pp2xdata->multi_addr_space) {
