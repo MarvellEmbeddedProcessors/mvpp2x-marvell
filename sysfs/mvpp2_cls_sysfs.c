@@ -106,12 +106,12 @@ static ssize_t mv_cls_store_unsigned(struct device *dev,
 		mvpp2_cls_hw_flow_read(sysfs_cur_hw, a, &flow_entry);
 	else if (!strcmp(name, "mvpp2_reg_read")) {
 		val = mvpp2_read(sysfs_cur_hw, a);
-		printk("mvpp2_read(0x%x)=%0x%x\n", a, val);
+		printk("mvpp2_read(0x%x)=0x%x\n", a, val);
 	}
 	else if (!strcmp(name, "mvpp2_reg_write")) {
 		mvpp2_write(sysfs_cur_hw, a, b);
 		val = mvpp2_read(sysfs_cur_hw, a);
-		printk("mvpp2_write_read(0x%x)=%0x%x\n", a, val);
+		printk("mvpp2_write_read(0x%x)=0x%x\n", a, val);
 	}
 
 	else {

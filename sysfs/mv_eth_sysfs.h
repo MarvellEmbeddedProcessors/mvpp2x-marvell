@@ -105,4 +105,7 @@ int mv_pp2_l2fw_sysfs_init(struct kobject *pp2_kobj);
 int mv_pp2_l2fw_sysfs_exit(struct kobject *pp2_kobj);
 #endif
 
+int mv_pp2_rss_sysfs_init(struct kobject *pp2_kobj);
+int mv_pp2_rss_sysfs_exit(struct kobject *pp2_kobj);
+
 #endif /* __mv_eth_sysfs_h__ */
