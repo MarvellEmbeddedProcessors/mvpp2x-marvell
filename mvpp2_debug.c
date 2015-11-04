@@ -753,4 +753,168 @@ void mvPp2PortStatus(struct mvpp2_hw *hw, int port)
 }
 #endif
 
+static char *mvpp2_prs_l2_info_str(unsigned int l2_info)
+{
+	switch (l2_info << MVPP2_PRS_RI_L2_CAST_OFFS) {
+	case MVPP2_PRS_RI_L2_UCAST:
+		return "Ucast";
+	case MVPP2_PRS_RI_L2_MCAST:
+		return "Mcast";
+	case MVPP2_PRS_RI_L2_BCAST:
+		return "Bcast";
+	default:
+		return "Unknown";
+	}
+	return NULL;
+}
+
+static char *mvpp2_prs_vlan_info_str(unsigned int vlan_info)
+{
+	switch (vlan_info << MVPP2_PRS_RI_VLAN_OFFS) {
+	case MVPP2_PRS_RI_VLAN_NONE:
+		return "None";
+	case MVPP2_PRS_RI_VLAN_SINGLE:
+		return "Single";
+	case MVPP2_PRS_RI_VLAN_DOUBLE:
+		return "Double";
+	case MVPP2_PRS_RI_VLAN_TRIPLE:
+		return "Triple";
+	default:
+		return "Unknown";
+	}
+	return NULL;
+}
+
+void mvpp2_rx_desc_print(struct mvpp2_rx_desc *desc)
+{
+	int i;
+	u32 *words = (u32 *) desc;
+
+	printk("RX desc - %p: ", desc);
+	for (i = 0; i < 8; i++)
+		printk("%8.8x ", *words++);
+	printk("\n");
+
+	printk("pkt_size=%d, L3_offs=%d, IP_hlen=%d, ",
+	       desc->data_size,
+	       (desc->status & MVPP2_RXD_L3_OFFSET_MASK) >> MVPP2_RXD_L3_OFFSET_OFFS,
+	       (desc->status & MVPP2_RXD_IP_HLEN_MASK) >> MVPP2_RXD_IP_HLEN_OFFS);
+
+	printk("L2=%s, ",
+		mvpp2_prs_l2_info_str((desc->rsrvd_parser & MVPP2_RXD_L2_CAST_MASK) >> MVPP2_RXD_L2_CAST_OFFS));
+
+	printk("VLAN=");
+	printk("%s, ",
+		mvpp2_prs_vlan_info_str((desc->rsrvd_parser & MVPP2_RXD_VLAN_INFO_MASK) >> MVPP2_RXD_VLAN_INFO_OFFS));
+
+	printk("L3=");
+	if (MVPP2_RXD_L3_IS_IP4(desc->status))
+		printk("IPv4 (hdr=%s), ", MVPP2_RXD_IP4_HDR_ERR(desc->status) ? "bad" : "ok");
+	else if (MVPP2_RXD_L3_IS_IP4_OPT(desc->status))
+		printk("IPv4 Options (hdr=%s), ", MVPP2_RXD_IP4_HDR_ERR(desc->status) ? "bad" : "ok");
+	else if (MVPP2_RXD_L3_IS_IP4_OTHER(desc->status))
+		printk("IPv4 Other (hdr=%s), ", MVPP2_RXD_IP4_HDR_ERR(desc->status) ? "bad" : "ok");
+	else if (MVPP2_RXD_L3_IS_IP6(desc->status))
+		printk("IPv6, ");
+	else if (MVPP2_RXD_L3_IS_IP6_EXT(desc->status))
+		printk("IPv6 Ext, ");
+	else
+		printk("Unknown, ");
+
+	if (desc->status & MVPP2_RXD_IP_FRAG_MASK)
+		printk("Frag, ");
+
+	printk("L4=");
+	if (MVPP2_RXD_L4_IS_TCP(desc->status))
+		printk("TCP (csum=%s)", (desc->status & MVPP2_RXD_L4_CHK_OK_MASK) ? "Ok" : "Bad");
+	else if (MVPP2_RXD_L4_IS_UDP(desc->status))
+		printk("UDP (csum=%s)", (desc->status & MVPP2_RXD_L4_CHK_OK_MASK) ? "Ok" : "Bad");
+	else
+		printk("Unknown");
+
+	printk("\n");
+
+	printk("Lookup_ID=0x%x, cpu_code=0x%x\n",
+		(desc->rsrvd_parser & MVPP2_RXD_LKP_ID_MASK) >> MVPP2_RXD_LKP_ID_OFFS,
+		(desc->rsrvd_parser & MVPP2_RXD_CPU_CODE_MASK) >> MVPP2_RXD_CPU_CODE_OFFS);
+}
+
+/* Macro for alignment up. For example, MV_ALIGN_UP(0x0330, 0x20) = 0x0340   */
+#define MV_ALIGN_UP(number, align)                                          \
+(((number) & ((align) - 1)) ? (((number) + (align)) & ~((align)-1)) : (number))
+
+/* Macro for alignment down. For example, MV_ALIGN_UP(0x0330, 0x20) = 0x0320 */
+#define MV_ALIGN_DOWN(number, align) ((number) & ~((align)-1))
+/* CPU architecture dependent 32, 16, 8 bit read/write IO addresses */
+#define MV_MEMIO32_WRITE(addr, data)    \
+	((*((volatile unsigned int *)(addr))) = ((unsigned int)(data)))
+
+#define MV_MEMIO32_READ(addr)           \
+	((*((volatile unsigned int *)(addr))))
+
+#define MV_MEMIO16_WRITE(addr, data)    \
+	((*((volatile unsigned short *)(addr))) = ((unsigned short)(data)))
+
+#define MV_MEMIO16_READ(addr)           \
+	((*((volatile unsigned short *)(addr))))
+
+#define MV_MEMIO8_WRITE(addr, data)     \
+	((*((volatile unsigned char *)(addr))) = ((unsigned char)(data)))
+
+#define MV_MEMIO8_READ(addr)            \
+	((*((volatile unsigned char *)(addr))))
+
+/* Dump memory in specific format:
+ * address: X1X1X1X1 X2X2X2X2 ... X8X8X8X8
+ */
+void mvpp2_skb_dump(struct sk_buff *skb, int size, int access)
+{
+	int i, j;
+	u32 memAddr;
+	u32 addr = skb->head + NET_SKB_PAD;
+
+	printk("skb=%p, buf=%p, ksize=%d\n", skb, skb->head, ksize(skb->head));
+
+	if (access == 0)
+		access = 1;
+
+	if ((access != 4) && (access != 2) && (access != 1)) {
+		printk("%d wrong access size. Access must be 1 or 2 or 4\n", access);
+		return;
+	}
+	memAddr = MV_ALIGN_DOWN((unsigned int)addr, 4);
+	size = MV_ALIGN_UP(size, 4);
+	addr = (void *)MV_ALIGN_DOWN((unsigned int)addr, access);
+	while (size > 0) {
+		printk("%08x: ", memAddr);
+		i = 0;
+		/* 32 bytes in the line */
+		while (i < 32) {
+			if (memAddr >= (u32)addr) {
+				switch (access) {
+				case 1:
+					printk("%02x ", MV_MEMIO8_READ(memAddr));
+					break;
+
+				case 2:
+					printk("%04x ", MV_MEMIO16_READ(memAddr));
+					break;
+
+				case 4:
+					printk("%08x ", MV_MEMIO32_READ(memAddr));
+					break;
+				}
+			} else {
+				for (j = 0; j < (access * 2 + 1); j++)
+					printk(" ");
+			}
+			i += access;
+			memAddr += access;
+			size -= access;
+			if (size <= 0)
+				break;
+		}
+		printk("\n");
+	}
+}
 

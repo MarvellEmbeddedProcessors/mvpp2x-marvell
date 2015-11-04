@@ -50,6 +50,8 @@ void mvpp22_isr_rx_group_regs(struct mvpp2 *priv, int port, bool print_all);
 void mvPp2V1RxqDbgCntrs(struct mvpp2 *priv, int port, int rxq);
 void mvPp2RxFifoRegs(struct mvpp2_hw *hw, int port);
 
+void mvpp2_rx_desc_print(struct mvpp2_rx_desc *desc);
 
+void mvpp2_skb_dump(struct sk_buff *skb, int size, int access);
 
 #endif /* _MVPP2_DEBUG_H_ */
