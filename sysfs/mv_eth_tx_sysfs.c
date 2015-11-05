@@ -32,10 +32,7 @@ disclaimer.
 #include <linux/platform_device.h>
 #include <linux/netdevice.h>
 
-#include "mv_eth_sysfs.h"
-#include "gbe/mvPp2Gbe.h"
-#include "mv_netdev.h"
-
+#include "mvPp2Common.h"
 
 static ssize_t mv_pp2_help(char *b)
 {
@@ -43,23 +40,23 @@ static ssize_t mv_pp2_help(char *b)
 	int s = PAGE_SIZE; /* buffer size */
 
 	o += scnprintf(b+o, s-o, "cat                              txRegs          - show global TX registers\n");
-	o += scnprintf(b+o, s-o, "echo [p] [txp] [txq]             > pTxqCounters  - show TXQ Counters for port <p/txp/txq> where <txq> range [0..7]\n");
-	o += scnprintf(b+o, s-o, "echo [p] [txp] [txq]             > pTxqRegs      - show TXQ registers for port <p/txp/txq> where <txq> range [0..7]\n");
+	o += scnprintf(b+o, s-o, "echo [p] [txq]                   > pTxqCounters  - show TXQ Counters for port <p/txp/txq> where <txq> range [0..7]\n");
+	o += scnprintf(b+o, s-o, "echo [p] [txq]                   > pTxqRegs      - show TXQ registers for port <p/txp/txq> where <txq> range [0..7]\n");
 	o += scnprintf(b+o, s-o, "echo [txq]                       > gTxqRegs      - show TXQ registers for global <txq> range [0..255]\n");
 	o += scnprintf(b+o, s-o, "echo [cpu]                       > aggrTxqRegs   - show Aggregation TXQ registers for <cpu> range [0..max]\n");
 	o += scnprintf(b+o, s-o, "echo [cpu] [v]                   > aggrTxqShow   - show aggregated TXQ descriptors ring for <cpu>.\n");
-	o += scnprintf(b+o, s-o, "echo [p] [txp] [txq] [v]         > txqShow       - show TXQ descriptors ring for <p/txp/txq>. v: 0-brief, 1-full\n");
-	o += scnprintf(b+o, s-o, "echo [p] [hex]                   > txFlags       - set TX flags. bits: 0-no_pad, 1-mh, 2-hw_cmd\n");
-	o += scnprintf(b+o, s-o, "echo [p] [hex]                   > txMH          - set 2 bytes of Marvell Header for transmit\n");
-	o += scnprintf(b+o, s-o, "echo [p] [txp] [txq] [cpu]       > txqDef        - set default <txp/txq> for packets sent to port <p> by <cpu>\n");
-	o += scnprintf(b+o, s-o, "echo [p] [txp] [txq] [v]         > txqSize       - set TXQ size <v> for <p/txp/txq>.\n");
-	o += scnprintf(b+o, s-o, "echo [p] [txp] [txq] [hwf] [swf] > txqLimit      - set HWF <hwf> and SWF <swf> limits for <p/txp/txq>.\n");
-	o += scnprintf(b+o, s-o, "echo [p] [txp] [txq] [v]         > txqChunk      - set SWF request chunk [v] for <p/txp/txq>\n");
-#ifdef CONFIG_MV_PP2_TXDONE_IN_HRTIMER
-	o += scnprintf(b+o, s-o, "echo [period]                    > txPeriod      - set Tx Done high resolution timer period\n");
-	o += scnprintf(b+o, s-o, "				     [period]: period range is [%lu, %lu], unit usec\n",
-		MV_PP2_HRTIMER_PERIOD_MIN, MV_PP2_HRTIMER_PERIOD_MAX);
-#endif
+	o += scnprintf(b+o, s-o, "echo [p]  [txq] [v]              > txqShow       - show TXQ descriptors ring for <p/txp/txq>. v: 0-brief, 1-full\n");
+//	o += scnprintf(b+o, s-o, "echo [p] [hex]                   > txFlags       - set TX flags. bits: 0-no_pad, 1-mh, 2-hw_cmd\n");
+//	o += scnprintf(b+o, s-o, "echo [p] [hex]                   > txMH          - set 2 bytes of Marvell Header for transmit\n");
+//	o += scnprintf(b+o, s-o, "echo [p] [txp] [txq] [cpu]       > txqDef        - set default <txp/txq> for packets sent to port <p> by <cpu>\n");
+//	o += scnprintf(b+o, s-o, "echo [p] [txp] [txq] [v]         > txqSize       - set TXQ size <v> for <p/txp/txq>.\n");
+//	o += scnprintf(b+o, s-o, "echo [p] [txp] [txq] [hwf] [swf] > txqLimit      - set HWF <hwf> and SWF <swf> limits for <p/txp/txq>.\n");
+//	o += scnprintf(b+o, s-o, "echo [p] [txp] [txq] [v]         > txqChunk      - set SWF request chunk [v] for <p/txp/txq>\n");
+//#ifdef CONFIG_MV_PP2_TXDONE_IN_HRTIMER
+//	o += scnprintf(b+o, s-o, "echo [period]                    > txPeriod      - set Tx Done high resolution timer period\n");
+//	o += scnprintf(b+o, s-o, "				     [period]: period range is [%lu, %lu], unit usec\n",
+//		MV_PP2_HRTIMER_PERIOD_MIN, MV_PP2_HRTIMER_PERIOD_MAX);
+//#endif
 	return o;
 }
 
@@ -73,46 +70,11 @@ static ssize_t mv_pp2_show(struct device *dev,
 		return -EPERM;
 
 	if (!strcmp(name, "txRegs"))
-		mvPp2TxRegs();
+		mvPp2TxRegs(sysfs_cur_priv);
 	else
 		off = mv_pp2_help(buf);
 
 	return off;
-}
-
-static ssize_t mv_pp2_tx_hex_store(struct device *dev,
-				struct device_attribute *attr, const char *buf, size_t len)
-{
-	const char      *name = attr->attr.name;
-	int             err;
-	unsigned int    p, v;
-	unsigned long   flags;
-
-	if (!capable(CAP_NET_ADMIN))
-		return -EPERM;
-
-	/* Read port and value */
-	err = p = v;
-	sscanf(buf, "%d %x", &p, &v);
-
-	local_irq_save(flags);
-
-	if (!strcmp(name, "txFlags")) {
-		err = mv_pp2_ctrl_tx_flag(p, MV_ETH_TX_F_NO_PAD, v & 0x1);
-		err = mv_pp2_ctrl_tx_flag(p, MV_ETH_TX_F_MH, v & 0x2);
-		err = mv_pp2_ctrl_tx_flag(p, MV_ETH_TX_F_HW_CMD, v & 0x4);
-	} else if (!strcmp(name, "txMH")) {
-		err = mv_pp2_eth_ctrl_tx_mh(p, MV_16BIT_BE((u16)v));
-	} else {
-		err = 1;
-		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
-	}
-	local_irq_restore(flags);
-
-	if (err)
-		printk(KERN_ERR "%s: error %d\n", __func__, err);
-
-	return err ? -EINVAL : len;
 }
 
 static ssize_t mv_pp2_txq_store(struct device *dev,
@@ -132,31 +94,18 @@ static ssize_t mv_pp2_txq_store(struct device *dev,
 
 	local_irq_save(flags);
 
-	if (!strcmp(name, "txqDef")) {
-		err = mv_pp2_ctrl_txq_cpu_def(p, v, a, b);
-	} else if (!strcmp(name, "txqShow")) {
-		mvPp2TxqShow(p, v, a, b);
+	if (!strcmp(name, "txqShow")) {
+		mvPp2TxqShow(sysfs_cur_priv, p, v, a);
 	}  else if (!strcmp(name, "aggrTxqShow")) {
-		mvPp2AggrTxqShow(p, v);
+		mvPp2AggrTxqShow(sysfs_cur_priv, p, v);
 	} else if (!strcmp(name, "gTxqRegs")) {
-		mvPp2PhysTxqRegs(p);
+		mvPp2PhysTxqRegs(sysfs_cur_priv, p);
 	} else if (!strcmp(name, "pTxqRegs")) {
-		mvPp2PortTxqRegs(p, v, a);
+		mvPp2PortTxqRegs(sysfs_cur_priv, p, v);
 	} else if (!strcmp(name, "pTxqCounters")) {
-		mvPp2V1TxqDbgCntrs(p, v, a);
+		mvPp2V1TxqDbgCntrs(sysfs_cur_priv, p, v);
 	} else if (!strcmp(name, "aggrTxqRegs")) {
-		mvPp2AggrTxqRegs(p);
-	} else if (!strcmp(name, "txqSize")) {
-		mv_pp2_ctrl_txq_size_set(p, v, a, b);
-	} else if (!strcmp(name, "txqLimit")) {
-		/* last param is ignored in ppv2.0 */
-		mv_pp2_ctrl_txq_limits_set(p, v, a, b, c);
-	} else if (!strcmp(name, "txqChunk")) {
-		mv_pp2_ctrl_txq_chunk_set(p, v, a, b);
-	} else if (!strcmp(name, "txPeriod")) {
-#ifdef CONFIG_MV_PP2_TXDONE_IN_HRTIMER
-		mv_pp2_tx_done_hrtimer_period_set(p);
-#endif
+		mvPp2AggrTxqRegs(sysfs_cur_priv, p);
 	} else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
@@ -178,15 +127,7 @@ static DEVICE_ATTR(txqShow,      S_IWUSR, NULL, mv_pp2_txq_store);
 static DEVICE_ATTR(gTxqRegs,     S_IWUSR, NULL, mv_pp2_txq_store);
 static DEVICE_ATTR(pTxqRegs,     S_IWUSR, NULL, mv_pp2_txq_store);
 static DEVICE_ATTR(aggrTxqShow,  S_IWUSR, NULL, mv_pp2_txq_store);
-static DEVICE_ATTR(txqDef,       S_IWUSR, NULL, mv_pp2_txq_store);
-static DEVICE_ATTR(txqSize,      S_IWUSR, NULL, mv_pp2_txq_store);
-static DEVICE_ATTR(txqLimit,     S_IWUSR, NULL, mv_pp2_txq_store);
-static DEVICE_ATTR(txqChunk,     S_IWUSR, NULL, mv_pp2_txq_store);
-#ifdef CONFIG_MV_PP2_TXDONE_IN_HRTIMER
-static DEVICE_ATTR(txPeriod,     S_IWUSR, NULL, mv_pp2_txq_store);
-#endif
-static DEVICE_ATTR(txFlags,      S_IWUSR, NULL, mv_pp2_tx_hex_store);
-static DEVICE_ATTR(txMH,         S_IWUSR, NULL, mv_pp2_tx_hex_store);
+
 
 static struct attribute *mv_pp2_tx_attrs[] = {
 	&dev_attr_txqDef.attr,
@@ -198,14 +139,6 @@ static struct attribute *mv_pp2_tx_attrs[] = {
 	&dev_attr_gTxqRegs.attr,
 	&dev_attr_pTxqRegs.attr,
 	&dev_attr_aggrTxqShow.attr,
-	&dev_attr_txqSize.attr,
-	&dev_attr_txqLimit.attr,
-	&dev_attr_txqChunk.attr,
-#ifdef CONFIG_MV_PP2_TXDONE_IN_HRTIMER
-	&dev_attr_txPeriod.attr,
-#endif
-	&dev_attr_txFlags.attr,
-	&dev_attr_txMH.attr,
 	NULL
 };
 

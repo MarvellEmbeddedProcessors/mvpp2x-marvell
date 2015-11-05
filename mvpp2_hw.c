@@ -3507,6 +3507,14 @@ void mvpp2_aggr_txq_pend_desc_add(struct mvpp2_port *port, int pending)
 }
 
 
+int mvpp2_aggr_desc_num_read(struct mvpp2 *priv, int cpu)
+{
+	u32 val = mvpp2_read(&priv->hw, MVPP2_AGGR_TXQ_STATUS_REG(cpu));
+	return(val & MVPP2_AGGR_TXQ_PENDING_MASK);
+}
+
+
+
 /* Check if there are enough free descriptors in aggregated txq.
  * If not, update the number of occupied descriptors and repeat the check.
  */

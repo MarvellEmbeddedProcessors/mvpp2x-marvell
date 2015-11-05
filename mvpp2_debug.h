@@ -53,6 +53,15 @@ void mvPp2RxFifoRegs(struct mvpp2_hw *hw, int port);
 void mvpp2_rx_desc_print(struct mvpp2_rx_desc *desc);
 
 void mvpp2_skb_dump(struct sk_buff *skb, int size, int access);
+void mvPp2TxqShow(struct mvpp2 *priv, int port, int txq, int mode);
+void mvPp2AggrTxqShow(struct mvpp2 *priv, int cpu, int mode);
+void mvPp2PhysTxqRegs(struct mvpp2 *priv, int txq);
+void mvPp2PortTxqRegs(struct mvpp2 *priv, int port, int txq);
+void mvPp2AggrTxqRegs(struct mvpp2 *priv, int cpu);
+void mvPp2V1TxqDbgCntrs(struct mvpp2 *priv, int port, int txq);
+void mvPp2TxRegs(struct mvpp2 *priv);
+
+
 
 int mvpp2_wrap_cos_mode_set(struct mvpp2_port *port, enum mvpp2_cos_classifier cos_mode);
 int mvpp2_wrap_cos_mode_get(struct mvpp2_port *port);

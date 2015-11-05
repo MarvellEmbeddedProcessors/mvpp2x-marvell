@@ -435,6 +435,7 @@ struct mvpp2 {
 	struct mvpp2_port **port_list;
 
 	/* Aggregated TXQs */
+	u16 num_aggr_qs;
 	struct mvpp2_aggr_tx_queue *aggr_txqs;
 
 	/* BM pools */

@@ -185,7 +185,7 @@ void mvPp2RxDmaRegsPrint(struct mvpp2 *priv, bool print_all, int start, int stop
 }
 EXPORT_SYMBOL(mvPp2RxDmaRegsPrint);
 
-static void mvPp2QueueShow(struct mvpp2 *priv, struct mvpp2_rx_queue *pp_rxq)
+static void mvPp2RxQueueDetailedShow(struct mvpp2 *priv, struct mvpp2_rx_queue *pp_rxq)
 {
 	int i;
 	struct mvpp2_rx_desc *rx_desc = pp_rxq->descs;
@@ -211,7 +211,6 @@ static void mvPp2QueueShow(struct mvpp2 *priv, struct mvpp2_rx_queue *pp_rxq)
 /* Show Port/Rxq descriptors ring */
 void mvPp2RxqShow(struct mvpp2 *priv, int port, int rxq, int mode)
 {
-	int pRxq;
 	struct mvpp2_port *pp_port;
 	struct mvpp2_rx_queue *pp_rxq;
 
@@ -235,12 +234,14 @@ void mvPp2RxqShow(struct mvpp2 *priv, int port, int rxq, int mode)
 	printk("\n[PPv2 RxQ show: port=%d, logical rxq=%d -> physical rxq=%d]\n",
 			port, pp_rxq->log_id, pp_rxq->id);
 
-	printk("first_virt_addr=%p, first_dma_addr=%x, next_rx_dec=%d, rxq_cccupied=%d, rxq_nonoccupied=%d\n",
-		   pp_rxq->descs, pp_rxq->descs_phys, pp_rxq->next_desc_to_proc,
-		   mvpp2_rxq_received(pp_port, pp_rxq->id), mvpp2_rxq_free(pp_port, pp_rxq->id));
+	printk("size=%d, pkts_coal=%d, time_coal=%d\n",pp_rxq->size, pp_rxq->pkts_coal, pp_rxq->time_coal);
+
+	printk("first_virt_addr=%p, first_dma_addr=%x, next_rx_desc=%d, rxq_cccupied=%d, rxq_nonoccupied=%d\n",
+	pp_rxq->descs, pp_rxq->descs_phys, pp_rxq->next_desc_to_proc,
+	mvpp2_rxq_received(pp_port, pp_rxq->id), mvpp2_rxq_free(pp_port, pp_rxq->id));
 
 	if (mode)
-		mvPp2QueueShow(priv, pp_rxq);
+		mvPp2RxQueueDetailedShow(priv, pp_rxq);
 }
 EXPORT_SYMBOL(mvPp2RxqShow);
 
@@ -330,65 +331,220 @@ void mvpp22_isr_rx_group_regs(struct mvpp2 *priv, int port, bool print_all)
 EXPORT_SYMBOL(mvpp22_isr_rx_group_regs);
 
 
-
-
-#if 0
-/* Show Port/TXQ descriptors ring */
-void mvPp2TxqShow(struct mvpp2_hw *hw, int port, int txp, int txq, int mode)
+static void mvPp2TxQueueDetailedShow(struct mvpp2 *priv, void *pp_txq, bool aggr_queue)
 {
-	int pTxq;
-	MVPP2_PHYS_TXQ_CTRL *pTxqCtrl;
-	MVPP2_QUEUE_CTRL *pQueueCtrl;
+	int i, size;
+	struct mvpp2_tx_desc *tx_desc;
 
-	printk("\n[PPv2 TxQ show: port=%d, txp=%d, txq=%d]\n", port, txp, txq);
+	if (aggr_queue) {
+		size = ((struct mvpp2_aggr_tx_queue *)pp_txq)->size;
+		tx_desc = ((struct mvpp2_aggr_tx_queue *)pp_txq)->descs;
+	} else {
+		size = ((struct mvpp2_tx_queue *)pp_txq)->size;
+		tx_desc = ((struct mvpp2_tx_queue *)pp_txq)->descs;
+	}
 
-	if (mvPp2TxpCheck(port, txp))
-		return;
+	for (i = 0; i < size; i++) {
+		printk("%3d. desc=%p, command=%08x, data_size=%4d pkt_offset=%4d, phy_txq=%d\n",
+			   i, tx_desc+i, tx_desc[i].command, tx_desc[i].data_size,
+			   tx_desc[i].packet_offset, tx_desc[i].phys_txq);
+		if (priv->pp2_version == PPV21) {
+			printk("buf_phys_addr=%08x, buf_cookie=%08x\n",
+				tx_desc[i].u.pp21.buf_phys_addr, tx_desc[i].u.pp21.buf_cookie);
+			printk( "hw_cmd[0]=0x%x, hw_cmd[1]=0x%x, hw_cmd[2]=0x%x, rsrvd1=0x%x\n",
+				tx_desc[i].u.pp21.rsrvd_hw_cmd[0],
+				tx_desc[i].u.pp21.rsrvd_hw_cmd[1],
+				tx_desc[i].u.pp21.rsrvd_hw_cmd[2],
+				tx_desc[i].u.pp21.rsrvd1);
+		}
+		else {
+			printk("rsrvd_hw_cmd1=0x%16llu, buf_phys_addr_hw_cmd2=0x%16llu, buf_cookie_bm_qset_hw_cmd3=0x%16llu \n",
+				tx_desc[i].u.pp22.rsrvd_hw_cmd1,
+				tx_desc[i].u.pp22.buf_phys_addr_hw_cmd2,
+				tx_desc[i].u.pp22.buf_cookie_bm_qset_hw_cmd3);
+		}
+	}
+}
 
-	if (mvPp2MaxCheck(txq, MVPP2_MAX_TXQ, "logical txq"))
-		return;
 
-	pTxq = MV_PPV2_TXQ_PHYS(port, txp, txq);
 
-	pTxqCtrl = &mvPp2PhysTxqs[pTxq];
-	pQueueCtrl = &pTxqCtrl->queueCtrl;
-	if (!pQueueCtrl->pFirst) {
-		printk("txq %d wasn't created\n", txq);
+/* Show Port/TXQ descriptors ring */
+void mvPp2TxqShow(struct mvpp2 *priv, int port, int txq, int mode)
+{
+	struct mvpp2_port *pp_port;
+	struct mvpp2_tx_queue *pp_txq;
+	struct mvpp2_txq_pcpu *txq_pcpu;
+	int cpu;
+
+	pp_port = mvpp2_port_struct_get(priv, port);
+
+	if (pp_port == NULL) {
+		printk("port #%d is not initialized\n", port);
 		return;
 	}
 
-	printk("nextToProc=%d (%p), txqPending=%d\n",
-		   pQueueCtrl->nextToProc,
-		   MVPP2_QUEUE_DESC_PTR(pQueueCtrl, pQueueCtrl->nextToProc),
-		   mvPp2TxqPendDescNumGet(port, txp, txq));
+	if (mvpp2_max_check(txq, pp_port->num_tx_queues, "logical txq"))
+		return;
 
-	mvPp2QueueShow(pQueueCtrl, mode, 1);
+	pp_txq = pp_port->txqs[txq];
+
+	if (pp_txq->descs == NULL) {
+		printk("txq #%d of port #%d is not initialized\n", txq, port);
+		return;
+	}
+
+	printk("\n[PPv2 TxQ show: port=%d, logical txq=%d, physical txq=%d]\n",
+			port, pp_txq->log_id, pp_txq->id);
+
+	printk("size=%d, pkts_coal=%d \n",pp_txq->size, pp_txq->pkts_coal);
+
+	printk("first_virt_addr=%p, first_dma_addr=%x, next_tx_desc=%d\n",
+		   pp_txq->descs, pp_txq->descs_phys, pp_txq->next_desc_to_proc);
+
+	for_each_online_cpu(cpu) {
+		txq_pcpu = per_cpu_ptr(pp_txq->pcpu, cpu);
+		printk("\n[PPv2 TxQ %d cpu=%d show:\n", txq, cpu);
+
+		printk("cpu=%d, size=%d, count=%d reserved_num=%d\n",
+			txq_pcpu->cpu, txq_pcpu->size, txq_pcpu->count, txq_pcpu->reserved_num);
+		printk("txq_put_index=%d, txq_get_index=%d\n",
+			txq_pcpu->txq_put_index, txq_pcpu->txq_get_index);
+		printk("tx_skb=%p, tx_buffs=%p\n",
+			txq_pcpu->tx_skb, txq_pcpu->tx_buffs);
+	}
+
+	if (mode)
+		mvPp2TxQueueDetailedShow(priv, pp_txq, 0);
 }
+EXPORT_SYMBOL(mvPp2TxqShow);
+
 
 /* Show CPU aggregation TXQ descriptors ring */
-void mvPp2AggrTxqShow(struct mvpp2_hw *hw, int cpu, int mode)
+void mvPp2AggrTxqShow(struct mvpp2 *priv, int cpu, int mode)
 {
-	MVPP2_AGGR_TXQ_CTRL *pTxqCtrl;
-	MVPP2_QUEUE_CTRL *pQueueCtrl;
+
+	struct mvpp2_aggr_tx_queue *aggr_queue = NULL;
+	int i;
 
 	printk("\n[PPv2 AggrTxQ: cpu=%d]\n", cpu);
 
-	if (mvPp2CpuCheck(cpu))
-		return;
-
-	pTxqCtrl = &mvPp2AggrTxqs[cpu];
-	pQueueCtrl = &pTxqCtrl->queueCtrl;
-	if (!pQueueCtrl->pFirst) {
-		printk("aggr tx queue for cpu %d wasn't created\n", cpu);
+	for (i=0;i<priv->num_aggr_qs;i++) {
+		if (priv->aggr_txqs[i].id == cpu) {
+			aggr_queue = &priv->aggr_txqs[i];
+			break;
+		}
+	}
+	if (!aggr_queue) {
+		printk("aggr_txq for cpu #%d is not initialized\n", cpu);
 		return;
 	}
-	printk("nextToProc=%d (%p), txqPending=%d\n",
-		   pQueueCtrl->nextToProc,
-		   MVPP2_QUEUE_DESC_PTR(pQueueCtrl, pQueueCtrl->nextToProc),
-		   mvPp2AggrTxqPendDescNumGet(cpu));
 
-	mvPp2QueueShow(pQueueCtrl, mode, 1);
+	printk("id=%d, size=%d, count=%d, next_desc=%d, pending_cntr=%d\n", aggr_queue->id,
+		aggr_queue->size, aggr_queue->count,aggr_queue->next_desc_to_proc,
+		mvpp2_aggr_desc_num_read(priv,cpu));
+
+	if (mode)
+		mvPp2TxQueueDetailedShow(priv, aggr_queue, 1);
+
 }
+EXPORT_SYMBOL(mvPp2AggrTxqShow);
+
+void mvPp2PhysTxqRegs(struct mvpp2 *priv, int txq)
+{
+	struct mvpp2_hw *hw = &priv->hw;
+
+	printk("\n[PPv2 TxQ registers: global txq=%d]\n", txq);
+
+	if (mvpp2_max_check(txq, MVPP2_TXQ_TOTAL_NUM, "global txq"))
+		return;
+
+	mvpp2_write(hw, MVPP2_TXQ_NUM_REG, txq);
+	mvpp2_print_reg(hw, MVPP2_TXQ_NUM_REG, "MVPP2_TXQ_NUM_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_DESC_ADDR_LOW_REG, "MVPP2_TXQ_DESC_ADDR_LOW_REG");
+	if (priv->pp2_version == PPV22)
+		mvpp2_print_reg(hw, MVPP22_TXQ_DESC_ADDR_HIGH_REG, "MVPP22_TXQ_DESC_ADDR_HIGH_REG");
+
+	mvpp2_print_reg(hw, MVPP2_TXQ_DESC_SIZE_REG, "MVPP2_TXQ_DESC_SIZE_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_DESC_HWF_SIZE_REG, "MVPP2_TXQ_DESC_HWF_SIZE_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_INDEX_REG, "MVPP2_TXQ_INDEX_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_PREF_BUF_REG, "MVPP2_TXQ_PREF_BUF_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_PENDING_REG, "MVPP2_TXQ_PENDING_REG");
+	if (priv->pp2_version == PPV21)
+		mvpp2_print_reg(hw, MVPP21_TXQ_SENT_REG(txq), "MVPP21_TXQ_SENT_REG");
+	else
+		mvpp2_print_reg(hw, MVPP22_TXQ_SENT_REG(txq), "MVPP22_TXQ_SENT_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_INT_STATUS_REG, "MVPP2_TXQ_INT_STATUS_REG");
+}
+EXPORT_SYMBOL(mvPp2PhysTxqRegs);
+
+void mvPp2PortTxqRegs(struct mvpp2 *priv, int port, int txq)
+{
+	struct mvpp2_port *pp2_port;
+
+	pp2_port = mvpp2_port_struct_get(priv, port);
+
+	if (mvpp2_max_check(txq, pp2_port->num_tx_queues, "port txq"))
+		return;
+
+	printk("\n[PPv2 TxQ registers: port=%d, local txq=%d]\n", port, txq);
+
+	mvPp2PhysTxqRegs(priv, pp2_port->txqs[txq]->id);
+}
+EXPORT_SYMBOL(mvPp2PortTxqRegs);
+
+void mvPp2AggrTxqRegs(struct mvpp2 *priv, int cpu)
+{
+	struct mvpp2_hw *hw = &priv->hw;
+
+	printk("\n[PP2 Aggr TXQ registers: cpu=%d]\n", cpu);
+
+	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_DESC_ADDR_REG(cpu), "MVPP2_AGGR_TXQ_DESC_ADDR_REG");
+	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_DESC_SIZE_REG(cpu), "MVPP2_AGGR_TXQ_DESC_SIZE_REG");
+	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_STATUS_REG(cpu), "MVPP2_AGGR_TXQ_STATUS_REG");
+	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_INDEX_REG(cpu), "MVPP2_AGGR_TXQ_INDEX_REG");
+}
+EXPORT_SYMBOL(mvPp2AggrTxqRegs);
+
+void mvPp2V1TxqDbgCntrs(struct mvpp2 *priv, int port, int txq)
+{
+
+	struct mvpp2_hw *hw = &priv->hw;
+
+	printk("\n------ [Port #%d txq #%d counters] -----\n", port, txq);
+	mvpp2_write(hw, MVPP2_CNT_IDX_REG, MVPP2_CNT_IDX_TX(port, txq));
+	mvpp2_print_reg(hw, MVPP2_TX_DESC_ENQ_REG, "MVPP2_TX_DESC_ENQ_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_DESC_ENQ_TO_DRAM_REG, "MVPP2_TX_DESC_ENQ_TO_DRAM_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_BUF_ENQ_TO_DRAM_REG, "MVPP2_TX_BUF_ENQ_TO_DRAM_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_DESC_HWF_ENQ_REG, "MVPP2_TX_DESC_HWF_ENQ_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_PKT_DQ_REG, "MVPP2_TX_PKT_DQ_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_PKT_FULLQ_DROP_REG, "MVPP2_TX_PKT_FULLQ_DROP_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_PKT_EARLY_DROP_REG, "MVPP2_TX_PKT_EARLY_DROP_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_DROP_REG, "MVPP2_TX_PKT_BM_DROP_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_MC_DROP_REG, "MVPP2_TX_PKT_BM_MC_DROP_REG");
+}
+EXPORT_SYMBOL(mvPp2V1TxqDbgCntrs);
+
+
+void mvPp2TxRegs(struct mvpp2 *priv)
+{
+	struct mvpp2_hw *hw = &priv->hw;
+	int i;
+	printk("\n[TX general registers]\n");
+
+	mvpp2_print_reg(hw, MVPP2_TX_SNOOP_REG, "MVPP2_TX_SNOOP_REG");
+	if (priv->pp2_version == PPV21) {
+		mvpp2_print_reg(hw, MVPP21_TX_FIFO_THRESH_REG, "MVPP21_TX_FIFO_THRESH_REG");
+	} else {
+		for (i=0;i<MVPP2_MAX_PORTS;i++) {
+			mvpp2_print_reg(hw, MVPP22_TX_FIFO_THRESH_REG(i), "MVPP22_TX_FIFO_THRESH_REG");
+		}
+	}
+	mvpp2_print_reg(hw, MVPP2_TX_PORT_FLUSH_REG, "MVPP2_TX_PORT_FLUSH_REG");
+}
+EXPORT_SYMBOL(mvPp2TxRegs);
+
+
+#if 0
 void mvPp2IsrRegs(struct mvpp2_hw *hw, int port)
 {
 	int physPort;
@@ -419,50 +575,7 @@ void mvPp2IsrRegs(struct mvpp2_hw *hw, int port)
 }
 
 
-void mvPp2PhysTxqRegs(struct mvpp2_hw *hw, int txq)
-{
-	printk("\n[PPv2 TxQ registers: global txq=%d]\n", txq);
 
-	if (mvPp2MaxCheck(txq, MVPP2_TXQ_TOTAL_NUM, "global txq"))
-		return;
-
-	mvpp2_write(MVPP2_TXQ_NUM_REG, txq);
-	mvpp2_print_reg(MVPP2_TXQ_NUM_REG, "MVPP2_TXQ_NUM_REG");
-	mvpp2_print_reg(MVPP2_TXQ_DESC_ADDR_REG, "MVPP2_TXQ_DESC_ADDR_REG");
-	mvpp2_print_reg(MVPP2_TXQ_DESC_SIZE_REG, "MVPP2_TXQ_DESC_SIZE_REG");
-	mvpp2_print_reg(MVPP2_TXQ_DESC_HWF_SIZE_REG, "MVPP2_TXQ_DESC_HWF_SIZE_REG");
-	mvpp2_print_reg(MVPP2_TXQ_INDEX_REG, "MVPP2_TXQ_INDEX_REG");
-	mvpp2_print_reg(MVPP2_TXQ_PREF_BUF_REG, "MVPP2_TXQ_PREF_BUF_REG");
-	mvpp2_print_reg(MVPP2_TXQ_PENDING_REG, "MVPP2_TXQ_PENDING_REG");
-	mvpp2_print_reg(MVPP2_TXQ_SENT_REG(txq), "MVPP2_TXQ_SENT_REG");
-	mvpp2_print_reg(MVPP2_TXQ_INT_STATUS_REG, "MVPP2_TXQ_INT_STATUS_REG");
-}
-
-void mvPp2PortTxqRegs(struct mvpp2_hw *hw, int port, int txp, int txq)
-{
-	printk("\n[PPv2 TxQ registers: port=%d, txp=%d, local txq=%d]\n", port, txp, txq);
-
-	if (mvPp2TxpCheck(port, txp))
-		return;
-
-	if (mvPp2MaxCheck(txq, MVPP2_MAX_TXQ, "local txq"))
-		return;
-
-	mvPp2PhysTxqRegs(MV_PPV2_TXQ_PHYS(port, txp, txq));
-}
-
-void mvPp2AggrTxqRegs(struct mvpp2_hw *hw, int cpu)
-{
-	printk("\n[PP2 Aggr TXQ registers: cpu=%d]\n", cpu);
-
-	if (mvPp2CpuCheck(cpu))
-		return;
-
-	mvpp2_print_reg(MVPP2_AGGR_TXQ_DESC_ADDR_REG(cpu), "MVPP2_AGGR_TXQ_DESC_ADDR_REG");
-	mvpp2_print_reg(MVPP2_AGGR_TXQ_DESC_SIZE_REG(cpu), "MVPP2_AGGR_TXQ_DESC_SIZE_REG");
-	mvpp2_print_reg(MVPP2_AGGR_TXQ_STATUS_REG(cpu), "MVPP2_AGGR_TXQ_STATUS_REG");
-	mvpp2_print_reg(MVPP2_AGGR_TXQ_INDEX_REG(cpu), "MVPP2_AGGR_TXQ_INDEX_REG");
-}
 
 void mvPp2AddrDecodeRegs(struct mvpp2_hw *hw)
 {
@@ -602,20 +715,6 @@ void mvPp2V1DropCntrs(struct mvpp2_hw *hw, int port)
 	}
 }
 
-void mvPp2V1TxqDbgCntrs(struct mvpp2_hw *hw, int port, int txp, int txq)
-{
-	printk("\n------ [Port #%d txp #%d txq #%d counters] -----\n", port, txp, txq);
-	mvPp2WrReg(MVPP2_V1_CNT_IDX_REG, TX_CNT_IDX(port, txp, txq));
-	mvpp2_print_reg(MVPP2_V1_TX_DESC_ENQ_REG, "MVPP2_V1_TX_DESC_ENQ_REG");
-	mvpp2_print_reg(MVPP2_V1_TX_DESC_ENQ_TO_DRAM_REG, "MVPP2_V1_TX_DESC_ENQ_TO_DRAM_REG");
-	mvpp2_print_reg(MVPP2_V1_TX_BUF_ENQ_TO_DRAM_REG, "MVPP2_V1_TX_BUF_ENQ_TO_DRAM_REG");
-	mvpp2_print_reg(MVPP2_V1_TX_DESC_HWF_ENQ_REG, "MVPP2_V1_TX_DESC_HWF_ENQ_REG");
-	mvpp2_print_reg(MVPP2_V1_TX_PKT_DQ_REG, "MVPP2_V1_TX_PKT_DQ_REG");
-	mvpp2_print_reg(MVPP2_V1_TX_PKT_FULLQ_DROP_REG, "MVPP2_V1_TX_PKT_FULLQ_DROP_REG");
-	mvpp2_print_reg(MVPP2_V1_TX_PKT_EARLY_DROP_REG, "MVPP2_V1_TX_PKT_EARLY_DROP_REG");
-	mvpp2_print_reg(MVPP2_V1_TX_PKT_BM_DROP_REG, "MVPP2_V1_TX_PKT_BM_DROP_REG");
-	mvpp2_print_reg(MVPP2_V1_TX_PKT_BM_MC_DROP_REG, "MVPP2_V1_TX_PKT_BM_MC_DROP_REG");
-}
 #endif
 
 void mvPp2V1RxqDbgCntrs(struct mvpp2 *priv, int port, int rxq)
@@ -639,20 +738,10 @@ void mvPp2V1RxqDbgCntrs(struct mvpp2 *priv, int port, int rxq)
 }
 EXPORT_SYMBOL(mvPp2V1RxqDbgCntrs);
 
-#if 0
-void mvPp2TxRegs(struct mvpp2_hw *hw)
-{
-	printk("\n[TX general registers]\n");
 
-	mvpp2_print_reg(MVPP2_TX_SNOOP_REG, "MVPP2_TX_SNOOP_REG");
-	mvpp2_print_reg(MVPP2_TX_FIFO_THRESH_REG, "MVPP2_TX_FIFO_THRESH_REG");
-	mvpp2_print_reg(MVPP2_TX_PORT_FLUSH_REG, "MVPP2_TX_PORT_FLUSH_REG");
-}
-#endif
 
 void mvPp2RxFifoRegs(struct mvpp2_hw *hw, int port)
 {
-
 	printk("\n[Port #%d RX Fifo]\n", port);
 	mvpp2_print_reg(hw, MVPP2_RX_DATA_FIFO_SIZE_REG(port), "MVPP2_RX_DATA_FIFO_SIZE_REG");
 	mvpp2_print_reg(hw, MVPP2_RX_ATTR_FIFO_SIZE_REG(port), "MVPP2_RX_ATTR_FIFO_SIZE_REG");

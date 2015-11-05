@@ -272,17 +272,48 @@
 
 /*-------------------------------------------------------------------------------*/
 
+#define MV_PP2_OVERRUN_DROP_REG(port)		(0x7000 + 4 * (port))
+#define MV_PP2_CLS_DROP_REG(port)		(0x7020 + 4 * (port))
+
+#define MVPP2_CNT_IDX_REG			0x7040
+/* LKP counters index */
+#define MVPP2_CNT_IDX_LKP(lkp, way)		((way) << 6 | (lkp))
+/* Flow counters index */
+#define MVPP2_CNT_IDX_FLOW(index)		(index)
+/* TX counters index */
+#define MVPP2_CNT_IDX_TX(port, txq)		(((16+port) << 3) | (txq))
+
+
+#define MVPP2_TX_DESC_ENQ_REG			0x7100
+#define MVPP2_TX_DESC_ENQ_TO_DRAM_REG		0x7104
+#define MVPP2_TX_BUF_ENQ_TO_DRAM_REG		0x7108
+#define MVPP2_TX_DESC_HWF_ENQ_REG		0x710c
+#define MVPP2_RX_DESC_ENQ_REG			0x7120
+#define MVPP2_TX_PKT_DQ_REG			0x7130
+
+#define MVPP2_TX_PKT_FULLQ_DROP_REG		0x7200
+#define MVPP2_TX_PKT_EARLY_DROP_REG		0x7204
+#define MVPP2_TX_PKT_BM_DROP_REG		0x7208
+#define MVPP2_TX_PKT_BM_MC_DROP_REG		0x720c
 #define MVPP2_RX_PKT_FULLQ_DROP_REG		0x7220
 #define MVPP2_RX_PKT_EARLY_DROP_REG		0x7224
 #define MVPP2_RX_PKT_BM_DROP_REG		0x7228
-#define MVPP2_RX_DESC_ENQ_REG			0x7120
+
+#define MVPP2_BM_DROP_CNTR_REG(pool)		(0x7300 + 4 *(pool))
+#define MVPP2_BM_MC_DROP_CNTR_REG(pool)		(0x7340 + 4 * (pool))
 
 
-#define MVPP2_CNT_IDX_REG			0x7040
-#define MVPP2_CNT_IDX_LKP(lkp, way)		((way) << 6 | (lkp))
-#define MVPP2_CNT_IDX_FLOW(index)		(index)
+#define MVPP2_PLCR_GREEN_CNTR_REG(plcr)		(0x7400 + 4 *(plcr))
+#define MVPP2_PLCR_YELLOW_CNTR_REG(plcr)	(0x7500 + 4 *(plcr))
+#define MVPP2_PLCR_RED_CNTR_REG(plcr)		(0x7600 + 4 *(plcr))
+
+
+
 #define MVPP2_CLS_LKP_TBL_HIT_REG		0x7700
 #define MVPP2_CLS_FLOW_TBL_HIT_REG		0x7704
+#define MVPP2_CLS4_TBL_HIT_REG			0x7708
+
+#define MVPP2_V1_OVERFLOW_MC_DROP_REG		0x770c
 
 
 
@@ -478,6 +509,7 @@
 #define MVPP22_TXQ_DESC_ADDR_HIGH_REG		0x20a8
 #define MVPP22_TXQ_DESC_ADDR_HIGH_MASK		0xff
 #define MVPP2_TXQ_DESC_SIZE_REG			0x2088
+#define MVPP2_TXQ_DESC_HWF_SIZE_REG		0x208c
 #define MVPP2_TXQ_DESC_SIZE_MASK		0x3ff0
 #define MVPP2_AGGR_TXQ_UPDATE_REG		0x2090
 #define MVPP2_TXQ_THRESH_REG			0x2094
@@ -507,9 +539,8 @@
 #define MVPP2_TXQ_RSVD_RSLT_MASK		0x3fff
 #define MVPP2_TXQ_RSVD_CLR_REG			0x20b8
 #define MVPP2_TXQ_RSVD_CLR_OFFSET		16
-#define MVPP21_AGGR_TXQ_DESC_ADDR_REG(cpu)	(0x2100 + 4 * (cpu))
+#define MVPP2_AGGR_TXQ_DESC_ADDR_REG(cpu)	(0x2100 + 4 * (cpu))
 #define MVPP21_AGGR_TXQ_DESC_ADDR_MASK		(0xfffffe00)
-#define MVPP22_AGGR_TXQ_DESC_ADDR_REG(cpu)	(0x2100 + 4 * (cpu))
 #define MVPP22_AGGR_TXQ_DESC_ADDR_MASK		(0xfffffffe)
 
 
@@ -713,10 +744,9 @@
 #define MVPP2_TXQ_TOKEN_CNTR_MAX		0xffffffff
 
 /* TX general registers */
-#define MVPP21_TX_SNOOP_REG			0x8800
-#define MVPP21_TX_SNOOP_EN_MASK			BIT(0)
-#define MVPP22_TX_SNOOP_REG			0x8800
-#define MVPP22_TX_SNOOP_EN_MASK			BIT(0)
+#define MVPP2_TX_SNOOP_REG			0x8800
+#define MVPP2_TX_SNOOP_EN_MASK			BIT(0)
+#define MVPP2_TX_SNOOP_EN_MASK			BIT(0)
 #define MVPP22_TX_SNOOP_HWF_EN_MASK		BIT(1)
 
 #define MVPP21_TX_FIFO_THRESH_REG		0x8804
@@ -745,11 +775,6 @@
 
 #define MVPP22_TX_PORT_SHORT_HDR_REG		0x8ac0
 #define MVPP22_TX_PORT_SHORT_HDR_MASK		0x7f
-
-
-/*PKT COUNTER registers */
-#define MVPP2_BM_DROP_CNTR_REG(pool)		(0x7300 + 4 *(pool))
-#define MVPP2_BM_MC_DROP_CNTR_REG(pool)		(0x7340+ 4 * (pool))
 
 
 
@@ -842,6 +867,8 @@
 
 /* Total number of RXQs available to all ports */
 #define MVPP2_RXQ_TOTAL_NUM		(MVPP2_MAX_PORTS * MVPP2_MAX_RXQ)
+
+#define MVPP2_TXQ_TOTAL_NUM		(MVPP2_MAX_PORTS * MVPP2_MAX_TXQ)
 
 /* Max number of Rx descriptors */
 #define MVPP2_MAX_RXD			128

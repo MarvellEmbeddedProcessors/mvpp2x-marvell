@@ -487,6 +487,7 @@ struct mvpp2_tx_desc * mvpp2_txq_next_desc_get(struct mvpp2_aggr_tx_queue *aggr_
 int mvpp2_txq_alloc_reserved_desc(struct mvpp2 *priv,
 					 struct mvpp2_tx_queue *txq, int num);
 void mvpp2_aggr_txq_pend_desc_add(struct mvpp2_port *port, int pending);
+int mvpp2_aggr_desc_num_read(struct mvpp2 *priv, int cpu);
 int mvpp2_aggr_desc_num_check(struct mvpp2 *priv,
 				     struct mvpp2_aggr_tx_queue *aggr_txq, int num);
 void mvpp2_rxq_offset_set(struct mvpp2_port *port,

@@ -672,7 +672,7 @@ static int mvpp2_txq_reserved_desc_num_proc(struct mvpp2 *priv,
 
 	desc_count = 0;
 	/* Compute total of used descriptors */
-	for_each_present_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		struct mvpp2_txq_pcpu *txq_pcpu_aux;
 
 		txq_pcpu_aux = per_cpu_ptr(txq->pcpu, cpu);
@@ -806,7 +806,7 @@ static int mvpp2_aggr_txq_init(struct platform_device *pdev,
 
 	/* Set Tx descriptors queue starting address */
 	/* indirect access */
-	mvpp2_write(hw, MVPP21_AGGR_TXQ_DESC_ADDR_REG(cpu),
+	mvpp2_write(hw, MVPP2_AGGR_TXQ_DESC_ADDR_REG(cpu),
 		    aggr_txq->descs_phys);
 	mvpp2_write(hw, MVPP2_AGGR_TXQ_DESC_SIZE_REG(cpu), desc_num);
 
@@ -980,7 +980,7 @@ static int mvpp2_txq_init(struct mvpp2_port *port,
 	mvpp2_write(hw, MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq->log_id),
 		    val);
 
-	for_each_present_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		txq_pcpu = per_cpu_ptr(txq->pcpu, cpu);
 		txq_pcpu->size = txq->size;
 		txq_pcpu->tx_skb = kmalloc(txq_pcpu->size *
@@ -1003,7 +1003,7 @@ static int mvpp2_txq_init(struct mvpp2_port *port,
 	return 0;
 
 error:
-	for_each_present_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		txq_pcpu = per_cpu_ptr(txq->pcpu, cpu);
 		kfree(txq_pcpu->tx_skb);
 		kfree(txq_pcpu->tx_buffs);
@@ -1024,7 +1024,7 @@ static void mvpp2_txq_deinit(struct mvpp2_port *port,
 	struct mvpp2_hw *hw = &(port->priv->hw);
 	int cpu;
 
-	for_each_present_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		txq_pcpu = per_cpu_ptr(txq->pcpu, cpu);
 		kfree(txq_pcpu->tx_skb);
 		kfree(txq_pcpu->tx_buffs);
@@ -1082,7 +1082,7 @@ static void mvpp2_txq_clean(struct mvpp2_port *port, struct mvpp2_tx_queue *txq)
 	val &= ~MVPP2_TXQ_DRAIN_EN_MASK;
 	mvpp2_write(hw, MVPP2_TXQ_PREF_BUF_REG, val);
 
-	for_each_present_cpu(cpu) {
+	for_each_online_cpu(cpu) {
 		txq_pcpu = per_cpu_ptr(txq->pcpu, cpu);
 
 		/* Release all packets */
@@ -2440,7 +2440,7 @@ static int mvpp2_stop(struct net_device *dev)
 
 	mvpp2_cleanup_irqs(port);
 	if (port->priv->pp2xdata->interrupt_tx_done == false) {
-		for_each_present_cpu(cpu) {
+		for_each_online_cpu(cpu) {
 			port_pcpu = per_cpu_ptr(port->pcpu, cpu);
 			hrtimer_cancel(&port_pcpu->tx_done_timer);
 			port_pcpu->timer_scheduled = false;
@@ -2701,7 +2701,7 @@ static int  mvpp2_port_txqs_init(struct device *dev, struct mvpp2_port *port)
 		txq->log_id = queue;
 		txq->pkts_coal = MVPP2_TXDONE_COAL_PKTS;
 
-		for_each_present_cpu(cpu) {
+		for_each_online_cpu(cpu) {
 			txq_pcpu = per_cpu_ptr(txq->pcpu, cpu);
 			txq_pcpu->cpu = cpu;
 		}
@@ -3061,7 +3061,7 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	}
 
 	if (port->priv->pp2xdata->interrupt_tx_done == false) {
-		for_each_present_cpu(cpu) {
+		for_each_online_cpu(cpu) {
 			port_pcpu = per_cpu_ptr(port->pcpu, cpu);
 
 			hrtimer_init(&port_pcpu->tx_done_timer, CLOCK_MONOTONIC,
@@ -3201,7 +3201,7 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 	MVPP2_PRINT_LINE();
 
 	if (port->priv->pp2xdata->interrupt_tx_done == false) {
-		for_each_present_cpu(cpu) {
+		for_each_online_cpu(cpu) {
 			port_pcpu = per_cpu_ptr(port->pcpu, cpu);
 			MVPP2_PRINT_LINE();
 
@@ -3327,7 +3327,7 @@ static void mvpp2_rx_fifo_init(struct mvpp2_hw *hw)
 /* Initialize network controller common part HW */
 static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 {
-	int err, i;
+	int err, i, cpu;
 	int last_log_rx_queue;
 	u32 val;
 	const struct mbus_dram_target_info *dram_target_info;
@@ -3372,14 +3372,17 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 				       GFP_KERNEL);
 	if (!priv->aggr_txqs)
 		return -ENOMEM;
-	/*TODO: FIXME: See num_present_cpus() above , below will OOPS for cpu_present_mask = cpu0|cpu3 */
-	for_each_present_cpu(i) {
-		priv->aggr_txqs[i].id = i;
+	priv->num_aggr_qs = num_active_cpus();
+	i = 0;
+	for_each_online_cpu(cpu) {
+		priv->aggr_txqs[i].id = cpu;
 		priv->aggr_txqs[i].size = MVPP2_AGGR_TXQ_SIZE;
+
 		err = mvpp2_aggr_txq_init(pdev, &priv->aggr_txqs[i],
 					  MVPP2_AGGR_TXQ_SIZE, i, priv);
 		if (err < 0)
 			return err;
+		i++;
 	}
 	MVPP2_PRINT_LINE();
 
@@ -3394,7 +3397,7 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 	MVPP2_PRINT_LINE();
 
 	/* Allow cache snoop when transmiting packets */
-	mvpp2_write(hw, MVPP21_TX_SNOOP_REG, 0x1);
+	mvpp2_write(hw, MVPP2_TX_SNOOP_REG, 0x1);
 	MVPP2_PRINT_LINE();
 
 	/* Buffer Manager initialization */
@@ -3793,7 +3796,7 @@ static int mvpp2_remove(struct platform_device *pdev)
 		mvpp2_bm_pool_destroy(pdev, hw, bm_pool);
 	}
 
-	for_each_present_cpu(i) {
+	for_each_online_cpu(i) {
 		struct mvpp2_aggr_tx_queue *aggr_txq = &priv->aggr_txqs[i];
 
 		dma_free_coherent(&pdev->dev,
