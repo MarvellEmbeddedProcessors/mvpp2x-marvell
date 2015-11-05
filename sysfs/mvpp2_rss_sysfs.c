@@ -37,7 +37,12 @@ disclaimer.
 static ssize_t mv_rss_help(char *buf)
 {
 	int off = 0;
-	off += scnprintf(buf + off, PAGE_SIZE,  "cat             rss_hw_dump          - dump rxq in rss table entry from hardware.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "cat                         rss_hw_dump  - dump rxq in rss table entry from hardware.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name] [mode]    >  rss_mode     - Set the hash mode for non-frag UDP packet\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "     [mode]      - 0 - 2-Tuple\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "                 - 1 - 5-Tuple\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name] [cpu]     >  rss_dflt_cpu - Set cpu to handle the non-IP packet\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
 
 	return off;
@@ -61,14 +66,58 @@ static ssize_t mv_rss_show(struct device *dev,
 	return off;
 }
 
+static ssize_t mv_rss_store(struct device *dev,
+				   struct device_attribute *attr, const char *buf, size_t len)
+{
+	const char      *name = attr->attr.name;
+	int             err;
+	unsigned int    b;
+	char		if_name[10];
+	struct net_device *netdev;
+	struct mvpp2_port *port;
+
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
+
+	/* Read port and value */
+	err = b = 0;
+
+	sscanf(buf, "%s %x", if_name, &b);
+
+	netdev = dev_get_by_name(&init_net, if_name);
+	if (!netdev) {
+		printk("%s: illegal interface <%s>\n", __func__, if_name);
+		return -EINVAL;
+	}
+	port = netdev_priv(netdev);
+
+	if (!strcmp(name, "rss_mode")) {
+		mvpp22_wrap_rss_mode_set(port, b);
+	} else if (!strcmp(name, "rss_dflt_cpu")) {
+		mvpp22_wrap_rss_dflt_cpu_set(port, b);
+	} else {
+		err = 1;
+		printk("%s: illegal operation <%s>\n", __func__, attr->attr.name);
+	}
+
+	if (err)
+		printk("%s: error %d\n", __func__, err);
+
+	return err ? -EINVAL : len;
+}
+
 
 
 static DEVICE_ATTR(rss_hw_dump,		S_IRUSR, mv_rss_show, NULL);
 static DEVICE_ATTR(help,		S_IRUSR, mv_rss_show, NULL);
+static DEVICE_ATTR(rss_mode,		S_IWUSR, NULL, mv_rss_store);
+static DEVICE_ATTR(rss_dflt_cpu,	S_IWUSR, NULL, mv_rss_store);
 
 static struct attribute *rss_attrs[] = {
 	&dev_attr_rss_hw_dump.attr,
 	&dev_attr_help.attr,
+	&dev_attr_rss_mode.attr,
+	&dev_attr_rss_dflt_cpu.attr,
 	NULL
 };
 

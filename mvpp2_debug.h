@@ -54,4 +54,13 @@ void mvpp2_rx_desc_print(struct mvpp2_rx_desc *desc);
 
 void mvpp2_skb_dump(struct sk_buff *skb, int size, int access);
 
+int mvpp2_wrap_cos_mode_set(struct mvpp2_port *port, enum mvpp2_cos_classifier cos_mode);
+int mvpp2_wrap_cos_mode_get(struct mvpp2_port *port);
+int mvpp2_wrap_cos_pri_map_set(struct mvpp2_port *port, int cos_pri_map);
+int mvpp2_wrap_cos_pri_map_get(struct mvpp2_port *port);
+int mvpp2_wrap_cos_dflt_value_set(struct mvpp2_port *port, int cos_value);
+int mvpp2_wrap_cos_dflt_value_get(struct mvpp2_port *port);
+int mvpp22_wrap_rss_mode_set(struct mvpp2_port *port, int rss_mode);
+int mvpp22_wrap_rss_dflt_cpu_set(struct mvpp2_port *port, int default_cpu);
+
 #endif /* _MVPP2_DEBUG_H_ */

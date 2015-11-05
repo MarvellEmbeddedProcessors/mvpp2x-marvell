@@ -583,5 +583,14 @@ void mvpp2_cleanup_txqs(struct mvpp2_port *port);
 void mvpp2_set_ethtool_ops(struct net_device *netdev);
 
 int mvpp22_rss_rxfh_indir_set(struct mvpp2_port *port);
+
+int mvpp2_cos_classifier_set(struct mvpp2_port *port, enum mvpp2_cos_classifier cos_mode);
+int mvpp2_cos_classifier_get(struct mvpp2_port *port);
+int mvpp2_cos_pri_map_set(struct mvpp2_port *port, int cos_pri_map);
+int mvpp2_cos_pri_map_get(struct mvpp2_port *port);
+int mvpp2_cos_default_value_set(struct mvpp2_port *port, int cos_value);
+int mvpp2_cos_default_value_get(struct mvpp2_port *port);
+int mvpp22_rss_mode_set(struct mvpp2_port *port, int rss_mode);
+int mvpp22_rss_default_cpu_set(struct mvpp2_port *port, int default_cpu);
 #endif /*_MVPP2_H_*/
 

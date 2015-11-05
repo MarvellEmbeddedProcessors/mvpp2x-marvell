@@ -918,3 +918,51 @@ void mvpp2_skb_dump(struct sk_buff *skb, int size, int access)
 	}
 }
 
+/* Wrap the API just for debug */
+int mvpp2_wrap_cos_mode_set(struct mvpp2_port *port, enum mvpp2_cos_classifier cos_mode)
+{
+	return mvpp2_cos_classifier_set(port, cos_mode);
+}
+EXPORT_SYMBOL(mvpp2_wrap_cos_mode_set);
+
+int mvpp2_wrap_cos_mode_get(struct mvpp2_port *port)
+{
+	return mvpp2_cos_classifier_get(port);
+}
+EXPORT_SYMBOL(mvpp2_wrap_cos_mode_get);
+
+int mvpp2_wrap_cos_pri_map_set(struct mvpp2_port *port, int cos_pri_map)
+{
+	return mvpp2_cos_pri_map_set(port, cos_pri_map);
+}
+EXPORT_SYMBOL(mvpp2_wrap_cos_pri_map_set);
+
+int mvpp2_wrap_cos_pri_map_get(struct mvpp2_port *port)
+{
+	return mvpp2_cos_pri_map_get(port);
+}
+EXPORT_SYMBOL(mvpp2_wrap_cos_pri_map_get);
+
+int mvpp2_wrap_cos_dflt_value_set(struct mvpp2_port *port, int cos_value)
+{
+	return mvpp2_cos_default_value_set(port, cos_value);
+}
+EXPORT_SYMBOL(mvpp2_wrap_cos_dflt_value_set);
+
+int mvpp2_wrap_cos_dflt_value_get(struct mvpp2_port *port)
+{
+	return mvpp2_cos_default_value_get(port);
+}
+EXPORT_SYMBOL(mvpp2_wrap_cos_dflt_value_get);
+
+int mvpp22_wrap_rss_mode_set(struct mvpp2_port *port, int rss_mode)
+{
+	return mvpp22_rss_mode_set(port, rss_mode);
+}
+EXPORT_SYMBOL(mvpp22_wrap_rss_mode_set);
+
+int mvpp22_wrap_rss_dflt_cpu_set(struct mvpp2_port *port, int default_cpu)
+{
+	return mvpp22_rss_default_cpu_set(port, default_cpu);
+}
+EXPORT_SYMBOL(mvpp22_wrap_rss_dflt_cpu_set);
