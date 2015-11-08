@@ -3494,8 +3494,8 @@ static void mvpp2_init_config(struct mvpp2_param_config *pp2_cfg, u32 cell_index
 
 	pp2_cfg->rss_cfg.dflt_cpu = default_cpu;
 	pp2_cfg->rss_cfg.queue_mode = mvpp2_queue_mode; /*TODO : This param is redundant, reduce from rss */
-	/* RSS enable staste equal to queue mode at the beginning, which can be update in running time */
-	pp2_cfg->rss_cfg.rss_en = mvpp2_queue_mode;
+	/* RSS is disabled as default, which can be update in running time */
+	pp2_cfg->rss_cfg.rss_en = 0;
 	pp2_cfg->rss_cfg.rss_mode = rss_mode;
 }
 
