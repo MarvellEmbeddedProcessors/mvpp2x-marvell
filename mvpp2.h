@@ -182,7 +182,8 @@
 /*--------------------------------------------------------------------*/
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-#define MVPP2_PRINT_LINE()	pr_crit("Passed: %s:%d\n", __FILENAME__, __LINE__)
+#define MVPP2_PRINT_LINE()
+//#define MVPP2_PRINT_LINE()	pr_crit("Passed: %s:%d\n", __FILENAME__, __LINE__)
 
 
 /* Descriptor ring Macros */
@@ -296,8 +297,11 @@ struct mvpp2_tx_queue {
 
 	u32 pkts_coal;
 
+	/* Virtual pointer to address of the Tx DMA descriptors memory_allocation */
+	void * desc_mem;
+
 	/* Virtual address of thex Tx DMA descriptors array */
-	struct mvpp2_tx_desc *descs;
+	struct mvpp2_tx_desc *first_desc;
 
 	/* DMA address of the Tx DMA descriptors array */
 	dma_addr_t descs_phys;
@@ -320,8 +324,11 @@ struct mvpp2_aggr_tx_queue {
 	/* Number of currently used Tx DMA descriptor in the descriptor ring */
 	int count;
 
-	/* Virtual address of thex Tx DMA descriptors array */
-	struct mvpp2_tx_desc *descs;
+	/* Virtual pointer to address of the Aggr_Tx DMA descriptors memory_allocation */
+	void * desc_mem;
+
+	/* Virtual pointer to address of the Aggr_Tx DMA descriptors array */
+	struct mvpp2_tx_desc *first_desc;
 
 	/* DMA address of the Tx DMA descriptors array */
 	dma_addr_t descs_phys;
@@ -347,8 +354,11 @@ struct mvpp2_rx_queue {
 	u32 pkts_coal;
 	u32 time_coal;
 
+	/* Virtual pointer to address of the Rx DMA descriptors memory_allocation */
+	void * desc_mem;
+
 	/* Virtual address of the RX DMA descriptors array */
-	struct mvpp2_rx_desc *descs;
+	struct mvpp2_rx_desc *first_desc;
 
 	/* DMA address of the RX DMA descriptors array */
 	dma_addr_t descs_phys;
@@ -527,6 +537,11 @@ struct mvpp2_port {
 	struct queue_vector q_vector[MVPP2_MAX_CPUS+MVPP2_MAX_SHARED];
 };
 
+struct pp2x_hw_params {
+	u8 desc_queue_addr_shift;
+};
+
+
 struct mvpp2x_platform_data {
 	enum mvppv2_version pp2x_ver;
 	u8 pp2x_max_port_rxqs;
@@ -538,6 +553,7 @@ struct mvpp2x_platform_data {
 	void (*mvpp2x_rxq_long_pool_set)(struct mvpp2_hw *, int, int);
 	void (*mvpp2x_port_queue_vectors_init)(struct mvpp2_port *);
 	void (*mvpp2x_port_isr_rx_group_cfg)(struct mvpp2_port *);
+	struct pp2x_hw_params hw;
 };
 
 

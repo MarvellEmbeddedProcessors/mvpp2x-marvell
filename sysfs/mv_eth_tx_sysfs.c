@@ -130,7 +130,6 @@ static DEVICE_ATTR(aggrTxqShow,  S_IWUSR, NULL, mv_pp2_txq_store);
 
 
 static struct attribute *mv_pp2_tx_attrs[] = {
-	&dev_attr_txqDef.attr,
 	&dev_attr_pTxqCounters.attr,
 	&dev_attr_aggrTxqRegs.attr,
 	&dev_attr_help.attr,

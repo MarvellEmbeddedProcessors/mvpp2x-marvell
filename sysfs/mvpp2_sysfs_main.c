@@ -112,12 +112,12 @@ static int mv_pp2_sysfs_init(void)
 
 	mv_pp2_bm_sysfs_init(&pd->kobj);
 	mv_pp2_rx_sysfs_init(&pd->kobj);
+	mv_pp2_tx_sysfs_init(&pd->kobj);
 
 	mv_pp2_rss_sysfs_init(&pd->kobj);
 
 	mv_pp2_cos_sysfs_init(&pd->kobj);
 
-//	mv_pp2_tx_sysfs_init(gbe_kobj);
 //	mv_pp2_tx_sched_sysfs_init(gbe_kobj);
 //	mv_pp2_qos_sysfs_init(gbe_kobj);
 //	mv_pp2_gbe_pme_sysfs_init(gbe_kobj);

@@ -82,7 +82,7 @@ void mvpp2_write(struct mvpp2_hw *hw, u32 offset, u32 data)
 		next_write++;
 		next_write = next_write%MVPP2_REG_BUF_SIZE;
 	} else {
-		//pr_info("mvpp2_write(%p) \n", hw->cpu_base[smp_processor_id()] + offset);
+		//pr_info("mvpp2_write(%d)=%d , caller %pS\n", offset, data, __builtin_return_address(0));
 	}
 
 	writel(data, hw->cpu_base[smp_processor_id()] + offset);
@@ -95,11 +95,13 @@ u32 mvpp2_read(struct mvpp2_hw *hw, u32 offset)
 	static void *last_used[20] = {0};
 	static int next_write = 0;
 	int i;
+	u32 val;
 	void * reg_ptr = hw->cpu_base[smp_processor_id()] + offset;
 #if 1
 	if (smp_processor_id() != 0)
-		pr_emerg("Received mvpp2_read(0x%x) from CPU1, caller is %pS !!\n", offset, __builtin_return_address(0));
+		pr_emerg("mvpp2_read(0x%x) from CPU1, caller is %pS !!\n", offset, __builtin_return_address(0));
 #endif
+	val = readl(reg_ptr);
 	for (i=0;i<MVPP2_REG_BUF_SIZE;i++) {
 		if (last_used[i] == reg_ptr)
 			break;
@@ -110,10 +112,10 @@ u32 mvpp2_read(struct mvpp2_hw *hw, u32 offset)
 		next_write++;
 		next_write = next_write%MVPP2_REG_BUF_SIZE;
 	} else {
-		//pr_info("mvpp2_read(%p) \n", reg_ptr);
+		//pr_info("mvpp2_read(%d)=%d , caller %pS\n", offset, val, __builtin_return_address(0));
 	}
 
-	return readl(reg_ptr);
+	return(val);
 }
 EXPORT_SYMBOL(mvpp2_read);
 
@@ -3496,7 +3498,7 @@ struct mvpp2_tx_desc * mvpp2_txq_next_desc_get(struct mvpp2_aggr_tx_queue *aggr_
 	int tx_desc = aggr_txq->next_desc_to_proc;
 
 	aggr_txq->next_desc_to_proc = MVPP2_QUEUE_NEXT_DESC(aggr_txq, tx_desc);
-	return aggr_txq->descs + tx_desc;
+	return aggr_txq->first_desc + tx_desc;
 }
 
 /* Update HW with number of aggregated Tx descriptors to be sent */
@@ -3789,12 +3791,14 @@ void mvpp2_egress_enable(struct mvpp2_port *port)
 	for (queue = 0; queue < port->num_tx_queues; queue++) {
 		struct mvpp2_tx_queue *txq = port->txqs[queue];
 
-		if (txq->descs != NULL)
+		if (txq->first_desc != NULL)
 			qmap |= (1 << queue);
 	}
 
 	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, tx_port_num);
 	mvpp2_write(hw, MVPP2_TXP_SCHED_Q_CMD_REG, qmap);
+
+	DBG_MSG("tx_port_num=%d qmap=0x%x\n", tx_port_num, qmap);
 }
 
 /* Disable transmit via physical egress queue

@@ -45,6 +45,9 @@
 /*Top Regfile*/
 
 
+#define MVPP21_DESC_ADDR_SHIFT			0 /*Applies to RXQ, AGGR_TXQ*/
+#define MVPP22_DESC_ADDR_SHIFT			(9-1) /*Applies to RXQ, AGGR_TXQ*/
+
 
 /* RX Fifo Registers */
 #define MVPP2_RX_DATA_FIFO_SIZE_REG(port)	(0x00 + 4 * (port))
@@ -480,12 +483,12 @@
 /* Descriptor Manager Top Registers */
 #define MVPP2_RXQ_NUM_REG			0x2040
 
-#define MVPP21_RXQ_DESC_ADDR_REG		0x2044
+#define MVPP2_RXQ_DESC_ADDR_REG			0x2044
+#define MVPP21_RXQ_DESC_ADDR_SHIFT		MVPP21_DESC_ADDR_SHIFT
 #define MVPP21_RXQ_DESC_ADDR_MASK		0xfffffe00
 
-#define MVPP22_RXQ_DESC_ADDR_REG		0x2044
+#define MVPP22_RXQ_DESC_ADDR_SHIFT		MVPP22_DESC_ADDR_SHIFT
 #define MVPP22_RXQ_DESC_ADDR_MASK		0xfffffffe
-#define MVPP22_RXQ_DESC_ADDR_SHIFT		(9-1)
 
 
 
@@ -505,6 +508,7 @@
 #define MVPP2_RXQ_INDEX_REG			0x2050
 #define MVPP2_TXQ_NUM_REG			0x2080
 #define MVPP2_TXQ_DESC_ADDR_LOW_REG		0x2084
+#define MVPP2_TXQ_DESC_ADDR_LOW_SHIFT		0
 #define MVPP2_TXQ_DESC_ADDR_LOW_MASK		0xfffffe00
 #define MVPP22_TXQ_DESC_ADDR_HIGH_REG		0x20a8
 #define MVPP22_TXQ_DESC_ADDR_HIGH_MASK		0xff
@@ -529,7 +533,7 @@
 #define MVPP21_TXQ_SENT_REG(txq)		(0x3c00 + 4 * (txq))
 #define MVPP21_TRANSMITTED_COUNT_OFFSET		16
 #define MVPP21_TRANSMITTED_COUNT_MASK		0x3fff0000
-#define MVPP22_TXQ_SENT_REG(txq)		(0x3e00 + 4 * (txq))
+#define MVPP22_TXQ_SENT_REG(txq)		(0x3e00 + 4 * (txq-128))
 #define MVPP22_TRANSMITTED_COUNT_OFFSET		16
 #define MVPP22_TRANSMITTED_COUNT_MASK		0x3fff0000
 
@@ -540,8 +544,10 @@
 #define MVPP2_TXQ_RSVD_CLR_REG			0x20b8
 #define MVPP2_TXQ_RSVD_CLR_OFFSET		16
 #define MVPP2_AGGR_TXQ_DESC_ADDR_REG(cpu)	(0x2100 + 4 * (cpu))
-#define MVPP21_AGGR_TXQ_DESC_ADDR_MASK		(0xfffffe00)
-#define MVPP22_AGGR_TXQ_DESC_ADDR_MASK		(0xfffffffe)
+#define MVPP21_AGGR_TXQ_DESC_ADDR_SHIFT		MVPP21_DESC_ADDR_SHIFT
+#define MVPP21_AGGR_TXQ_DESC_ADDR_MASK		0xfffffe00
+#define MVPP22_AGGR_TXQ_DESC_ADDR_SHIFT		MVPP22_DESC_ADDR_SHIFT
+#define MVPP22_AGGR_TXQ_DESC_ADDR_MASK		0xfffffffe
 
 
 #define MVPP2_AGGR_TXQ_DESC_SIZE_REG(cpu)	(0x2140 + 4 * (cpu))
@@ -868,7 +874,7 @@
 /* Total number of RXQs available to all ports */
 #define MVPP2_RXQ_TOTAL_NUM		(MVPP2_MAX_PORTS * MVPP2_MAX_RXQ)
 
-#define MVPP2_TXQ_TOTAL_NUM		(MVPP2_MAX_PORTS * MVPP2_MAX_TXQ)
+#define MVPP2_TXQ_TOTAL_NUM		(128/*pon*/ + MVPP2_MAX_PORTS*MVPP2_MAX_TXQ/*eth*/)
 
 /* Max number of Rx descriptors */
 #define MVPP2_MAX_RXD			128
@@ -884,6 +890,11 @@
 
 /* Descriptor aligned size */
 #define MVPP2_DESC_ALIGNED_SIZE		32
+#define MVPP2_DESC_Q_ALIGN		512
+
+#define MVPP2_DESCQ_MEM_SIZE(descs)	(descs * MVPP2_DESC_ALIGNED_SIZE + MVPP2_DESC_Q_ALIGN)
+#define MVPP2_DESCQ_MEM_ALIGN(mem)	(ALIGN(mem, MVPP2_DESC_Q_ALIGN))
+
 
 /* Descriptor alignment mask */
 #define MVPP2_TX_DESC_ALIGN		(MVPP2_DESC_ALIGNED_SIZE - 1)

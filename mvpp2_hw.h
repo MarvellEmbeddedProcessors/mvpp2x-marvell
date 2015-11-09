@@ -148,8 +148,8 @@ mvpp2_rxq_next_desc_get(struct mvpp2_rx_queue *rxq)
 	int rx_desc = rxq->next_desc_to_proc;
 
 	rxq->next_desc_to_proc = MVPP2_QUEUE_NEXT_DESC(rxq, rx_desc);
-	prefetch(rxq->descs + rxq->next_desc_to_proc);
-	return (rxq->descs + rx_desc);
+	prefetch(rxq->first_desc + rxq->next_desc_to_proc);
+	return (rxq->first_desc + rx_desc);
 }
 
 /* Mask the current CPU's Rx/Tx interrupts */
@@ -435,7 +435,10 @@ static inline void mvpp22_txdesc_phys_addr_set(dma_addr_t phys_addr,
 #else
 	*((dma_addr_t *)buf_phys_addr_p) = phys_addr;
 	*((u8 *)buf_phys_addr_p + sizeof(dma_addr_t)) = 0; /*5th byte*/
+
+	//pr_crit("phys_addr=%x, buf_phys_addr_hw_cmd2=%d\n", phys_addr, tx_desc->u.pp22.buf_phys_addr_hw_cmd2);
 #endif
+
 }
 
 static inline void mvpp2x_txdesc_phys_addr_set(enum mvppv2_version pp2_ver,

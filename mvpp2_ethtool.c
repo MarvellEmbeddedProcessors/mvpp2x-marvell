@@ -87,9 +87,9 @@
 #define ETH_MIB_BAD_CRC_EVENT               0x74
 #define ETH_MIB_COLLISION                   0x78
 #define ETH_MIB_LATE_COLLISION              0x7c
- 
+
 #endif
- 
+
 extern u32 mv_pp2_vfpga_address;
 
 /* Get settings (phy address, speed) for ethtools */
@@ -414,8 +414,10 @@ static const struct ethtool_ops mvpp2_eth_tool_ops = {
 	.set_ringparam		= mvpp2_ethtool_set_ringparam,
 	/* For rxfh relevant command, only support LK-3.18 */
 	.get_rxfh_indir_size	= mvpp2_ethtool_get_rxfh_indir_size,
+#ifdef CONFIG_MV_PP2_FPGA
 	.get_rxfh_indir		= mvpp2_ethtool_get_rxfh_indir,
 	.set_rxfh_indir		= mvpp2_ethtool_set_rxfh_indir,
+#endif
 	.get_rxnfc		= mvpp2_ethtool_get_rxnfc,
 };
 
