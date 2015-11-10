@@ -65,10 +65,10 @@
 
 /* Declaractions */
 u8 mvpp2_num_cos_queues = 4;
-static bool mvpp2_queue_mode = MVPP2_QDIST_MULTI_MODE;
-static bool rss_mode = 0;
+static u8 mvpp2_queue_mode = MVPP2_QDIST_MULTI_MODE;
+static u8 rss_mode = 0;
 static u8 default_cpu = 0;
-static bool cos_classifer = 0;
+static u8 cos_classifer = 0;
 static u32 pri_map = 0x0;
 static u8 default_cos = 0;
 static bool jumbo_pool = false;
@@ -1325,6 +1325,37 @@ static enum hrtimer_restart mvpp2_hr_timer_cb(struct hrtimer *timer)
 	return HRTIMER_NORESTART;
 }
 
+/* The function get the number of cpu online */
+static inline int mvpp2x_num_online_cpu_get(struct mvpp2 *pp2)
+{
+	u8 num_online_cpus = 0;
+	u16 x = pp2->cpu_map;
+
+	while(x) {
+		x &= (x - 1);
+		num_online_cpus++;
+	}
+
+	return num_online_cpus;
+}
+
+/* The function calculate the width, such as cpu width, cos queue width */
+static inline void mvpp2x_width_calc(struct mvpp2 *pp2, u32 *cpu_width, u32 *cos_width, u32 *port_rxq_width)
+{
+	if (pp2) {
+		/* Calculate CPU width */
+		if (cpu_width)
+			*cpu_width = ilog2(roundup_pow_of_two(mvpp2x_num_online_cpu_get(pp2)));
+		/* Calculate cos queue width */
+		if (cos_width)
+			*cos_width = ilog2(roundup_pow_of_two(pp2->pp2_cfg.cos_cfg.num_cos_queues));
+		/* Calculate rx queue width on the port */
+		if (port_rxq_width)
+			*port_rxq_width = ilog2(roundup_pow_of_two(pp2->pp2xdata->pp2x_max_port_rxqs));
+	}
+}
+
+
 /* CoS API */
 
 /* mvpp2_cos_classifier_set
@@ -1427,17 +1458,22 @@ int mvpp2_cos_classifier_get(struct mvpp2_port *port)
 */
 int mvpp2_cos_pri_map_set(struct mvpp2_port *port, int cos_pri_map)
 {
-	int ret;
+	int ret, prev_pri_map;
+	u8 bound_cpu_first_rxq;
 
-	if (pri_map == cos_pri_map)
+
+	if (port->priv->pp2_cfg.cos_cfg.pri_map == cos_pri_map)
 		return 0;
 
+	prev_pri_map = port->priv->pp2_cfg.cos_cfg.pri_map;
 	port->priv->pp2_cfg.cos_cfg.pri_map = cos_pri_map;
 
+
 	/* Update C2 rules with nre pri_map */
-	ret = mvpp2_cls_c2_rule_set(port);
+	bound_cpu_first_rxq  = mvpp2_bound_cpu_first_rxq_calc(port);
+	ret = mvpp2_cls_c2_rule_set(port, bound_cpu_first_rxq);
 	if (ret) {
-		port->priv->pp2_cfg.cos_cfg.pri_map = pri_map;
+		port->priv->pp2_cfg.cos_cfg.pri_map = prev_pri_map;
 		return ret;
 	}
 
@@ -1457,17 +1493,20 @@ int mvpp2_cos_pri_map_get(struct mvpp2_port *port)
 */
 int mvpp2_cos_default_value_set(struct mvpp2_port *port, int cos_value)
 {
-	int ret;
+	int ret, prev_cos_value;
+	u8 bound_cpu_first_rxq;
 
-	if (default_cos == cos_value)
+	if (port->priv->pp2_cfg.cos_cfg.default_cos == cos_value)
 		return 0;
 
+	prev_cos_value = port->priv->pp2_cfg.cos_cfg.default_cos;
 	port->priv->pp2_cfg.cos_cfg.default_cos = cos_value;
 
-	/* Update C2 rules with nre pri_map */
-	ret = mvpp2_cls_c2_rule_set(port);
+	/* Update C2 rules with the pri_map */
+	bound_cpu_first_rxq  = mvpp2_bound_cpu_first_rxq_calc(port);
+	ret = mvpp2_cls_c2_rule_set(port, bound_cpu_first_rxq);
 	if (ret) {
-		port->priv->pp2_cfg.cos_cfg.default_cos = cos_value;
+		port->priv->pp2_cfg.cos_cfg.default_cos = prev_cos_value;
 		return ret;
 	}
 
@@ -1511,10 +1550,10 @@ static inline int mvpp22_cpu_id_from_indir_tbl_get(struct mvpp2 *pp2, int cpu_se
 */
 int mvpp22_rss_rxfh_indir_set(struct mvpp2_port *port)
 {
-	int rss_tbl_needed = port->priv->pp2_cfg.cos_cfg.num_cos_queues;
-	int rss_tbl, entry_idx;
-	u32 cos_width, cpu_width, cpu_id;
 	struct mvpp22_rss_entry rss_entry;
+	int rss_tbl, entry_idx;
+	u32 cos_width = 0, cpu_width = 0, cpu_id = 0;
+	int rss_tbl_needed = port->priv->pp2_cfg.cos_cfg.num_cos_queues;
 
 	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
 		return -1;
@@ -1524,9 +1563,9 @@ int mvpp22_rss_rxfh_indir_set(struct mvpp2_port *port)
 	if (!port->priv->cpu_map)
 		return -1;
 
-	/* Calculate width */
-	cpu_width = ilog2(roundup_pow_of_two(port->priv->cpu_map));
-	cos_width = ilog2(roundup_pow_of_two(port->priv->pp2_cfg.cos_cfg.num_cos_queues));
+	/* Calculate cpu and cos width */
+	mvpp2x_width_calc(port->priv, &cpu_width, &cos_width, NULL);
+
 	rss_entry.u.entry.width = cos_width + cpu_width;
 
 	rss_entry.sel = MVPP22_RSS_ACCESS_TBL;
@@ -1554,8 +1593,28 @@ int mvpp22_rss_rxfh_indir_set(struct mvpp2_port *port)
 */
 void mvpp22_rss_enable(struct mvpp2_port *port, bool en)
 {
-	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_MULTI_MODE)
+	u8 bound_cpu_first_rxq;
+
+
+	if (port->priv->pp2_cfg.rss_cfg.rss_en == en)
+		return;
+
+	bound_cpu_first_rxq  = mvpp2_bound_cpu_first_rxq_calc(port);
+
+	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_MULTI_MODE) {
 		mvpp22_rss_c2_enable(port, en);
+		if (en) {
+			if (mvpp22_rss_default_cpu_set(port, port->priv->pp2_cfg.rss_cfg.dflt_cpu))
+				netdev_err(port->dev, "cannot set rss default cpu on port(%d)\n", port->id);
+			else
+				port->priv->pp2_cfg.rss_cfg.rss_en = 1;
+		} else {
+			if (mvpp2_cls_c2_rule_set(port, bound_cpu_first_rxq))
+				netdev_err(port->dev, "cannot set c2 and qos table on port(%d)\n", port->id);
+			else
+				port->priv->pp2_cfg.rss_cfg.rss_en = 0;
+		}
+	}
 }
 
 /* mvpp2_rss_mode_set
@@ -1629,16 +1688,30 @@ int mvpp22_rss_mode_set(struct mvpp2_port *port, int rss_mode)
 */
 int mvpp22_rss_default_cpu_set(struct mvpp2_port *port, int default_cpu)
 {
-	u32 index;
+	u8 index, queue, q_cpu_mask;
+	u8 cpu_width = 0, cos_width = 0;
 
 	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
 		return -1;
 
-	/* Update the default C2 rule on the port */
+	/* Calculate width */
+	mvpp2x_width_calc(port->priv, &cpu_width, &cos_width, NULL);
+	q_cpu_mask = (1 << cpu_width) - 1;
+
+	/* Update LSB[cpu_width + cos_width - 1 : cos_width] of queue (queue high and low) on c2 rule. */
 	index = port->priv->hw.c2_shadow->rule_idx_info[port->id].default_rule_idx;
-	mvpp2_cls_c2_rule_queue_set(port->priv, index, default_cpu);
-	/* Update the pbit table queue, the table index equals to port id as design */
-	mvpp2_cls_c2_pbit_qos_queue_set(port->priv, port->id, default_cpu);
+	queue = mvpp2_cls_c2_rule_queue_get(&port->priv->hw, index);
+	queue &= ~(q_cpu_mask << cos_width);
+	queue |= (default_cpu << cos_width);
+	mvpp2_cls_c2_rule_queue_set(&port->priv->hw, index, queue);
+
+	/* Update LSB[cpu_width + cos_width - 1 : cos_width] of queue on pbit table, table id equals to port id */
+	for (index = 0; index < MVPP2_QOS_TBL_LINE_NUM_PRI; index++) {
+		queue = mvpp2_cls_c2_pbit_tbl_queue_get(&port->priv->hw, port->id, index);
+		queue &= ~(q_cpu_mask << cos_width);
+		queue |= (default_cpu << cos_width);
+		mvpp2_cls_c2_pbit_tbl_queue_set(&port->priv->hw, port->id, index, queue);
+	}
 
 	/* Update default cpu in cfg */
 	port->priv->pp2_cfg.rss_cfg.dflt_cpu = default_cpu;
@@ -2321,6 +2394,16 @@ static int mvpp2_open(struct net_device *dev)
 			0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 	struct mvpp2_hw *hw = &(port->priv->hw);
 	int err;
+	u32 cpu_width = 0, cos_width = 0, port_rxq_width = 0;
+	u8 bound_cpu_first_rxq;
+
+	/* Calculate width */
+	mvpp2x_width_calc(port->priv, &cpu_width, &cos_width, &port_rxq_width);
+	if (cpu_width + cos_width > port_rxq_width) {
+		err = -1;
+		netdev_err(dev, "cpu or cos queue width invalid\n");
+		return err;
+	}
 
 	err = mvpp2_prs_mac_da_accept(hw, port->id, mac_bcast, true);
 	if (err) {
@@ -2401,14 +2484,15 @@ static int mvpp2_open(struct net_device *dev)
 	}
 
 	/* Init C2 rules */
-	err = mvpp2_cls_c2_rule_set(port);
+	bound_cpu_first_rxq  = mvpp2_bound_cpu_first_rxq_calc(port);
+	err = mvpp2_cls_c2_rule_set(port, bound_cpu_first_rxq);
 	if (err) {
 		netdev_err(port->dev, "cannot init C2 rules \n");
 		goto err_free_irq;
 	}
 
 	/* Assign rss table for rxq belong to this port */
-	err = mvpp22_rss_rxq_set(port);
+	err = mvpp22_rss_rxq_set(port, cos_width);
 	if (err) {
 		netdev_err(port->dev, "cannot allocate rss table for rxq \n");
 		goto err_free_irq;
@@ -2429,11 +2513,13 @@ static int mvpp2_open(struct net_device *dev)
 			goto err_free_irq;
 		}
 
-		/* Set rss default CPU */
-		err = mvpp22_rss_default_cpu_set(port, port->priv->pp2_cfg.rss_cfg.dflt_cpu);
-		if (err) {
-			netdev_err(port->dev, "cannot set rss default cpu \n");
-			goto err_free_irq;
+		/* Set rss default CPU only when rss enabled */
+		if (port->priv->pp2_cfg.rss_cfg.rss_en) {
+			err = mvpp22_rss_default_cpu_set(port, port->priv->pp2_cfg.rss_cfg.dflt_cpu);
+			if (err) {
+				netdev_err(port->dev, "cannot set rss default cpu \n");
+				goto err_free_irq;
+			}
 		}
 	}
 
@@ -3521,6 +3607,7 @@ static void mvpp2_init_config(struct mvpp2_param_config *pp2_cfg, u32 cell_index
 	pp2_cfg->cell_index = cell_index;
 	pp2_cfg->first_bm_pool = first_bm_pool;
 	pp2_cfg->first_sw_thread = first_addr_space;
+	pp2_cfg->first_log_rxq = first_log_rxq_queue;
 	pp2_cfg->jumbo_pool = jumbo_pool;
 	pp2_cfg->queue_mode = mvpp2_queue_mode;
 
@@ -3534,20 +3621,8 @@ static void mvpp2_init_config(struct mvpp2_param_config *pp2_cfg, u32 cell_index
 	/* RSS is disabled as default, which can be update in running time */
 	pp2_cfg->rss_cfg.rss_en = 0;
 	pp2_cfg->rss_cfg.rss_mode = rss_mode;
-}
 
-/* The function get the number of cpu online */
-static inline int mvpp2x_num_online_cpu_get(struct mvpp2 *pp2)
-{
-	u8 num_online_cpus = 0;
-	u16 x = pp2->cpu_map;
-
-	while(x) {
-		x &= (x - 1);
-		num_online_cpus++;
-	}
-
-	return num_online_cpus;
+	pp2_cfg->rx_cpu_map = port_cpu_bind_map;
 }
 
 static void mvpp2_init_rxfhindir(struct mvpp2 *pp2)

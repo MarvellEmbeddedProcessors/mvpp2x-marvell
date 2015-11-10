@@ -5377,7 +5377,6 @@ int mvpp2_cls_c2_qos_hw_write(struct mvpp2_hw *hw, struct mvpp2_cls_c2_qos_entry
 	regVal |= (qos->tbl_line << MVPP2_CLS2_DSCP_PRI_INDEX_LINE_OFF);
 	regVal |= (qos->tbl_sel << MVPP2_CLS2_DSCP_PRI_INDEX_SEL_OFF);
 	regVal |= (qos->tbl_id << MVPP2_CLS2_DSCP_PRI_INDEX_TBL_ID_OFF);
-
 	mvpp2_write(hw, MVPP2_CLS2_DSCP_PRI_INDEX_REG, regVal);
 
 	/* write data reg*/
@@ -5468,7 +5467,7 @@ static int mvpp2_cls_c2_prio_set(struct mvpp2_cls_c2_entry *c2, int cmd, int pri
 
 	/*set modify priority value*/
 	c2->sram.regs.qos_attr &= ~MVPP2_CLS2_ACT_QOS_ATTR_PRI_MASK;
-	c2->sram.regs.qos_attr |= (prio << MVPP2_CLS2_ACT_QOS_ATTR_PRI_OFF);
+	c2->sram.regs.qos_attr |= ((prio << MVPP2_CLS2_ACT_QOS_ATTR_PRI_OFF) & MVPP2_CLS2_ACT_QOS_ATTR_PRI_MASK);
 
 	if (from == 1)
 		c2->sram.regs.action_tbl |= (1 << MVPP2_CLS2_ACT_DATA_TBL_PRI_DSCP_OFF);
@@ -5489,7 +5488,7 @@ static int mvpp2_cls_c2_dscp_set(struct mvpp2_cls_c2_entry *c2, int cmd, int dsc
 
 	/*set modify DSCP value*/
 	c2->sram.regs.qos_attr &= ~MVPP2_CLS2_ACT_QOS_ATTR_DSCP_MASK;
-	c2->sram.regs.qos_attr |= (dscp << MVPP2_CLS2_ACT_QOS_ATTR_DSCP_OFF);
+	c2->sram.regs.qos_attr |= ((dscp << MVPP2_CLS2_ACT_QOS_ATTR_DSCP_OFF) & MVPP2_CLS2_ACT_QOS_ATTR_DSCP_MASK);
 
 	if (from == 1)
 		c2->sram.regs.action_tbl |= (1 << MVPP2_CLS2_ACT_DATA_TBL_PRI_DSCP_OFF);
@@ -5508,9 +5507,9 @@ static int mvpp2_cls_c2_queue_low_set(struct mvpp2_cls_c2_entry *c2, int cmd, in
 	c2->sram.regs.actions &= ~MVPP2_CLS2_ACT_QL_MASK;
 	c2->sram.regs.actions |= (cmd << MVPP2_CLS2_ACT_QL_OFF);
 
-	/*set modify High queue value*/
+	/*set modify Low queue value*/
 	c2->sram.regs.qos_attr &= ~MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK;
-	c2->sram.regs.qos_attr |= (queue << MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF);
+	c2->sram.regs.qos_attr |= ((queue << MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF) & MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK);
 
 	if (from == 1)
 		c2->sram.regs.action_tbl |= (1 << MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_OFF);
@@ -5531,7 +5530,7 @@ static int mvpp2_cls_c2_queue_high_set(struct mvpp2_cls_c2_entry *c2, int cmd, i
 
 	/*set modify High queue value*/
 	c2->sram.regs.qos_attr &= ~MVPP2_CLS2_ACT_QOS_ATTR_QH_MASK;
-	c2->sram.regs.qos_attr |= (queue << MVPP2_CLS2_ACT_QOS_ATTR_QH_OFF);
+	c2->sram.regs.qos_attr |= ((queue << MVPP2_CLS2_ACT_QOS_ATTR_QH_OFF) & MVPP2_CLS2_ACT_QOS_ATTR_QH_MASK);
 
 	if (from == 1)
 		c2->sram.regs.action_tbl |= (1 << MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_OFF);
@@ -5592,13 +5591,13 @@ static int mvpp2_cls_c2_tcam_byte_set(struct mvpp2_cls_c2_entry *c2, unsigned in
 	return 0;
 }
 
-static int mvpp2_cls_c2_qos_queue_set(struct mvpp2_cls_c2_qos_entry *qos, int queue)
+static int mvpp2_cls_c2_qos_queue_set(struct mvpp2_cls_c2_qos_entry *qos, u8 queue)
 {
 	if (!qos || queue >= (1 << MVPP2_CLS2_QOS_TBL_QUEUENUM_BITS))
 		return -EINVAL;
 
 	qos->data &= ~MVPP2_CLS2_QOS_TBL_QUEUENUM_MASK;
-	qos->data |= (queue << MVPP2_CLS2_QOS_TBL_QUEUENUM_OFF);
+	qos->data |= (((u32)queue) << MVPP2_CLS2_QOS_TBL_QUEUENUM_OFF);
 	return 0;
 }
 
@@ -5801,87 +5800,93 @@ static int mvpp2_c2_rule_add(struct mvpp2_port *port, struct mvpp2_c2_add_entry 
 	return 0;
 }
 
-/* C2 rule set */
-int mvpp2_cls_c2_rule_set(struct mvpp2_port *port)
+/* Fill the qos table with queue */
+static void mvpp2_cls_c2_qos_tbl_fill(struct mvpp2_port *port, u8 tbl_sel, u8 start_queue)
 {
-	int ret, cos_value, cos_queue, lkp_type, vlan_pri, dscp_pri;
-	struct mvpp2_c2_add_entry c2_init_entry;
 	struct mvpp2_cls_c2_qos_entry qos_entry;
+	u32 pri, line_num;
+	u8 cos_value, cos_queue, queue;
+
+
+	if (tbl_sel == MVPP2_QOS_TBL_SEL_PRI)
+		line_num = MVPP2_QOS_TBL_LINE_NUM_PRI;
+	else
+		line_num = MVPP2_QOS_TBL_LINE_NUM_DSCP;
+
+	memset(&qos_entry, 0, sizeof(struct mvpp2_cls_c2_qos_entry));
+	qos_entry.tbl_id = port->id;
+	qos_entry.tbl_sel = tbl_sel;
+
+	/* Fill the QoS dscp/pbit table */
+	for (pri = 0; pri < line_num; pri++) {
+		/* cos_value equal to dscp/8 or pbit value */
+		cos_value = ((tbl_sel == MVPP2_QOS_TBL_SEL_PRI) ? pri : (pri/8));
+		/* each nibble of pri_map stands for a cos-value, nibble value is the queue */
+		cos_queue = mvpp2_cosval_queue_map(port, cos_value);
+		qos_entry.tbl_line = pri;
+		/* map cos queue to physical queue */
+		/* Physical queue contains 2 parts: port ID and CPU ID, CPU ID will be used in RSS */
+		queue = start_queue + cos_queue;
+		mvpp2_cls_c2_qos_queue_set(&qos_entry, queue);
+		mvpp2_cls_c2_qos_hw_write(&port->priv->hw, &qos_entry);
+	}
+}
+
+/* C2 rule set */
+int mvpp2_cls_c2_rule_set(struct mvpp2_port *port, u8 start_queue)
+{
+	struct mvpp2_c2_add_entry c2_init_entry;
+	int ret;
+	u8 cos_value, cos_queue, queue, lkp_type;
 
 	/* QoS of pbit rule */
 	for (lkp_type = MVPP2_CLS_LKP_VLAN_PRI; lkp_type <= MVPP2_CLS_LKP_DEFAULT; lkp_type++) {
 		memset(&c2_init_entry, 0, sizeof(struct mvpp2_c2_add_entry));
-		memset(&qos_entry, 0, sizeof(struct mvpp2_cls_c2_qos_entry));
 
 		/* Port info */
 		c2_init_entry.port.port_type = MVPP2_SRC_PORT_TYPE_PHY;
 		c2_init_entry.port.port_value = (1 << port->id);
 		c2_init_entry.port.port_mask = 0xff;
-
 		/* Lookup type */
 		c2_init_entry.lkp_type = lkp_type;
 		c2_init_entry.lkp_type_mask = 0x3F;
-
-		/* QoS info */
-		if (lkp_type != MVPP2_CLS_LKP_DEFAULT) {
-			/* QoS info from C2 QoS table */
-			if (lkp_type == MVPP2_CLS_LKP_VLAN_PRI)
-				c2_init_entry.qos_info.qos_tbl_type = MVPP2_QOS_TBL_SEL_PRI;
-			else if (lkp_type == MVPP2_CLS_LKP_DSCP_PRI)
-				c2_init_entry.qos_info.qos_tbl_type = MVPP2_QOS_TBL_SEL_DSCP;
-			/* Set the QoS table index equal to port ID */
-			c2_init_entry.qos_info.qos_tbl_index = port->id;
-			c2_init_entry.qos_info.q_low_src = MVPP2_QOS_SRC_DSCP_PBIT_TBL;
-		} else {
-			/* QoS info from C2 action table */
-			c2_init_entry.qos_info.q_low_src = MVPP2_QOS_SRC_ACTION_TBL;
-			cos_value = port->priv->pp2_cfg.cos_cfg.default_cos;
-			c2_init_entry.qos_value.q_low = (port->priv->pp2_cfg.cos_cfg.pri_map >> (cos_value * 4)) & 0x7;
-		}
-
 		/* Action info */
 		c2_init_entry.action.color_act = MVPP2_COLOR_ACTION_TYPE_NO_UPDT_LOCK;
 		c2_init_entry.action.pri_act =	MVPP2_ACTION_TYPE_NO_UPDT_LOCK;
 		c2_init_entry.action.dscp_act = MVPP2_ACTION_TYPE_NO_UPDT_LOCK;
 		c2_init_entry.action.q_low_act = MVPP2_ACTION_TYPE_UPDT_LOCK;
-		/* Queue High always comes from action table */
-		c2_init_entry.qos_info.q_high_src = MVPP2_QOS_SRC_ACTION_TBL;
-		/* Queue high(5 bits) contains 2 parts: port ID and CPU ID, CPU ID will be used in RSS */
-		c2_init_entry.qos_value.q_high = port->id;
 		c2_init_entry.action.q_high_act = MVPP2_ACTION_TYPE_UPDT_LOCK;
 		if (port->priv->pp2_version == PPV22)
 			c2_init_entry.action.rss_act = MVPP2_ACTION_TYPE_UPDT_LOCK;
 		/* To CPU */
 		c2_init_entry.action.frwd_act = MVPP2_FRWD_ACTION_TYPE_SWF_LOCK;
 
-		/* CoS queue, corresponding to queue low(3 bits), from pbit table */
-		qos_entry.tbl_id = c2_init_entry.qos_info.qos_tbl_index;
-		if (c2_init_entry.qos_info.qos_tbl_type == MVPP2_QOS_TBL_SEL_PRI) {
-			qos_entry.tbl_sel = MVPP2_QOS_TBL_SEL_PRI;
-			/* Fill the QoS pbit table */
-			for (vlan_pri = 0; vlan_pri < MVPP2_QOS_TBL_LINE_NUM_PRI; vlan_pri++) {
-				/* cos_value equal to vlan pri */
-				cos_value = vlan_pri;
-				/* nibble index of pri_map indicates a cos value, nibble value is the queue */
-				cos_queue = (port->priv->pp2_cfg.cos_cfg.pri_map >> (cos_value * 4)) & 0x7;
-				qos_entry.tbl_line = vlan_pri;
-				mvpp2_cls_c2_qos_queue_set(&qos_entry, cos_queue);
-				mvpp2_cls_c2_qos_hw_write(&port->priv->hw, &qos_entry);
+		/* QoS info */
+		if (lkp_type != MVPP2_CLS_LKP_DEFAULT) {
+			/* QoS info from C2 QoS table */
+			/* Set the QoS table index equal to port ID */
+			c2_init_entry.qos_info.qos_tbl_index = port->id;
+			c2_init_entry.qos_info.q_low_src = MVPP2_QOS_SRC_DSCP_PBIT_TBL;
+			c2_init_entry.qos_info.q_high_src = MVPP2_QOS_SRC_DSCP_PBIT_TBL;
+			if (lkp_type == MVPP2_CLS_LKP_VLAN_PRI) {
+				c2_init_entry.qos_info.qos_tbl_type = MVPP2_QOS_TBL_SEL_PRI;
+				mvpp2_cls_c2_qos_tbl_fill(port, MVPP2_QOS_TBL_SEL_PRI, start_queue);
+			} else if (lkp_type == MVPP2_CLS_LKP_DSCP_PRI) {
+				c2_init_entry.qos_info.qos_tbl_type = MVPP2_QOS_TBL_SEL_DSCP;
+				mvpp2_cls_c2_qos_tbl_fill(port, MVPP2_QOS_TBL_SEL_DSCP, start_queue);
 			}
-		} else if (c2_init_entry.qos_info.qos_tbl_type == MVPP2_QOS_TBL_SEL_DSCP) {
-			qos_entry.tbl_sel = MVPP2_QOS_TBL_SEL_DSCP;
-			/* Fill the QoS dscp table */
-			for (dscp_pri = 0; dscp_pri < MVPP2_QOS_TBL_LINE_NUM_DSCP; dscp_pri++) {
-				/* cos_value equal to dscp/8 */
-				cos_value = dscp_pri / 8;
-				/* each nibble of pri_map stands for a cos-value, value of nibble is the queue */
-				cos_queue = (port->priv->pp2_cfg.cos_cfg.pri_map >> (cos_value * 4)) & 0x7;
-				qos_entry.tbl_line = dscp_pri;
-				mvpp2_cls_c2_qos_queue_set(&qos_entry, cos_queue);
-				mvpp2_cls_c2_qos_hw_write(&port->priv->hw, &qos_entry);
-			}
+		} else {
+			/* QoS info from C2 action table */
+			c2_init_entry.qos_info.q_low_src = MVPP2_QOS_SRC_ACTION_TBL;
+			c2_init_entry.qos_info.q_high_src = MVPP2_QOS_SRC_ACTION_TBL;
+			cos_value = port->priv->pp2_cfg.cos_cfg.default_cos;
+			cos_queue = mvpp2_cosval_queue_map(port, cos_value);
+			/* map to physical queue */
+			/* Physical queue contains 2 parts: port ID and CPU ID, CPU ID will be used in RSS */
+			queue = start_queue + cos_queue;
+			c2_init_entry.qos_value.q_low = ((u16)queue) & ((1 << MVPP2_CLS2_ACT_QOS_ATTR_QL_BITS) - 1);
+			c2_init_entry.qos_value.q_high = ((u16)queue) >> MVPP2_CLS2_ACT_QOS_ATTR_QL_BITS;
 		}
-
 		/* RSS En in PP22 */
 		c2_init_entry.rss_en = port->priv->pp2_cfg.rss_cfg.rss_en;
 
@@ -5894,58 +5899,76 @@ int mvpp2_cls_c2_rule_set(struct mvpp2_port *port)
 	return 0;
 }
 
-/* The function update LSB[cpu_width + cos_width - 1 : cos_width] of queue (queue high and low) on dedicated c2 rule.
-*  used by rss default cpu set */
-void mvpp2_cls_c2_rule_queue_set(struct mvpp2 *pp2, u32 rule_idx, u8 queue)
+/* The function get the queue in the C2 rule with input index */
+u8 mvpp2_cls_c2_rule_queue_get(struct mvpp2_hw *hw, u32 rule_idx)
 {
-	u32 regVal, q_mask, cpu_width, cos_width;
-
-	/* Calculate width, Through ilog2(pp2->cpu_map), the cpu online max id can be got */
-	cpu_width = ilog2(roundup_pow_of_two(pp2->cpu_map));
-	cos_width = ilog2(roundup_pow_of_two(pp2->pp2_cfg.cos_cfg.num_cos_queues));
-
-	q_mask = (1 << cpu_width) - 1;
+	u32 regVal;
+	u8 queue;
 
 	/* Write index reg */
-	mvpp2_write(&pp2->hw, MVPP2_CLS2_TCAM_IDX_REG, rule_idx);
+	mvpp2_write(hw, MVPP2_CLS2_TCAM_IDX_REG, rule_idx);
 
-	/* Read Reg 0x1B64 */
-	regVal = mvpp2_read(&pp2->hw, MVPP2_CLS2_ACT_QOS_ATTR_REG);
-	/* Update Value */
-	regVal &= (~(q_mask << (MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF + cos_width)));
-	regVal |= ((queue & q_mask) << (MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF + cos_width));
-	/* Write Reg 0x1B64 */
-	mvpp2_write(&pp2->hw, MVPP2_CLS2_ACT_QOS_ATTR_REG, regVal);
+	/* Read Reg CLSC2_ATTR0 */
+	regVal = mvpp2_read(hw, MVPP2_CLS2_ACT_QOS_ATTR_REG);
+	queue = (regVal & (MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK | MVPP2_CLS2_ACT_QOS_ATTR_QH_MASK)) >>
+											MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF;
+	return queue;
 }
 
-/* The function update LSB[cpu_width + cos_width - 1 : cos_width] of queue on dedicated pbit qos table.
-*  used by rss default cpu set */
-void mvpp2_cls_c2_pbit_qos_queue_set(struct mvpp2 *pp2, u8 tbl_id, u8 queue)
+/* The function set the qos queue in one C2 rule */
+void mvpp2_cls_c2_rule_queue_set(struct mvpp2_hw *hw, u32 rule_idx, u8 queue)
 {
-	u32 tbl_line, q_mask, regVal, cpu_width, cos_width;
+	u32 regVal;
 
-	/* Calculate width, Through ilog2(pp2->cpu_map), the cpu online max id can be got */
-	cpu_width = ilog2(roundup_pow_of_two(pp2->cpu_map));
-	cos_width = ilog2(roundup_pow_of_two(pp2->pp2_cfg.cos_cfg.num_cos_queues));
+	/* Write index reg */
+	mvpp2_write(hw, MVPP2_CLS2_TCAM_IDX_REG, rule_idx);
 
-	q_mask = (1 << cpu_width) - 1;
+	/* Read Reg CLSC2_ATTR0 */
+	regVal = mvpp2_read(hw, MVPP2_CLS2_ACT_QOS_ATTR_REG);
+	/* Update Value */
+	regVal &= (~(MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK | MVPP2_CLS2_ACT_QOS_ATTR_QH_MASK));
+	regVal |= (((u32)queue) << MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF);
 
-	for (tbl_line = 0; tbl_line < MVPP2_QOS_TBL_LINE_NUM_PRI; tbl_line++) {
-		regVal = 0;
-		/* write index reg */
-		regVal |= (tbl_line << MVPP2_CLS2_DSCP_PRI_INDEX_LINE_OFF);
-		regVal |= (MVPP2_QOS_TBL_SEL_PRI << MVPP2_CLS2_DSCP_PRI_INDEX_SEL_OFF);
-		regVal |= (tbl_id << MVPP2_CLS2_DSCP_PRI_INDEX_TBL_ID_OFF);
-		mvpp2_write(&pp2->hw, MVPP2_CLS2_DSCP_PRI_INDEX_REG, regVal);
+	/* Write Reg CLSC2_ATTR0 */
+	mvpp2_write(hw, MVPP2_CLS2_ACT_QOS_ATTR_REG, regVal);
+}
 
-		/* Read Reg CLSC2_DSCP_PRI */
-		regVal = mvpp2_read(&pp2->hw, MVPP2_CLS2_QOS_TBL_REG);
-		regVal &= (~(q_mask << (MVPP2_CLS2_QOS_TBL_QUEUENUM_OFF + cos_width)));
-		regVal |= ((queue & q_mask) << (MVPP2_CLS2_QOS_TBL_QUEUENUM_OFF + cos_width));
+/* The function get the queue in the pbit table entry */
+u8 mvpp2_cls_c2_pbit_tbl_queue_get(struct mvpp2_hw *hw, u8 tbl_id, u8 tbl_line)
+{
+	u8 queue;
+	u32 regVal = 0;
 
-		/* Write Reg CLSC2_DSCP_PRI */
-		mvpp2_write(&pp2->hw, MVPP2_CLS2_QOS_TBL_REG, regVal);
-	}
+	/* write index reg */
+	regVal |= (tbl_line << MVPP2_CLS2_DSCP_PRI_INDEX_LINE_OFF);
+	regVal |= (MVPP2_QOS_TBL_SEL_PRI << MVPP2_CLS2_DSCP_PRI_INDEX_SEL_OFF);
+	regVal |= (tbl_id << MVPP2_CLS2_DSCP_PRI_INDEX_TBL_ID_OFF);
+	mvpp2_write(hw, MVPP2_CLS2_DSCP_PRI_INDEX_REG, regVal);
+	/* Read Reg CLSC2_DSCP_PRI */
+	regVal = mvpp2_read(hw, MVPP2_CLS2_QOS_TBL_REG);
+	queue = (regVal &  MVPP2_CLS2_QOS_TBL_QUEUENUM_MASK) >> MVPP2_CLS2_QOS_TBL_QUEUENUM_OFF;
+
+	return queue;
+}
+
+/* The function set the queue in the pbit table entry */
+void mvpp2_cls_c2_pbit_tbl_queue_set(struct mvpp2_hw *hw, u8 tbl_id, u8 tbl_line, u8 queue)
+{
+	u32 regVal = 0;
+
+	/* write index reg */
+	regVal |= (tbl_line << MVPP2_CLS2_DSCP_PRI_INDEX_LINE_OFF);
+	regVal |= (MVPP2_QOS_TBL_SEL_PRI << MVPP2_CLS2_DSCP_PRI_INDEX_SEL_OFF);
+	regVal |= (tbl_id << MVPP2_CLS2_DSCP_PRI_INDEX_TBL_ID_OFF);
+	mvpp2_write(hw, MVPP2_CLS2_DSCP_PRI_INDEX_REG, regVal);
+
+	/* Read Reg CLSC2_DSCP_PRI */
+	regVal = mvpp2_read(hw, MVPP2_CLS2_QOS_TBL_REG);
+	regVal &= (~MVPP2_CLS2_QOS_TBL_QUEUENUM_MASK);
+	regVal |= (((u32)queue) << MVPP2_CLS2_QOS_TBL_QUEUENUM_OFF);
+
+	/* Write Reg CLSC2_DSCP_PRI */
+	mvpp2_write(hw, MVPP2_CLS2_QOS_TBL_REG, regVal);
 }
 
 /* RSS */
@@ -6018,7 +6041,7 @@ int mvpp22_rss_tbl_entry_get(struct mvpp2_hw *hw, struct mvpp22_rss_entry *rss)
 
 int mvpp22_rss_hw_dump(struct mvpp2_hw *hw)
 {
-	int tbl_id, tbl_line, cos_queue;
+	int tbl_id, tbl_line;
 
 	struct mvpp22_rss_entry rss_entry;
 
@@ -6045,11 +6068,11 @@ int mvpp22_rss_hw_dump(struct mvpp2_hw *hw)
 EXPORT_SYMBOL(mvpp22_rss_hw_dump);
 
 /* The function allocate a rss table for each phisical rxq, they have same cos priority */
-int mvpp22_rss_rxq_set(struct mvpp2_port *port)
+int mvpp22_rss_rxq_set(struct mvpp2_port *port, u32 cos_width)
 {
 	int rxq;
 	struct mvpp22_rss_entry rss_entry;
-	int mask = ((1 << ilog2(roundup_pow_of_two(port->priv->pp2_cfg.cos_cfg.num_cos_queues))) - 1);
+	int cos_mask = ((1 << cos_width) - 1);
 
 	if (port->priv->pp2_version != PPV22)
 		return 0;
@@ -6060,7 +6083,7 @@ int mvpp22_rss_rxq_set(struct mvpp2_port *port)
 
 	for (rxq = 0; rxq < port->num_rx_queues; rxq++) {
 		rss_entry.u.pointer.rxq_idx = port->rxqs[rxq]->id;
-		rss_entry.u.pointer.rss_tbl_ptr = port->rxqs[rxq]->id & mask;
+		rss_entry.u.pointer.rss_tbl_ptr = port->rxqs[rxq]->id & cos_mask;
 		if (mvpp22_rss_tbl_entry_set(&port->priv->hw, &rss_entry))
 			return -1;
 	}
@@ -6090,6 +6113,7 @@ void mvpp22_rss_c2_enable(struct mvpp2_port *port, bool en)
 			regVal |= MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_MASK;
 		else
 			regVal &= (~MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_MASK);
+
 		mvpp2_write(&port->priv->hw, MVPP2_CLS2_ACT_DUP_ATTR_REG, regVal);
 	}
 }

@@ -33,6 +33,8 @@
 #include <linux/skbuff.h>
 #include <linux/netdevice.h>
 #include <linux/string.h>
+#include <linux/log2.h>
+
 
 #include "mvpp2_hw_type.h"
 
@@ -422,8 +424,10 @@ struct mvpp2_param_config {
 	u8 first_bm_pool;
 	bool jumbo_pool; /* pp2 always supports 2 pools : short=MV_DEF_256, long=MV_DEF_2K. Param defines option to have additional pool, jumbo=MV_DEF_10K.*/
 	u8 first_sw_thread; /* The index of the first PPv2.2 sub-address space for this NET_INSTANCE.*/
+	u8 first_log_rxq; /* The first cos rx queue used in the port */
 	u8 cell_index; /* The cell_index of the PPv22 (could be 0,1, set according to dtsi) */
 	enum mvpp2_queue_distribution_mode queue_mode;
+	u32 rx_cpu_map; /* The CPU that port bind, each port has a nibble indexed by port_id, nibble value is CPU id*/
 };
 
 
@@ -575,6 +579,25 @@ static inline struct mvpp2_port * mvpp2_port_struct_get(struct mvpp2 *priv, int 
 			return(priv->port_list[i]);
 	}
 	return(NULL);
+}
+
+static inline u8 mvpp2_cosval_queue_map(struct mvpp2_port *port, u8 cos_value) {
+	int cos_width, cos_mask;
+
+	cos_width = ilog2(roundup_pow_of_two(port->priv->pp2_cfg.cos_cfg.num_cos_queues));
+	cos_mask  = (1 << cos_width) - 1;
+
+	return((port->priv->pp2_cfg.cos_cfg.pri_map >> (cos_value * 4)) & cos_mask);
+}
+
+static inline u8 mvpp2_bound_cpu_first_rxq_calc(struct mvpp2_port *port) {
+
+	u8 cos_width, bind_cpu;
+
+	cos_width = ilog2(roundup_pow_of_two(port->priv->pp2_cfg.cos_cfg.num_cos_queues));
+	bind_cpu = (port->priv->pp2_cfg.rx_cpu_map >> (4 * port->id)) & 0xF;
+
+	return(port->first_rxq + (bind_cpu << cos_width));
 }
 
 
