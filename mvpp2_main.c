@@ -75,6 +75,7 @@ static bool jumbo_pool = false;
 static u16 rx_queue_size = MVPP2_MAX_RXD;
 static u16 tx_queue_size = MVPP2_MAX_TXD;
 static u16 buffer_scaling = 100;
+static u32 port_cpu_bind_map = 0;
 static u8 first_bm_pool = 0;
 static u8 first_addr_space = 0;
 static u8 first_log_rxq_queue = 0;
@@ -124,6 +125,10 @@ MODULE_PARM_DESC(buffer_scaling, "Buffer scaling (TBD)");
 
 
 /*TODO:  Below module_params will not go to ML. Created for testing. */
+
+module_param(port_cpu_bind_map, uint, S_IRUGO);
+MODULE_PARM_DESC(port_cpu_bind_map, "Set default port-to-cpu binding, nibble for each port. Relevant when queue_mode=single & rss is disabled");
+
 module_param(first_bm_pool, byte, S_IRUGO);
 MODULE_PARM_DESC(first_bm_pool, "First used buffer pool (0-11)");
 

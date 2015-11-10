@@ -3243,12 +3243,14 @@ void mvpp2_cls_oversize_rxq_set(struct mvpp2_port *port)
 	mvpp2_write(hw, MVPP2_CLS_OVERSIZE_RXQ_LOW_REG(port->id),
 		    port->first_rxq & MVPP2_CLS_OVERSIZE_RXQ_LOW_MASK);
 
+#if 0 //TODO: Delete this after checking MVPP2
 	mvpp2_write(hw, MVPP2_CLS_SWFWD_P2HQ_REG(port->id),
 		    (port->first_rxq >> MVPP2_CLS_OVERSIZE_RXQ_LOW_BITS));
 
 	val = mvpp2_read(hw, MVPP2_CLS_SWFWD_PCTRL_REG);
 	val |= MVPP2_CLS_SWFWD_PCTRL_MASK(port->id);
 	mvpp2_write(hw, MVPP2_CLS_SWFWD_PCTRL_REG, val);
+#endif
 }
 
 void mvpp2_get_mac_address(struct mvpp2_port *port, unsigned char *addr)
