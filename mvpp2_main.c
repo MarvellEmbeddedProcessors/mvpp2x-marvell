@@ -36,10 +36,12 @@
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/cpumask.h>
+#include <linux/kallsyms.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_mdio.h>
 #include <linux/of_net.h>
+#include <linux/of_address.h>
 #include <linux/of_address.h>
 #include <linux/of_device.h>
 
@@ -57,6 +59,7 @@
 #include "mvpp2_hw.h"
 #include "mvpp2_debug.h"
 
+#define MVPP2_SKB_TEST_SIZE 64
 /* Declaractions */
 u8 mvpp2_num_cos_queues = 4;
 static u8 mvpp2_queue_mode = MVPP2_QDIST_MULTI_MODE;
@@ -76,10 +79,10 @@ static u8 first_log_rxq_queue = 0;
 
 #ifdef CONFIG_MV_PP2_FPGA
 #define FPGA_PORTS_BASE          0
-#define MV_PP2_FPGA_PERODIC_TIME 100
+#define MV_PP2_FPGA_PERODIC_TIME 10
 #define FPGA_PORT_0_OFFSET       0x104000
 
-u32 mv_pp2_vfpga_address;
+void * mv_pp2_vfpga_address;
 struct timer_list cpu_poll_timer;
 static void mv_pp22_cpu_timer_callback(unsigned long data);
 #endif
@@ -359,6 +362,7 @@ static int mvpp2_bm_init(struct platform_device *pdev, struct mvpp2 *priv)
 
 
 
+
 /* Allocate skb for BM pool */
 static struct sk_buff *mvpp2_skb_alloc(struct mvpp2_port *port,
 				       struct mvpp2_bm_pool *bm_pool,
@@ -369,14 +373,22 @@ static struct sk_buff *mvpp2_skb_alloc(struct mvpp2_port *port,
 	dma_addr_t phys_addr;
 
 	skb = __dev_alloc_skb(bm_pool->pkt_size, gfp_mask);
-	if (!skb)
+	if (!skb) {
+		pr_crit_once("%s skb alloc failed\n",__func__);
 		return NULL;
+	}
 
 	phys_addr = dma_map_single(port->dev->dev.parent, skb->head,
 				   MVPP2_RX_BUF_SIZE(bm_pool->pkt_size),
 				    DMA_FROM_DEVICE);
+	if (DEBUG)
+		pr_crit_once("dev_ptr:%p, dev_name:%s, sizeof(dma_addr_t):%d, sizeof(long):%d, phys_addr:%llx, size:%d\n",
+			port->dev->dev.parent, port->dev->dev.parent->init_name, sizeof(dma_addr_t), sizeof(long),
+			phys_addr, MVPP2_RX_BUF_SIZE(bm_pool->pkt_size));
+
 	if (unlikely(dma_mapping_error(port->dev->dev.parent, phys_addr))) {
 		dev_kfree_skb_any(skb);
+		MVPP2_PRINT_LINE();
 		return NULL;
 	}
 	*buf_phys_addr = phys_addr;
@@ -404,6 +416,7 @@ static int mvpp2_bm_bufs_add(struct mvpp2_port *port,
 			   buf_num, bm_pool->id);
 		return 0;
 	}
+	MVPP2_PRINT_LINE();
 
 	for (i = 0; i < buf_num; i++) {
 		skb = mvpp2_skb_alloc(port, bm_pool, &phys_addr, GFP_KERNEL);
@@ -454,6 +467,7 @@ static struct mvpp2_bm_pool * mvpp2_bm_pool_use_internal(
 		netdev_err(port->dev, "pool does not exist\n");
 		return NULL;
 	}
+	MVPP2_PRINT_LINE();
 
 	if (add_port) {
 		pkts_num = mvpp2_bm_buf_calc(log_pool, pool->port_map |(1 << port->id));
@@ -565,14 +579,6 @@ static int mvpp2_bm_update_mtu(struct net_device *dev, int mtu)
 	return 0;
 }
 
-#ifdef CONFIG_MV_PP2_FPGA
-static void print_regs(struct mvpp2_port *port)
-{
-	int val;
-	val = readl(port->base + 0x10);
-	pr_debug("******* print_reg(%d):[0x%x] = 0x%x\n", __LINE__, (unsigned int)port->base + 0x10, val);
-}
-#endif
 
 /* Set defaults to the MVPP2 port */
 static void mvpp2_defaults_set(struct mvpp2_port *port)
@@ -585,14 +591,12 @@ static void mvpp2_defaults_set(struct mvpp2_port *port)
 		mvpp2_port_loopback_set(port);
 
 #ifdef CONFIG_MV_PP2_FPGA
-	print_regs(port);
 	writel(0x8be4, port->base);
 	writel(0xc200, port->base + 0x8);
 	writel(0x3, port->base + 0x90);
 
 	writel(0x902A, port->base + 0xC);    /*force link to 100Mb*/
 	writel(0x8be5, port->base);          /*enable port        */
-	print_regs(port);
 #endif
 #if 0
 	/* Update TX FIFO MIN Threshold */
@@ -832,7 +836,7 @@ static int mvpp2_rxq_init(struct mvpp2_port *port,
 	if (!rxq->desc_mem)
 		return -ENOMEM;
 
-	rxq->first_desc = MVPP2_DESCQ_MEM_ALIGN((uintptr_t)rxq->desc_mem);
+	rxq->first_desc = (struct mvpp2_rx_desc *) MVPP2_DESCQ_MEM_ALIGN((uintptr_t)rxq->desc_mem);
 	first_desc_phy  = MVPP2_DESCQ_MEM_ALIGN(rxq->descs_phys);
 
 	rxq->last_desc = rxq->size - 1;
@@ -938,7 +942,7 @@ static int mvpp2_txq_init(struct mvpp2_port *port,
 	if (!txq->desc_mem)
 		return -ENOMEM;
 
-	txq->first_desc = MVPP2_DESCQ_MEM_ALIGN((uintptr_t)txq->desc_mem);
+	txq->first_desc = (struct mvpp2_tx_desc *)MVPP2_DESCQ_MEM_ALIGN((uintptr_t)txq->desc_mem);
 	first_desc_phy  = MVPP2_DESCQ_MEM_ALIGN(txq->descs_phys);
 
 
@@ -1818,6 +1822,9 @@ static int mvpp2_rx(struct mvpp2_port *port, struct napi_struct *napi,
 
 	/* Get number of received packets and clamp the to-do */
 	rx_received = mvpp2_rxq_received(port, rxq->id);
+
+	//MVPP2_PRINT_VAR(rx_received);
+
 	if (rx_todo > rx_received)
 		rx_todo = rx_received;
 
@@ -1850,6 +1857,10 @@ static int mvpp2_rx(struct mvpp2_port *port, struct napi_struct *napi,
 			buf_phys_addr = mvpp22_rxdesc_phys_addr_get(rx_desc);
 		}
 
+#ifdef CONFIG_64BIT
+		skb = (uintptr_t)skb | port->priv->pp2xdata->skb_base_addr;
+#endif
+
 
 		/* In case of an error, release the requested buffer pointer
 		 * to the Buffer Manager. This request process is controlled
@@ -1857,18 +1868,23 @@ static int mvpp2_rx(struct mvpp2_port *port, struct napi_struct *napi,
 		 * comprised by the RX descriptor.
 		 */
 		if (rx_status & MVPP2_RXD_ERR_SUMMARY) {
+
+			MVPP2_PRINT_LINE();
 			dev->stats.rx_errors++;
 			mvpp2_rx_error(port, rx_desc);
 			mvpp2_pool_refill(port->priv, pool, buf_phys_addr, skb);
 			continue;
 		}
+		MVPP2_PRINT_LINE();
 
 
 		rcvd_pkts++;
 		rcvd_bytes += rx_bytes;
 		atomic_inc(&bm_pool->in_use);
+		MVPP2_PRINT_LINE();
 
 		skb_reserve(skb, MVPP2_MH_SIZE);
+		MVPP2_PRINT_LINE();
 		skb_put(skb, rx_bytes);
 		skb->protocol = eth_type_trans(skb, dev);
 		mvpp2_rx_csum(port, rx_status, skb);
@@ -3263,8 +3279,8 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 		first_log_rxq_queue;
 	port->phy_node = phy_node;
 	port->phy_interface = phy_mode;
-	port->base = (void *) ((mv_pp2_vfpga_address + FPGA_PORT_0_OFFSET) + ((port->id) * 0x1000));
-	DBG_MSG("mvpp2(%d): mvpp2_port_probe: port_id-%d mv_pp2_vfpga_address=0x%x port->base=0x%p\n",
+	port->base = ((mv_pp2_vfpga_address + FPGA_PORT_0_OFFSET) + ((port->id) * 0x1000));
+	DBG_MSG("mvpp2(%d): mvpp2_port_probe: port_id-%d mv_pp2_vfpga_address=0x%p port->base=0x%p\n",
 		   __LINE__, port->id, mv_pp2_vfpga_address, port->base);
 	MVPP2_PRINT_LINE();
 
@@ -3554,7 +3570,7 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 }
 
 
-static const struct mvpp2x_platform_data pp21_pdata = {
+static struct mvpp2x_platform_data pp21_pdata = {
 	.pp2x_ver = PPV21,
 	.pp2x_max_port_rxqs = 8,
 	.mvpp2x_rxq_short_pool_set = mvpp21_rxq_short_pool_set,
@@ -3565,10 +3581,12 @@ static const struct mvpp2x_platform_data pp21_pdata = {
 	.mvpp2x_port_queue_vectors_init = mvpp21_port_queue_vectors_init,
 	.mvpp2x_port_isr_rx_group_cfg = mvpp21x_port_isr_rx_group_cfg,
 	.num_port_irq = 1,
-	.hw.desc_queue_addr_shift = MVPP21_AGGR_TXQ_DESC_ADDR_SHIFT,
+	.hw.desc_queue_addr_shift = MVPP21_DESC_ADDR_SHIFT,
+	.skb_base_addr = 0,
+	.skb_base_mask = DMA_BIT_MASK(32),
 };
 
-static const struct mvpp2x_platform_data pp22_pdata = {
+static struct mvpp2x_platform_data pp22_pdata = {
 	.pp2x_ver = PPV22,
 	.pp2x_max_port_rxqs = 32,
 	.mvpp2x_rxq_short_pool_set = mvpp22_rxq_short_pool_set,
@@ -3579,7 +3597,9 @@ static const struct mvpp2x_platform_data pp22_pdata = {
 	.mvpp2x_port_queue_vectors_init = mvpp22_port_queue_vectors_init,
 	.mvpp2x_port_isr_rx_group_cfg = mvpp22_port_isr_rx_group_cfg,
 	.num_port_irq = 9,
-	.hw.desc_queue_addr_shift = MVPP22_AGGR_TXQ_DESC_ADDR_SHIFT,
+	.hw.desc_queue_addr_shift = MVPP22_DESC_ADDR_SHIFT,
+	.skb_base_addr = 0,
+	.skb_base_mask = DMA_BIT_MASK(40),
 };
 
 
@@ -3651,7 +3671,9 @@ void mvpp2_pp2_basic_print(struct platform_device *pdev, struct mvpp2 *priv)
 	DBG_MSG("first_bm_pool(%d) jumbo_pool(%d)\n", priv->pp2_cfg.first_bm_pool, priv->pp2_cfg.jumbo_pool);
 	DBG_MSG("cell_index(%d) num_ports(%d)\n", priv->pp2_cfg.cell_index, priv->num_ports);
 
+	DBG_MSG("skb_base_addr(%p)\n", priv->pp2xdata->skb_base_addr);
 	DBG_MSG("hw->base(%p)\n", priv->hw.base);
+
 }
 EXPORT_SYMBOL(mvpp2_pp2_basic_print);
 
@@ -3721,6 +3743,13 @@ static int mvpp2_probe(struct platform_device *pdev)
 	u16 cpu_map;
 	u32 cell_index = 0;
 
+
+	err = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
+	if (err) {
+		pr_crit("mvpp2: cannot set dma_mask \n");
+		return -EIO; //TODO
+	}
+
 	priv = devm_kzalloc(&pdev->dev, sizeof(struct mvpp2), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
@@ -3751,6 +3780,22 @@ MVPP2_PRINT_LINE();
 #endif
 MVPP2_PRINT_LINE();
 
+#ifdef CONFIG_64BIT
+{
+	struct sk_buff *skb;
+
+	if (priv->pp2xdata->skb_base_addr == 0) {
+		skb = alloc_skb(MVPP2_SKB_TEST_SIZE, GFP_KERNEL);
+		MVPP2_PRINT_VAR(skb);
+		if (!skb)
+			return -ENOMEM;
+		priv->pp2xdata->skb_base_addr = (uintptr_t)skb & ~(priv->pp2xdata->skb_base_mask);
+		kfree_skb(skb);
+	}
+}
+#endif
+
+
 #ifndef CONFIG_MV_PP2_FPGA
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	hw->base = devm_ioremap_resource(&pdev->dev, res);
@@ -3764,8 +3809,8 @@ MVPP2_PRINT_LINE();
 	if (IS_ERR(hw->lms_base))
 		return PTR_ERR(hw->lms_base);
 #else
-	hw->base = (void *)mv_pp2_vfpga_address;
-	pr_debug("mvpp2(%d): mvpp2_probe:mv_pp2_vfpga_address=0x%x\n", __LINE__, mv_pp2_vfpga_address);
+	hw->base = mv_pp2_vfpga_address;
+	pr_debug("mvpp2(%d): mvpp2_probe:mv_pp2_vfpga_address=0x%p\n", __LINE__, mv_pp2_vfpga_address);
 #endif
 MVPP2_PRINT_LINE();
 
@@ -3961,12 +4006,12 @@ static int mv_pp2_pci_probe(struct pci_dev *pdev, const struct pci_device_id *en
 		return -ENODEV;
 	}
 
-	mv_pp2_vfpga_address = (u32)pci_iomap(pdev, 0, 16 * 1024 * 1024);
+	mv_pp2_vfpga_address = pci_iomap(pdev, 0, 16 * 1024 * 1024);
 
 	if (!mv_pp2_vfpga_address)
 		pr_err("mvpp2: can not map device registers\n");
 
-	pr_debug("mvpp2: fpga base: VIRT=0x%0x, size=%d KBytes\n", mv_pp2_vfpga_address, 16 * 1024);
+	pr_debug("mvpp2: fpga base: VIRT=0x%p, size=%d KBytes\n", mv_pp2_vfpga_address, 16 * 1024);
 	return 0;
 }
 
@@ -4004,7 +4049,6 @@ static struct platform_device mvpp2_device = {
 	.num_resources	= ARRAY_SIZE(mvpp2_resources),
 	.resource		= mvpp2_resources,
 	.dev            = {
-		.coherent_dma_mask = DMA_BIT_MASK(32),
 		.platform_data = 0,
 		.init_name = "f10f0000.ethernet",
 	},
@@ -4014,7 +4058,7 @@ static struct platform_device mvpp2_device = {
 
 static int __init mpp2_module_init(void)
 {
-	int ret;
+	int ret = 0;
 
 #ifdef CONFIG_MV_PP2_FPGA
 
@@ -4028,6 +4072,9 @@ static int __init mpp2_module_init(void)
 		pr_err("mvpp2: PCI card not found, driver not installed. rc=%d\n", ret);
 		return ret;
 	}
+
+	mvpp2_device.dev.dma_mask = kmalloc(sizeof(mvpp2_device.dev.dma_mask), GFP_KERNEL);
+
 	mvpp2_num_cos_queues=4;
 
 #endif

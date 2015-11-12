@@ -245,7 +245,7 @@ static inline void mvpp2_bm_hw_pool_create(struct mvpp2_hw *hw,
 	mvpp2_write(hw, MVPP2_BM_POOL_BASE_ADDR_REG(pool), lower_32_bits(pool_addr));
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 	mvpp2_write(hw, MVPP22_BM_POOL_BASE_ADDR_HIGH_REG,
-	(upper_32_bits(pool_addr)& MVPP22_ADDR_HIGH_MASK);
+	(upper_32_bits(pool_addr)& MVPP22_ADDR_HIGH_MASK));
 #endif
 	mvpp2_write(hw, MVPP2_BM_POOL_SIZE_REG(pool), size);
 
@@ -262,11 +262,11 @@ static inline void mvpp2_bm_pool_put(struct mvpp2_hw *hw, u32 pool,
 {
 
 /*TODO: Validate this is  correct CONFIG_XXX for (sk_buff *),   it is a kmem_cache address (YuvalC).*/
-#ifdef CONFIG_PHYS_ADDR_T_64BIT
+#ifdef CONFIG_64BIT /*CONFIG_PHYS_ADDR_T_64BIT*/
 	u32 val = 0;
-	val = (upper_32_bits((uintptr_t)buf_virt_addr) && MVPP22_ADDR_HIGH_MASK) << MVPP22_BM_VIRT_HIGH_RLS_OFFST;
+	val = (upper_32_bits((uintptr_t)buf_virt_addr) & MVPP22_ADDR_HIGH_MASK) << MVPP22_BM_VIRT_HIGH_RLS_OFFST;
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
-	val |= (upper_32_bits(buf_phys_addr) && MVPP22_ADDR_HIGH_MASK) << MVPP22_BM_PHY_HIGH_RLS_OFFSET;
+	val |= (upper_32_bits(buf_phys_addr) & MVPP22_ADDR_HIGH_MASK) << MVPP22_BM_PHY_HIGH_RLS_OFFSET;
 
 #endif
 	mvpp2_write(hw, MVPP22_BM_PHY_VIRT_HIGH_RLS_REG, val);
@@ -320,8 +320,9 @@ static inline void mvpp2_port_interrupts_disable(struct mvpp2_port *port)
 
 static inline void mvpp2_qvector_interrupt_enable(struct queue_vector *q_vec)
 {
-	struct mvpp2_port *port = q_vec->parent;
 #ifndef CONFIG_MV_PP2_FPGA
+	struct mvpp2_port *port = q_vec->parent;
+
 	mvpp2_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
 		    MVPP2_ISR_ENABLE_INTERRUPT(q_vec->sw_thread_mask));
 #endif

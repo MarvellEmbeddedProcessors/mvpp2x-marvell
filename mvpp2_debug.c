@@ -195,14 +195,14 @@ static void mvPp2RxQueueDetailedShow(struct mvpp2 *priv, struct mvpp2_rx_queue *
 		printk("%3d. desc=%p, status=%08x, data_size=%4d",
 			   i, rx_desc+i, rx_desc[i].status, rx_desc[i].data_size);
 		if (priv->pp2_version == PPV21) {
-			printk("buf_addr=%08x, buf_cookie=%08x",
+			printk("buf_addr=%lx, buf_cookie=%p",
 				   mvpp21_rxdesc_phys_addr_get(rx_desc),
-				   (u32)mvpp21_rxdesc_cookie_get(rx_desc));
+				   mvpp21_rxdesc_cookie_get(rx_desc));
 		}
 		else {
-			printk("buf_addr=%08x, buf_cookie=%08x",
+			printk("buf_addr=%lx, buf_cookie=%p",
 				   mvpp22_rxdesc_phys_addr_get(rx_desc),
-				   (u32)mvpp22_rxdesc_cookie_get(rx_desc));
+				   mvpp22_rxdesc_cookie_get(rx_desc));
 		}
 
 		printk("parser_info=%03x\n", rx_desc->rsrvd_parser);
@@ -237,10 +237,10 @@ void mvPp2RxqShow(struct mvpp2 *priv, int port, int rxq, int mode)
 
 	printk("size=%d, pkts_coal=%d, time_coal=%d\n",pp_rxq->size, pp_rxq->pkts_coal, pp_rxq->time_coal);
 
-	printk("first_virt_addr=%p, first_dma_addr=%x, next_rx_desc=%d, rxq_cccupied=%d, rxq_nonoccupied=%d\n",
+	printk("first_virt_addr=%p, first_dma_addr=%lx, next_rx_desc=%d, rxq_cccupied=%d, rxq_nonoccupied=%d\n",
 	pp_rxq->first_desc, MVPP2_DESCQ_MEM_ALIGN(pp_rxq->descs_phys), pp_rxq->next_desc_to_proc,
 	mvpp2_rxq_received(pp_port, pp_rxq->id), mvpp2_rxq_free(pp_port, pp_rxq->id));
-	printk("virt_mem_area_addr=%p, dma_mem_area_addr=%x\n", pp_rxq->desc_mem, pp_rxq->descs_phys);
+	printk("virt_mem_area_addr=%p, dma_mem_area_addr=%lx\n", pp_rxq->desc_mem, pp_rxq->descs_phys);
 
 	if (mode)
 		mvPp2RxQueueDetailedShow(priv, pp_rxq);
@@ -403,9 +403,9 @@ void mvPp2TxqShow(struct mvpp2 *priv, int port, int txq, int mode)
 
 	printk("physical_txq=%d, size=%d, pkts_coal=%d \n",pp_txq->id, pp_txq->size, pp_txq->pkts_coal);
 
-	printk("first_virt_addr=%p, first_dma_addr=%x, next_tx_desc=%d\n",
+	printk("first_virt_addr=%p, first_dma_addr=%lx, next_tx_desc=%d\n",
 		   pp_txq->first_desc, MVPP2_DESCQ_MEM_ALIGN(pp_txq->descs_phys), pp_txq->next_desc_to_proc);
-	printk("virt_mem_area_addr=%p, dma_mem_area_addr=%x\n", pp_txq->desc_mem, pp_txq->descs_phys);
+	printk("virt_mem_area_addr=%p, dma_mem_area_addr=%lx\n", pp_txq->desc_mem, pp_txq->descs_phys);
 
 	for_each_online_cpu(cpu) {
 		txq_pcpu = per_cpu_ptr(pp_txq->pcpu, cpu);

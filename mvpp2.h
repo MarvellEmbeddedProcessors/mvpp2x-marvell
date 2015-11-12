@@ -46,9 +46,9 @@
 
 #define PFX			MVPP2_DRIVER_NAME ": "
 
-#ifndef REDFINE_DEBUG_ONCE
+#ifndef REDEFINE_DEBUG_ONCE
 
-#define REDFINE_DEBUG_ONCE
+#define REDEFINE_DEBUG_ONCE
 #if defined(DEBUG) || defined(CONFIG_MVPP2_DEBUG)
 #undef DEBUG
 #define DEBUG	1
@@ -58,7 +58,7 @@
 #define VERBOSE	0
 #endif /*DEBUG||CONFIG_MVPP2_DEBUG*/
 
-#endif /*REDFINE_DEBUG_ONCE*/
+#endif /*REDEFINE_DEBUG_ONCE*/
 
 
 #if VERBOSE
@@ -185,7 +185,11 @@
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define MVPP2_PRINT_LINE()
-//#define MVPP2_PRINT_LINE()	pr_crit("Passed: %s:%d\n", __FILENAME__, __LINE__)
+//#define MVPP2_PRINT_LINE()	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
+
+#define MVPP2_PRINT_VAR(var) pr_crit("%s(%d): "#var"=0x%lx\n", __FILENAME__, __LINE__, var);
+#define MVPP2_PRINT_VAR_NAME(var,name) pr_crit("%s(%d): %s=0x%lx\n", __FILENAME__, __LINE__, name, var);
+
 
 
 /* Descriptor ring Macros */
@@ -432,7 +436,7 @@ struct mvpp2 {
 	enum mvppv2_version pp2_version; /* Redundant, consider to delete. (prevents extra pointer lookup from mvpp2x_platform_data) */
 
 	struct	mvpp2_hw hw;
-	const struct mvpp2x_platform_data *pp2xdata;
+	struct mvpp2x_platform_data *pp2xdata;
 
 	u16 cpu_map; /* Bitmap of the participating cpu's */
 
@@ -553,6 +557,10 @@ struct mvpp2x_platform_data {
 	void (*mvpp2x_port_queue_vectors_init)(struct mvpp2_port *);
 	void (*mvpp2x_port_isr_rx_group_cfg)(struct mvpp2_port *);
 	struct pp2x_hw_params hw;
+#ifdef CONFIG_64BIT
+	uintptr_t skb_base_addr;
+	uintptr_t skb_base_mask;
+#endif
 };
 
 
