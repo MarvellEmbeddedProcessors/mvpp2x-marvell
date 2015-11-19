@@ -32,6 +32,32 @@
 #include <linux/skbuff.h>
 #include <linux/platform_device.h>
 
+/* Macro for alignment up. For example, MV_ALIGN_UP(0x0330, 0x20) = 0x0340   */
+#define MV_ALIGN_UP(number, align)                                          \
+(((number) & ((align) - 1)) ? (((number) + (align)) & ~((align)-1)) : (number))
+
+/* Macro for alignment down. For example, MV_ALIGN_UP(0x0330, 0x20) = 0x0320 */
+#define MV_ALIGN_DOWN(number, align) ((number) & ~((align)-1))
+/* CPU architecture dependent 32, 16, 8 bit read/write IO addresses */
+#define MV_MEMIO32_WRITE(addr, data)    \
+	((*((volatile unsigned int *)(addr))) = ((unsigned int)(data)))
+
+#define MV_MEMIO32_READ(addr)           \
+	((*((volatile unsigned int *)(addr))))
+
+#define MV_MEMIO16_WRITE(addr, data)    \
+	((*((volatile unsigned short *)(addr))) = ((unsigned short)(data)))
+
+#define MV_MEMIO16_READ(addr)           \
+	((*((volatile unsigned short *)(addr))))
+
+#define MV_MEMIO8_WRITE(addr, data)     \
+	((*((volatile unsigned char *)(addr))) = ((unsigned char)(data)))
+
+#define MV_MEMIO8_READ(addr)            \
+	((*((volatile unsigned char *)(addr))))
+
+
 void mvpp2_print_reg(struct mvpp2_hw *hw, unsigned int reg_addr, char *reg_name);
 void mvpp2_print_reg2(struct mvpp2_hw *hw, unsigned int reg_addr, char *reg_name, unsigned int index);
 
