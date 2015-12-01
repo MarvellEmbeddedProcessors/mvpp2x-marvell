@@ -30,7 +30,7 @@ ccflags-y += -I${KDIR}/include
 ccflags-y += -DDEBUG -DCONFIG_MV_PP2_FPGA -DARMADA_390
 
 mvpp2x_sysfs-y := mvpp2_sysfs_main.o mvpp2_prs_high_sysfs.o mvpp2_prs_low_sysfs.o mvpp2_cls_sysfs.o mvpp2_cls2_sysfs.o
-mvpp2x_sysfs-y += mv_eth_bm_sysfs.o mv_eth_rx_sysfs.o mv_eth_tx_sysfs.o mvpp2_rss_sysfs.o mvpp2_cos_sysfs.o
+mvpp2x_sysfs-y += mv_eth_bm_sysfs.o mv_eth_rx_sysfs.o mv_eth_tx_sysfs.o mvpp2_rss_sysfs.o mvpp2_cos_sysfs.o mvpp2_debug_sysfs.o
 
 
 #PLAT_DIR 	:= $(MV_EBU_NET_DIR)

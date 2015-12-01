@@ -97,5 +97,6 @@ int mvpp2_wrap_cos_dflt_value_set(struct mvpp2_port *port, int cos_value);
 int mvpp2_wrap_cos_dflt_value_get(struct mvpp2_port *port);
 int mvpp22_wrap_rss_mode_set(struct mvpp2_port *port, int rss_mode);
 int mvpp22_wrap_rss_dflt_cpu_set(struct mvpp2_port *port, int default_cpu);
+int mvpp2_port_bind_cpu_set(struct mvpp2_port *port, u8 bind_cpu);
 
 #endif /* _MVPP2_DEBUG_H_ */

@@ -1044,7 +1044,7 @@ EXPORT_SYMBOL(mvpp22_wrap_rss_dflt_cpu_set);
 int mvpp2_port_bind_cpu_set(struct mvpp2_port *port, u8 bind_cpu)
 {
 	int ret = 0;
-	u8 bound_cpu_first_rxq = mvpp2_bound_cpu_first_rxq_calc(port);
+	u8 bound_cpu_first_rxq;
 
 	if (port->priv->pp2_cfg.rss_cfg.rss_en) {
 		netdev_err(port->dev, "cannot bind cpu to port when rss is enabled\n");
@@ -1058,9 +1058,10 @@ int mvpp2_port_bind_cpu_set(struct mvpp2_port *port, u8 bind_cpu)
 
 	/* Check original cpu and new cpu is same or not */
 	if (bind_cpu != ((port->priv->pp2_cfg.rx_cpu_map >> (port->id * 4)) & 0xF)) {
-		ret = mvpp2_cls_c2_rule_set(port, bound_cpu_first_rxq);
 		port->priv->pp2_cfg.rx_cpu_map &= (~(0xF << (port->id * 4)));
 		port->priv->pp2_cfg.rx_cpu_map |= ((bind_cpu & 0xF) << (port->id * 4));
+		bound_cpu_first_rxq = mvpp2_bound_cpu_first_rxq_calc(port);
+		ret = mvpp2_cls_c2_rule_set(port, bound_cpu_first_rxq);
 	}
 
 	return ret;

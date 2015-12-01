@@ -111,4 +111,7 @@ int mv_pp2_rss_sysfs_exit(struct kobject *pp2_kobj);
 int mv_pp2_cos_sysfs_init(struct kobject *pp2_kobj);
 int mv_pp2_cos_sysfs_exit(struct kobject *pp2_kobj);
 
+int mv_pp2_debug_sysfs_init(struct kobject *pp2_kobj);
+int mv_pp2_debug_sysfs_exit(struct kobject *pp2_kobj);
+
 #endif /* __mv_eth_sysfs_h__ */
