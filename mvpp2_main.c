@@ -50,18 +50,12 @@
 #include <uapi/linux/ppp_defs.h>
 #include <net/ip.h>
 #include <net/ipv6.h>
-
 #ifdef CONFIG_MV_PP2_FPGA
 #include <linux/pci.h>
 #endif
-
-
 #include "mvpp2.h"
 #include "mvpp2_hw.h"
 #include "mvpp2_debug.h"
-
-
-
 
 /* Declaractions */
 u8 mvpp2_num_cos_queues = 4;
@@ -127,7 +121,7 @@ MODULE_PARM_DESC(buffer_scaling, "Buffer scaling (TBD)");
 /*TODO:  Below module_params will not go to ML. Created for testing. */
 
 module_param(port_cpu_bind_map, uint, S_IRUGO);
-MODULE_PARM_DESC(port_cpu_bind_map, "Set default port-to-cpu binding, nibble for each port. Relevant when queue_mode=single & rss is disabled");
+MODULE_PARM_DESC(port_cpu_bind_map, "Set default port-to-cpu binding, nibble for each port. Relevant when queue_mode=multi-mode & rss is disabled");
 
 module_param(first_bm_pool, byte, S_IRUGO);
 MODULE_PARM_DESC(first_bm_pool, "First used buffer pool (0-11)");
@@ -1555,7 +1549,7 @@ int mvpp22_rss_rxfh_indir_set(struct mvpp2_port *port)
 	u32 cos_width = 0, cpu_width = 0, cpu_id = 0;
 	int rss_tbl_needed = port->priv->pp2_cfg.cos_cfg.num_cos_queues;
 
-	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
 		return -1;
 
 	memset(&rss_entry, 0, sizeof(struct mvpp22_rss_entry));
@@ -1601,7 +1595,7 @@ void mvpp22_rss_enable(struct mvpp2_port *port, bool en)
 
 	bound_cpu_first_rxq  = mvpp2_bound_cpu_first_rxq_calc(port);
 
-	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_MULTI_MODE) {
+	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_MULTI_MODE) {
 		mvpp22_rss_c2_enable(port, en);
 		if (en) {
 			if (mvpp22_rss_default_cpu_set(port, port->priv->pp2_cfg.rss_cfg.dflt_cpu))
@@ -1626,7 +1620,7 @@ int mvpp22_rss_mode_set(struct mvpp2_port *port, int rss_mode)
 	int data[3];
 	struct mvpp2_hw *hw = &(port->priv->hw);
 
-	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
 		return -1;
 
 	for (index = 0; index < (MVPP2_PRS_FL_LAST - MVPP2_PRS_FL_START); index++) {
@@ -1691,7 +1685,7 @@ int mvpp22_rss_default_cpu_set(struct mvpp2_port *port, int default_cpu)
 	u8 index, queue, q_cpu_mask;
 	u8 cpu_width = 0, cos_width = 0;
 
-	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
 		return -1;
 
 	/* Calculate width */
@@ -2499,7 +2493,7 @@ static int mvpp2_open(struct net_device *dev)
 	}
 
 	/* RSS related config */
-	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_MULTI_MODE) {
+	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_MULTI_MODE) {
 		/* Set RSS mode */
 		err = mvpp22_rss_mode_set(port, port->priv->pp2_cfg.rss_cfg.rss_mode);
 		if (err) {
@@ -3617,7 +3611,6 @@ static void mvpp2_init_config(struct mvpp2_param_config *pp2_cfg, u32 cell_index
 	pp2_cfg->cos_cfg.pri_map = pri_map;
 
 	pp2_cfg->rss_cfg.dflt_cpu = default_cpu;
-	pp2_cfg->rss_cfg.queue_mode = mvpp2_queue_mode; /*TODO : This param is redundant, reduce from rss */
 	/* RSS is disabled as default, which can be update in running time */
 	pp2_cfg->rss_cfg.rss_en = 0;
 	pp2_cfg->rss_cfg.rss_mode = rss_mode;

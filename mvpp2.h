@@ -410,13 +410,10 @@ struct mvpp2_cos {
 };
 
 struct mvpp2_rss {
-	enum mvpp2_queue_distribution_mode queue_mode;//single/multi mode
 	u8 rss_mode; /*UDP packet */
 	u8 dflt_cpu; /*non-IP packet */
 	u8 rss_en;
 };
-
-
 
 struct mvpp2_param_config {
 	struct mvpp2_cos cos_cfg;
@@ -430,10 +427,8 @@ struct mvpp2_param_config {
 	u32 rx_cpu_map; /* The CPU that port bind, each port has a nibble indexed by port_id, nibble value is CPU id*/
 };
 
-
 /* Shared Packet Processor resources */
 struct mvpp2 {
-
 	enum mvppv2_version pp2_version; /* Redundant, consider to delete. (prevents extra pointer lookup from mvpp2x_platform_data) */
 
 	struct	mvpp2_hw hw;

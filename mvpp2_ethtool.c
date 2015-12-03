@@ -357,7 +357,7 @@ static int mvpp2_ethtool_get_rxfh_indir(struct net_device *dev, u32 *indir)
 	size_t copy_size;
 	struct mvpp2_port *port = netdev_priv(dev);
 
-	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
 		return -EOPNOTSUPP;
 
 	copy_size = ARRAY_SIZE(port->priv->rx_indir_table);
@@ -374,7 +374,7 @@ static int mvpp2_ethtool_set_rxfh_indir(struct net_device *dev, const u32 *indir
 	int err;
 	struct mvpp2_port *port = netdev_priv(dev);
 
-	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
 		return -EOPNOTSUPP;
 
 	for (i = 0; i < ARRAY_SIZE(port->priv->rx_indir_table); i++)
@@ -393,7 +393,7 @@ static int mvpp2_ethtool_get_rxnfc(struct net_device *dev, struct ethtool_rxnfc 
 {
 	struct mvpp2_port *port = netdev_priv(dev);
 
-	if (port->priv->pp2_cfg.rss_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
 		return -EOPNOTSUPP;
 
 	if (info->cmd == ETHTOOL_GRXRINGS) {
