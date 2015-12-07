@@ -86,7 +86,11 @@ static ssize_t mv_debug_store(struct device *dev,
 
 	if (!strcmp(name, "bind_cpu")) {
 		mvpp2_port_bind_cpu_set(port, b);
-	} else {
+	}
+	else if (!strcmp(name, "debug_param")) {
+		mvpp2_debug_param_set(b);
+	}
+	else {
 		err = 1;
 		printk("%s: illegal operation <%s>\n", __func__, attr->attr.name);
 	}
@@ -99,10 +103,12 @@ static ssize_t mv_debug_store(struct device *dev,
 
 static DEVICE_ATTR(help,	S_IRUSR, mv_debug_show, NULL);
 static DEVICE_ATTR(bind_cpu,	S_IWUSR, NULL, mv_debug_store);
+static DEVICE_ATTR(debug_param,	S_IWUSR, NULL, mv_debug_store);
 
 static struct attribute *debug_attrs[] = {
 	&dev_attr_help.attr,
 	&dev_attr_bind_cpu.attr,
+	&dev_attr_debug_param.attr,
 	NULL
 };
 

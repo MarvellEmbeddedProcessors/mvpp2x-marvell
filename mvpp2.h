@@ -46,6 +46,21 @@
 
 #define PFX			MVPP2_DRIVER_NAME ": "
 
+#ifdef CONFIG_MV_PP2_PALLADIUM
+#define PALAD(x)	x
+#else
+#define PALAD(x)
+#endif
+
+#if defined(CONFIG_MV_PP2_PALLADIUM)
+/*These are the indexes of MVPP2_PRS_FL_IP4_UNTAG_NO_OPV4_OPTIONS/MVPP2_PRS_FL_NON_IP_UNTAG
+  in mvpp2_prs_flow_id_array[] */
+#define MVPP2_PRS_FL_IP4_UNTAG_NO_OPV4_OPTIONS	40
+#define MVPP2_PRS_FL_NON_IP_UNTAG_INDEX		50
+#endif
+
+
+
 #ifndef REDEFINE_DEBUG_ONCE
 
 #define REDEFINE_DEBUG_ONCE
@@ -185,7 +200,10 @@
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define MVPP2_PRINT_LINE()
+#define MVPP2_PRINT_2LINE()
+//#define MVPP2_PRINT_2LINE()	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
 //#define MVPP2_PRINT_LINE()	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
+
 
 #define MVPP2_PRINT_VAR(var) pr_crit("%s(%d): "#var"=0x%lx\n", __FILENAME__, __LINE__, var);
 #define MVPP2_PRINT_VAR_NAME(var,name) pr_crit("%s(%d): %s=0x%lx\n", __FILENAME__, __LINE__, name, var);
@@ -216,17 +234,22 @@
 #define MVPP2_BM_POOL_PTR_ALIGN		128
 
 
+#ifdef CONFIG_MV_PP2_PALLADIUM
+#define MVPP2_BM_SHORT_BUF_NUM		256
+#define MVPP2_BM_LONG_BUF_NUM		256
+#define MVPP2_BM_JUMBO_BUF_NUM		256
+#else
 #define MVPP2_BM_SHORT_BUF_NUM		2048
 #define MVPP2_BM_LONG_BUF_NUM		1024
 #define MVPP2_BM_JUMBO_BUF_NUM		512
-
+#endif
 
 #define MVPP2_ALL_BUFS			0
 
 
 #define RX_TOTAL_SIZE(buf_size)		((buf_size) + MV_ETH_SKB_SHINFO_SIZE)
 #define RX_TRUE_SIZE(total_size)	roundup_pow_of_two(total_size)
-
+extern  u32 debug_param;
 
 
 enum mvppv2_version {
@@ -470,6 +493,9 @@ struct mvpp2_pcpu_stats {
 /* Per-CPU port control */
 struct mvpp2_port_pcpu {
 	struct hrtimer tx_done_timer;
+#ifdef CONFIG_MV_PP2_PALLADIUM
+	struct timer_list slow_tx_done_timer;
+#endif
 	bool timer_scheduled;
 	/* Tasklet for egress finalization */
 	struct tasklet_struct tx_done_tasklet;

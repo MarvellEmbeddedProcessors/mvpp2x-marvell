@@ -123,7 +123,7 @@ static inline int mvpp2_rxq_free(struct mvpp2_port *port, int rxq_id)
 {
 	u32 val = mvpp2_read(&(port->priv->hw), MVPP2_RXQ_STATUS_REG(rxq_id));
 
-	return val & MVPP2_RXQ_NON_OCCUPIED_MASK;
+	return (val & MVPP2_RXQ_NON_OCCUPIED_MASK >> MVPP2_RXQ_NON_OCCUPIED_OFFSET);
 }
 
 
@@ -299,7 +299,7 @@ static inline void mvpp2_port_interrupts_enable(struct mvpp2_port *port)
 
 	for (i=0;i<port->num_qvector;i++)
 		sw_thread_mask |= q_vec[i].sw_thread_mask;
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	mvpp2_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
 		    MVPP2_ISR_ENABLE_INTERRUPT(sw_thread_mask));
 #endif
@@ -320,7 +320,7 @@ static inline void mvpp2_port_interrupts_disable(struct mvpp2_port *port)
 
 static inline void mvpp2_qvector_interrupt_enable(struct queue_vector *q_vec)
 {
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	struct mvpp2_port *port = q_vec->parent;
 
 	mvpp2_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),

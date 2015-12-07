@@ -207,7 +207,11 @@ static int mvpp2_ethtool_get_settings(struct net_device *dev,
 
 	if (!port->phy_dev)
 		return -ENODEV;
+#if !defined(CONFIG_MV_PP2_PALLADIUM)
 	return phy_ethtool_gset(port->phy_dev, cmd);
+#else
+	return 0;
+#endif
 }
 
 /* Set settings (phy address, speed) for ethtools */
@@ -218,7 +222,11 @@ static int mvpp2_ethtool_set_settings(struct net_device *dev,
 
 	if (!port->phy_dev)
 		return -ENODEV;
+#if !defined(CONFIG_MV_PP2_PALLADIUM)
 	return phy_ethtool_sset(port->phy_dev, cmd);
+#else
+	return 0;
+#endif
 }
 
 /* Set interrupt coalescing for ethtools */

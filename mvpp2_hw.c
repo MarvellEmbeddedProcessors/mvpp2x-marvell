@@ -72,6 +72,7 @@ void mvpp2_write(struct mvpp2_hw *hw, u32 offset, u32 data)
 	if (smp_processor_id() != 0)
 		pr_emerg("mvpp2_write(0x%x) from CPU%d, caller is %pS !!\n", offset, smp_processor_id(), __builtin_return_address(0));
 #endif
+#if DEBUG && !defined(CONFIG_MV_PP2_PALLADIUM)
 	for (i=0;i<MVPP2_REG_BUF_SIZE;i++) {
 		if (last_used[i] == reg_ptr)
 			break;
@@ -84,6 +85,7 @@ void mvpp2_write(struct mvpp2_hw *hw, u32 offset, u32 data)
 	} else {
 		//pr_info("mvpp2_write(%d)=%d , caller %pS\n", offset, data, __builtin_return_address(0));
 	}
+#endif
 
 	writel(data, hw->cpu_base[smp_processor_id()] + offset);
 }
@@ -102,6 +104,7 @@ u32 mvpp2_read(struct mvpp2_hw *hw, u32 offset)
 		pr_emerg("mvpp2_read(0x%x) from CPU%d, caller is %pS !!\n", offset, smp_processor_id(), __builtin_return_address(0));
 #endif
 	val = readl(reg_ptr);
+#if DEBUG && !defined(CONFIG_MV_PP2_PALLADIUM)
 	for (i=0;i<MVPP2_REG_BUF_SIZE;i++) {
 		if (last_used[i] == reg_ptr)
 			break;
@@ -114,6 +117,7 @@ u32 mvpp2_read(struct mvpp2_hw *hw, u32 offset)
 	} else {
 		//pr_info("mvpp2_read(%d)=%d , caller %pS\n", offset, val, __builtin_return_address(0));
 	}
+#endif
 
 	return(val);
 }
@@ -906,6 +910,7 @@ static int mvpp2_prs_tcam_first_free(struct mvpp2_hw *hw, unsigned char start,
 {
 	int tid;
 
+	//pr_crit("mvpp2_prs_tcam_first_free start=%d, end=%d, caller=%pS\n", start, end, __builtin_return_address(0));
 	if (start > end)
 		swap(start, end);
 
@@ -916,7 +921,7 @@ static int mvpp2_prs_tcam_first_free(struct mvpp2_hw *hw, unsigned char start,
 		if (!hw->prs_shadow[tid].valid)
 			return tid;
 	}
-
+	pr_crit("Out of TCAM Entries !!: %s(%d)\n", __FILENAME__, __LINE__);
 	return -EINVAL;
 }
 
@@ -1685,6 +1690,8 @@ static void mvpp2_prs_def_flow_init(struct mvpp2_hw *hw)
 
 		/* Update shadow table and hw entry */
 		mvpp2_prs_shadow_set(hw, pe.index, MVPP2_PRS_LU_FLOWS);
+		
+		//pr_crit("mvpp2_prs_def_flow_init: port(%d), index(%d) \n", port, pe.index);
 		mvpp2_prs_hw_write(hw, &pe);
 	}
 }
@@ -1738,8 +1745,11 @@ static void mvpp2_prs_mac_init(struct mvpp2_hw *hw)
 	/* place holders only - no ports */
 	mvpp2_prs_mac_drop_all_set(hw, 0, false);
 	mvpp2_prs_mac_promisc_set(hw, 0, false);
+
+#if !defined(CONFIG_MV_PP2_PALLADIUM)
 	mvpp2_prs_mac_multi_set(hw, MVPP2_PE_MAC_MC_ALL, 0, false);
 	mvpp2_prs_mac_multi_set(hw, MVPP2_PE_MAC_MC_IP6, 0, false);
+#endif
 }
 
 /* Set default entries for various types of dsa packets */
@@ -1747,6 +1757,7 @@ static void mvpp2_prs_dsa_init(struct mvpp2_hw *hw)
 {
 	struct mvpp2_prs_entry pe;
 
+#if !defined(CONFIG_MV_PP2_PALLADIUM)
 	/* None tagged EDSA entry - place holder */
 	mvpp2_prs_dsa_tag_set(hw, 0, false, MVPP2_PRS_UNTAGGED,
 			      MVPP2_PRS_EDSA);
@@ -1776,6 +1787,7 @@ static void mvpp2_prs_dsa_init(struct mvpp2_hw *hw)
 	/* Tagged DSA ethertype entry */
 	mvpp2_prs_dsa_tag_ethertype_set(hw, 0, true,
 					MVPP2_PRS_TAGGED, MVPP2_PRS_DSA);
+#endif
 
 	/* Set default entry, in case DSA or EDSA tag not found */
 	memset(&pe, 0, sizeof(struct mvpp2_prs_entry));
@@ -1802,6 +1814,7 @@ static int mvpp2_prs_etype_init(struct mvpp2_hw *hw)
 	struct mvpp2_prs_entry pe;
 	int tid;
 
+#if !defined(CONFIG_MV_PP2_PALLADIUM)
 	/* Ethertype: PPPoE */
 	tid = mvpp2_prs_tcam_first_free(hw, MVPP2_PE_FIRST_FREE_TID,
 					MVPP2_PE_LAST_FREE_TID);
@@ -1828,6 +1841,7 @@ static int mvpp2_prs_etype_init(struct mvpp2_hw *hw)
 				MVPP2_PRS_RI_PPPOE_MASK);
 	mvpp2_prs_hw_write(hw, &pe);
 
+#endif
 	/* Ethertype: ARP */
 	tid = mvpp2_prs_tcam_first_free(hw, MVPP2_PE_FIRST_FREE_TID,
 					MVPP2_PE_LAST_FREE_TID);
@@ -1858,6 +1872,7 @@ static int mvpp2_prs_etype_init(struct mvpp2_hw *hw)
 				MVPP2_PRS_RI_L3_PROTO_MASK);
 	mvpp2_prs_hw_write(hw, &pe);
 
+#if !defined(CONFIG_MV_PP2_PALLADIUM)
 	/* Ethertype: LBTD */
 	tid = mvpp2_prs_tcam_first_free(hw, MVPP2_PE_FIRST_FREE_TID,
 					MVPP2_PE_LAST_FREE_TID);
@@ -1891,6 +1906,7 @@ static int mvpp2_prs_etype_init(struct mvpp2_hw *hw)
 				MVPP2_PRS_RI_CPU_CODE_MASK |
 				MVPP2_PRS_RI_UDF3_MASK);
 	mvpp2_prs_hw_write(hw, &pe);
+#endif
 
 	/* Ethertype: IPv4 without options */
 	tid = mvpp2_prs_tcam_first_free(hw, MVPP2_PE_FIRST_FREE_TID,
@@ -1956,6 +1972,7 @@ static int mvpp2_prs_etype_init(struct mvpp2_hw *hw)
 	mvpp2_prs_shadow_ri_set(hw, pe.index, MVPP2_PRS_RI_L3_IP4_OPT,
 				MVPP2_PRS_RI_L3_PROTO_MASK);
 	mvpp2_prs_hw_write(hw, &pe);
+#if !defined(CONFIG_MV_PP2_PALLADIUM)
 
 	/* Ethertype: IPv6 without options */
 	tid = mvpp2_prs_tcam_first_free(hw, MVPP2_PE_FIRST_FREE_TID,
@@ -2013,7 +2030,7 @@ static int mvpp2_prs_etype_init(struct mvpp2_hw *hw)
 	mvpp2_prs_shadow_ri_set(hw, pe.index, MVPP2_PRS_RI_L3_UN,
 				MVPP2_PRS_RI_L3_PROTO_MASK);
 	mvpp2_prs_hw_write(hw, &pe);
-
+#endif
 	return 0;
 }
 
@@ -2034,7 +2051,7 @@ static int mvpp2_prs_vlan_init(struct platform_device *pdev, struct mvpp2_hw *hw
 					      GFP_KERNEL);
 	if (!hw->prs_double_vlans)
 		return -ENOMEM;
-
+#if !defined(CONFIG_MV_PP2_PALLADIUM)
 	/* Double VLAN: 0x8100, 0x88A8 */
 	err = mvpp2_prs_double_vlan_add(hw, ETH_P_8021Q, ETH_P_8021AD,
 					MVPP2_PRS_PORT_MASK);
@@ -2078,7 +2095,7 @@ static int mvpp2_prs_vlan_init(struct platform_device *pdev, struct mvpp2_hw *hw
 	/* Update shadow table and hw entry */
 	mvpp2_prs_shadow_set(hw, pe.index, MVPP2_PRS_LU_VLAN);
 	mvpp2_prs_hw_write(hw, &pe);
-
+#endif
 	/* Set default vlan none entry */
 	memset(&pe, 0, sizeof(struct mvpp2_prs_entry));
 	mvpp2_prs_tcam_lu_set(&pe, MVPP2_PRS_LU_VLAN);
@@ -2218,11 +2235,15 @@ static int mvpp2_prs_ip4_init(struct mvpp2_hw *hw)
 	/* Set entries for TCP, UDP and IGMP over IPv4 */
 	err = mvpp2_prs_ip4_proto(hw, IPPROTO_TCP, MVPP2_PRS_RI_L4_TCP,
 				  MVPP2_PRS_RI_L4_PROTO_MASK);
+
+	PALAD(MVPP2_PRINT_LINE());
 	if (err)
 		return err;
 
 	err = mvpp2_prs_ip4_proto(hw, IPPROTO_UDP, MVPP2_PRS_RI_L4_UDP,
 				  MVPP2_PRS_RI_L4_PROTO_MASK);
+
+	PALAD(MVPP2_PRINT_LINE());
 	if (err)
 		return err;
 
@@ -2231,16 +2252,22 @@ static int mvpp2_prs_ip4_init(struct mvpp2_hw *hw)
 				  MVPP2_PRS_RI_UDF3_RX_SPECIAL,
 				  MVPP2_PRS_RI_CPU_CODE_MASK |
 				  MVPP2_PRS_RI_UDF3_MASK);
+
+	PALAD(MVPP2_PRINT_LINE());
 	if (err)
 		return err;
 
 	/* IPv4 Broadcast */
 	err = mvpp2_prs_ip4_cast(hw, MVPP2_PRS_L3_BROAD_CAST);
+
+	PALAD(MVPP2_PRINT_LINE());
 	if (err)
 		return err;
 
 	/* IPv4 Multicast */
 	err = mvpp2_prs_ip4_cast(hw, MVPP2_PRS_L3_MULTI_CAST);
+
+	PALAD(MVPP2_PRINT_LINE());
 	if (err)
 		return err;
 
@@ -2288,6 +2315,8 @@ static int mvpp2_prs_ip4_init(struct mvpp2_hw *hw)
 	/* Update shadow table and hw entry */
 	mvpp2_prs_shadow_set(hw, pe.index, MVPP2_PRS_LU_IP4);
 	mvpp2_prs_hw_write(hw, &pe);
+
+	PALAD(MVPP2_PRINT_LINE());
 
 	return 0;
 }
@@ -2711,6 +2740,8 @@ int mvpp2_prs_def_flow(struct mvpp2_port *port)
 
 		/* Update shadow table */
 		mvpp2_prs_shadow_set(hw, pe->index, MVPP2_PRS_LU_FLOWS);
+
+		//pr_crit("mvpp2_prs_def_flow: index(%d) port->id\n", pe->index, port->id);
 	}
 
 	mvpp2_prs_tcam_port_map_set(pe, (1 << port->id));
@@ -2739,7 +2770,7 @@ int mvpp2_prs_flow_id_gen(struct mvpp2_port *port, u32 flowId, u32 res, u32 resM
 		/* Go through the all entires from last to first */
 		tid = mvpp2_prs_tcam_first_free(hw,
 						MVPP2_PE_LAST_FREE_TID,
-					       MVPP2_PE_FIRST_FREE_TID);
+					        MVPP2_PE_FIRST_FREE_TID);
 		if (tid < 0) {
 			kfree(pe);
 			return tid;
@@ -2767,10 +2798,12 @@ int mvpp2_prs_flow_id_gen(struct mvpp2_port *port, u32 flowId, u32 res, u32 resM
 	return 0;
 }
 
+
 int mvpp2_prs_flow_set(struct mvpp2_port *port)
 {
 	int index, ret;
 
+#if !defined(CONFIG_MV_PP2_PALLADIUM)
 	for (index = 0; index < MVPP2_PRS_FL_TCAM_NUM; index++) {
 		ret = mvpp2_prs_flow_id_gen(port,
 					    mvpp2_prs_flow_id_array[index].flow_id,
@@ -2779,6 +2812,31 @@ int mvpp2_prs_flow_set(struct mvpp2_port *port)
 		if (ret)
 			return ret;
 	}
+#else
+
+	index = MVPP2_PRS_FL_IP4_UNTAG_NO_OPV4_OPTIONS;
+	ret = mvpp2_prs_flow_id_gen(port,
+				    mvpp2_prs_flow_id_array[index].flow_id,
+				    mvpp2_prs_flow_id_array[index].prs_result.ri,
+				    mvpp2_prs_flow_id_array[index].prs_result.ri_mask);
+	if (ret)
+		return ret;
+
+	MVPP2_PRINT_LINE();
+
+
+	index = MVPP2_PRS_FL_NON_IP_UNTAG_INDEX;
+	ret = mvpp2_prs_flow_id_gen(port,
+				    mvpp2_prs_flow_id_array[index].flow_id,
+				    mvpp2_prs_flow_id_array[index].prs_result.ri,
+				    mvpp2_prs_flow_id_array[index].prs_result.ri_mask);
+	if (ret)
+		return ret;
+
+	MVPP2_PRINT_LINE();
+
+#endif
+
 
 	return 0;
 }
@@ -3041,6 +3099,7 @@ void mvpp2_cls_flow_tbl_config(struct mvpp2_hw *hw)
 	struct mvpp2_cls_flow_entry fe;
 
 	for (lkpid = MVPP2_PRS_FL_START; lkpid < MVPP2_PRS_FL_LAST; lkpid++) {
+		PALAD(MVPP2_PRINT_LINE());
 		/* Get lookup id attribute */
 		lkpid_attr = mvpp2_prs_flow_id_attr_get(lkpid);
 		/* Default rss hash is based on 5T */
@@ -3161,6 +3220,7 @@ void mvpp2_cls_lookup_tbl_config(struct mvpp2_hw *hw)
 	mvpp2_cls_sw_lkp_en_set(&le, 1);
 
 	for (index = 0; index < (MVPP2_PRS_FL_LAST - MVPP2_PRS_FL_START); index++) {
+		PALAD(MVPP2_PRINT_LINE());
 		data[0] = MVPP2_FLOW_TBL_SIZE;
 		data[1] = MVPP2_FLOW_TBL_SIZE;
 		data[2] = MVPP2_FLOW_TBL_SIZE;
@@ -3201,17 +3261,21 @@ int mvpp2_cls_init(struct platform_device *pdev, struct mvpp2_hw *hw)
 
 	/* Enable classifier */
 	mvpp2_write(hw, MVPP2_CLS_MODE_REG, MVPP2_CLS_MODE_ACTIVE_MASK);
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Clear classifier flow table */
 	memset(&fe.data, 0, MVPP2_CLS_FLOWS_TBL_DATA_WORDS);
 	for (index = 0; index < MVPP2_CLS_FLOWS_TBL_SIZE; index++) {
+		PALAD(MVPP2_PRINT_LINE());
 		fe.index = index;
 		mvpp2_cls_flow_write(hw, &fe);
 	}
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Clear classifier lookup table */
 	le.data = 0;
 	for (index = 0; index < MVPP2_CLS_LKP_TBL_SIZE; index++) {
+		PALAD(MVPP2_PRINT_LINE());
 		le.lkpid = index;
 		le.way = 0;
 		mvpp2_cls_lookup_write(hw, &le);
@@ -3219,26 +3283,35 @@ int mvpp2_cls_init(struct platform_device *pdev, struct mvpp2_hw *hw)
 		le.way = 1;
 		mvpp2_cls_lookup_write(hw, &le);
 	}
+	PALAD(MVPP2_PRINT_LINE());
 
 	hw->cls_shadow = devm_kcalloc(&pdev->dev, 1, sizeof(struct mvpp2_cls_shadow), GFP_KERNEL);
 	if (!hw->cls_shadow)
 		return -ENOMEM;
+	PALAD(MVPP2_PRINT_LINE());
 
 	hw->cls_shadow->flow_info = devm_kcalloc (&pdev->dev, (MVPP2_PRS_FL_LAST - MVPP2_PRS_FL_START),
 					sizeof(struct mvpp2_cls_flow_info),
 					GFP_KERNEL);
 	if (!hw->cls_shadow->flow_info)
 		return -ENOMEM;
+	MVPP2_PRINT_LINE();
+
 	/* Start from entry 1 to allocate flow table */
 	hw->cls_shadow->flow_free_start = 1;
 	for (index = 0; index < (MVPP2_PRS_FL_LAST - MVPP2_PRS_FL_START); index++)
 		hw->cls_shadow->flow_info[index].lkpid = index + MVPP2_PRS_FL_START;
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Init flow table */
 	mvpp2_cls_flow_tbl_config(hw);
 
+	PALAD(MVPP2_PRINT_LINE());
+
 	/* Init lookup table */
 	mvpp2_cls_lookup_tbl_config(hw);
+
+	PALAD(MVPP2_PRINT_LINE());
 
 	return 0;
 }
@@ -3412,6 +3485,7 @@ void mvpp2_tx_done_time_coal_set(struct mvpp2_port *port, u32 usec)
 /* Change maximum receive size of the port */
 void mvpp2_gmac_max_rx_size_set(struct mvpp2_port *port)
 {
+#ifndef CONFIG_MV_PP2_PALLADIUM
 	u32 val;
 
 	val = readl(port->base + MVPP2_GMAC_CTRL_0_REG);
@@ -3419,6 +3493,7 @@ void mvpp2_gmac_max_rx_size_set(struct mvpp2_port *port)
 	val |= (((port->pkt_size - MVPP2_MH_SIZE) / 2) <<
 		    MVPP2_GMAC_MAX_RX_SIZE_OFFS);
 	writel(val, port->base + MVPP2_GMAC_CTRL_0_REG);
+#endif
 }
 
 
@@ -3621,6 +3696,7 @@ void mvpp2_rxq_offset_set(struct mvpp2_port *port,
 void mvpp2_port_mii_set(struct mvpp2_port *port)
 {
 	u32 val;
+#ifndef CONFIG_MV_PP2_PALLADIUM
 
 	val = readl(port->base + MVPP2_GMAC_CTRL_2_REG);
 
@@ -3635,49 +3711,64 @@ void mvpp2_port_mii_set(struct mvpp2_port *port)
 	}
 
 	writel(val, port->base + MVPP2_GMAC_CTRL_2_REG);
+#endif
+
 }
 
 void mvpp2_port_fc_adv_enable(struct mvpp2_port *port)
 {
 	u32 val;
+#ifndef CONFIG_MV_PP2_PALLADIUM
 
 	val = readl(port->base + MVPP2_GMAC_AUTONEG_CONFIG);
 	val |= MVPP2_GMAC_FC_ADV_EN;
 	writel(val, port->base + MVPP2_GMAC_AUTONEG_CONFIG);
+#endif
 }
 
 void mvpp2_port_enable(struct mvpp2_port *port)
 {
+#ifndef CONFIG_MV_PP2_PALLADIUM
+
 	u32 val;
 
 	val = readl(port->base + MVPP2_GMAC_CTRL_0_REG);
 	val |= MVPP2_GMAC_PORT_EN_MASK;
 	val |= MVPP2_GMAC_MIB_CNTR_EN_MASK;
 	writel(val, port->base + MVPP2_GMAC_CTRL_0_REG);
+#endif
 }
 
 void mvpp2_port_disable(struct mvpp2_port *port)
 {
+#ifndef CONFIG_MV_PP2_PALLADIUM
+
 	u32 val;
 
 	val = readl(port->base + MVPP2_GMAC_CTRL_0_REG);
 	val &= ~(MVPP2_GMAC_PORT_EN_MASK);
 	writel(val, port->base + MVPP2_GMAC_CTRL_0_REG);
+#endif
 }
 
 /* Set IEEE 802.3x Flow Control Xon Packet Transmission Mode */
 void mvpp2_port_periodic_xon_disable(struct mvpp2_port *port)
 {
+#ifndef CONFIG_MV_PP2_PALLADIUM
+
 	u32 val;
 
 	val = readl(port->base + MVPP2_GMAC_CTRL_1_REG) &
 		    ~MVPP2_GMAC_PERIODIC_XON_EN_MASK;
 	writel(val, port->base + MVPP2_GMAC_CTRL_1_REG);
+#endif
 }
 
 /* Configure loopback port */
 void mvpp2_port_loopback_set(struct mvpp2_port *port)
 {
+#ifndef CONFIG_MV_PP2_PALLADIUM
+
 	u32 val;
 
 	val = readl(port->base + MVPP2_GMAC_CTRL_1_REG);
@@ -3693,10 +3784,13 @@ void mvpp2_port_loopback_set(struct mvpp2_port *port)
 		val &= ~MVPP2_GMAC_PCS_LB_EN_MASK;
 
 	writel(val, port->base + MVPP2_GMAC_CTRL_1_REG);
+#endif
 }
 
 void mvpp2_port_reset(struct mvpp2_port *port)
 {
+#ifndef CONFIG_MV_PP2_PALLADIUM
+
 	u32 val;
 
 	val = readl(port->base + MVPP2_GMAC_CTRL_2_REG) &
@@ -3706,6 +3800,7 @@ void mvpp2_port_reset(struct mvpp2_port *port)
 	while (readl(port->base + MVPP2_GMAC_CTRL_2_REG) &
 	       MVPP2_GMAC_PORT_RESET_MASK)
 		continue;
+#endif
 }
 
 
@@ -3885,12 +3980,14 @@ int mvpp2_prs_default_init(struct platform_device *pdev,
 				  struct mvpp2_hw *hw)
 {
 	int err, index, i;
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Enable tcam table */
 	mvpp2_write(hw, MVPP2_PRS_TCAM_CTRL_REG, MVPP2_PRS_TCAM_EN_MASK);
 
 	/* Clear all tcam and sram entries */
 	for (index = 0; index < MVPP2_PRS_TCAM_SRAM_SIZE; index++) {
+		PALAD(MVPP2_PRINT_LINE());
 		mvpp2_write(hw, MVPP2_PRS_TCAM_IDX_REG, index);
 		for (i = 0; i < MVPP2_PRS_TCAM_WORDS; i++)
 			mvpp2_write(hw, MVPP2_PRS_TCAM_DATA_REG(i), 0);
@@ -3899,38 +3996,52 @@ int mvpp2_prs_default_init(struct platform_device *pdev,
 		for (i = 0; i < MVPP2_PRS_SRAM_WORDS; i++)
 			mvpp2_write(hw, MVPP2_PRS_SRAM_DATA_REG(i), 0);
 	}
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Invalidate all tcam entries */
-	for (index = 0; index < MVPP2_PRS_TCAM_SRAM_SIZE; index++)
+	for (index = 0; index < MVPP2_PRS_TCAM_SRAM_SIZE; index++) {
+		PALAD(MVPP2_PRINT_LINE());
 		mvpp2_prs_hw_inv(hw, index);
+	}
+	PALAD(MVPP2_PRINT_LINE());
 
 	hw->prs_shadow = devm_kcalloc(&pdev->dev, MVPP2_PRS_TCAM_SRAM_SIZE,
 					sizeof(struct mvpp2_prs_shadow),
 					GFP_KERNEL);
+	PALAD(MVPP2_PRINT_LINE());
+
 	if (!hw->prs_shadow)
 		return -ENOMEM;
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Always start from lookup = 0 */
 	for (index = 0; index < MVPP2_MAX_PORTS; index++)
 		mvpp2_prs_hw_port_init(hw, index, MVPP2_PRS_LU_MH,
 				       MVPP2_PRS_PORT_LU_MAX, 0);
+	PALAD(MVPP2_PRINT_LINE());
 
 	mvpp2_prs_def_flow_init(hw);
+	PALAD(MVPP2_PRINT_LINE());
 
 	mvpp2_prs_mh_init(hw);
+	PALAD(MVPP2_PRINT_LINE());
 
 	mvpp2_prs_mac_init(hw);
+	PALAD(MVPP2_PRINT_LINE());
 
 	mvpp2_prs_dsa_init(hw);
+	PALAD(MVPP2_PRINT_LINE());
 
 	err = mvpp2_prs_etype_init(hw);
 	if (err)
 		return err;
+	PALAD(MVPP2_PRINT_LINE());
 
 	err = mvpp2_prs_vlan_init(pdev, hw);
 	if (err)
 		return err;
-
+	PALAD(MVPP2_PRINT_LINE());
+#if !defined(CONFIG_MV_PP2_PALLADIUM)
 	err = mvpp2_prs_pppoe_init(hw);
 	if (err)
 		return err;
@@ -3938,11 +4049,12 @@ int mvpp2_prs_default_init(struct platform_device *pdev,
 	err = mvpp2_prs_ip6_init(hw);
 	if (err)
 		return err;
+#endif
 
 	err = mvpp2_prs_ip4_init(hw);
 	if (err)
 		return err;
-
+	PALAD(MVPP2_PRINT_LINE());
 	return 0;
 }
 
@@ -5793,8 +5905,10 @@ void mvpp2_cls_c2_hw_inv_all(struct mvpp2_hw *hw)
 {
 	int index;
 
-	for (index = 0; index < MVPP2_CLS_C2_TCAM_SIZE; index++)
+	for (index = 0; index < MVPP2_CLS_C2_TCAM_SIZE; index++) {
+		PALAD(MVPP2_PRINT_LINE());
 		mvpp2_cls_c2_hw_inv(hw, index);
+	}
 }
 EXPORT_SYMBOL(mvpp2_cls_c2_hw_inv_all);
 
@@ -5806,15 +5920,20 @@ static void mvpp2_cls_c2_qos_hw_clear_all(struct mvpp2_hw *hw)
 
 	/* clear DSCP tables */
 	qos.tbl_sel = MVPP2_QOS_TBL_SEL_DSCP;
-	for (qos.tbl_id = 0; qos.tbl_id < MVPP2_QOS_TBL_NUM_DSCP; qos.tbl_id++)
-		for (qos.tbl_line = 0; qos.tbl_line < MVPP2_QOS_TBL_LINE_NUM_DSCP; qos.tbl_line++)
+	for (qos.tbl_id = 0; qos.tbl_id < MVPP2_QOS_TBL_NUM_DSCP; qos.tbl_id++) {
+		for (qos.tbl_line = 0; qos.tbl_line < MVPP2_QOS_TBL_LINE_NUM_DSCP; qos.tbl_line++) {
 			mvpp2_cls_c2_qos_hw_write(hw, &qos);
+			PALAD(MVPP2_PRINT_LINE());
+		}
+	}
 
 	/* clear PRIO tables */
 	qos.tbl_sel = MVPP2_QOS_TBL_SEL_PRI;
 	for (qos.tbl_id = 0; qos.tbl_id < MVPP2_QOS_TBL_NUM_PRI; qos.tbl_id++)
-		for (qos.tbl_line = 0; qos.tbl_line < MVPP2_QOS_TBL_LINE_NUM_PRI; qos.tbl_line++)
+		for (qos.tbl_line = 0; qos.tbl_line < MVPP2_QOS_TBL_LINE_NUM_PRI; qos.tbl_line++) {
+			PALAD(MVPP2_PRINT_LINE());
 			mvpp2_cls_c2_qos_hw_write(hw, &qos);
+		}
 }
 
 int mvpp2_cls_c2_qos_tbl_set(struct mvpp2_cls_c2_entry *c2, int tbl_id, int tbl_sel)
@@ -6126,15 +6245,20 @@ int mvpp2_c2_init(struct platform_device *pdev, struct mvpp2_hw *hw)
 
 	/* Invalid all C2 and QoS entries */
 	mvpp2_cls_c2_hw_inv_all(hw);
+	PALAD(MVPP2_PRINT_LINE());
+
 	mvpp2_cls_c2_qos_hw_clear_all(hw);
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Set CLSC2_TCAM_CTRL to enable C2, or C2 does not work */
 	mvpp2_write(hw, MVPP2_CLS2_TCAM_CTRL_REG, MVPP2_CLS2_TCAM_CTRL_EN_MASK);
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Allocate mem for c2 shadow */
 	hw->c2_shadow = devm_kcalloc(&pdev->dev, 1, sizeof(struct mvpp2_c2_shadow), GFP_KERNEL);
 	if (!hw->c2_shadow)
 		return -ENOMEM;
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Init the rule idx to invalid value */
 	for (i = 0; i < 8; i++) {
@@ -6143,6 +6267,7 @@ int mvpp2_c2_init(struct platform_device *pdev, struct mvpp2_hw *hw)
 		hw->c2_shadow->rule_idx_info[i].default_rule_idx = MVPP2_CLS_C2_TCAM_SIZE;
 	}
 	hw->c2_shadow->c2_tcam_free_start = 0;
+	PALAD(MVPP2_PRINT_LINE());
 
 	return 0;
 }
@@ -6236,6 +6361,7 @@ static void mvpp2_cls_c2_qos_tbl_fill(struct mvpp2_port *port, u8 tbl_sel, u8 st
 		/* Physical queue contains 2 parts: port ID and CPU ID, CPU ID will be used in RSS */
 		queue = start_queue + cos_queue;
 		mvpp2_cls_c2_qos_queue_set(&qos_entry, queue);
+		PALAD(MVPP2_PRINT_LINE());
 		mvpp2_cls_c2_qos_hw_write(&port->priv->hw, &qos_entry);
 	}
 }
@@ -6299,6 +6425,7 @@ int mvpp2_cls_c2_rule_set(struct mvpp2_port *port, u8 start_queue)
 		c2_init_entry.rss_en = port->priv->pp2_cfg.rss_cfg.rss_en;
 
 		/* Add rule to C2 TCAM */
+		PALAD(MVPP2_PRINT_LINE());
 		ret = mvpp2_c2_rule_add(port, &c2_init_entry);
 		if (ret)
 			return ret;
@@ -6490,6 +6617,7 @@ int mvpp22_rss_rxq_set(struct mvpp2_port *port, u32 cos_width)
 	rss_entry.sel = MVPP22_RSS_ACCESS_POINTER;
 
 	for (rxq = 0; rxq < port->num_rx_queues; rxq++) {
+		PALAD(MVPP2_PRINT_LINE());
 		rss_entry.u.pointer.rxq_idx = port->rxqs[rxq]->id;
 		rss_entry.u.pointer.rss_tbl_ptr = port->rxqs[rxq]->id & cos_mask;
 		if (mvpp22_rss_tbl_entry_set(&port->priv->hw, &rss_entry))
@@ -6510,6 +6638,7 @@ void mvpp22_rss_c2_enable(struct mvpp2_port *port, bool en)
 	c2_index[MVPP2_CLS_LKP_DEFAULT] = port->priv->hw.c2_shadow->rule_idx_info[port->id].default_rule_idx;
 
 	for (lkp_type = 0; lkp_type < MVPP2_CLS_LKP_MAX; lkp_type++) {
+		PALAD(MVPP2_PRINT_LINE());
 		/* For lookup type of MVPP2_CLS_LKP_HASH, there is no corresponding C2 rule, so skip it */
 		if (lkp_type == MVPP2_CLS_LKP_HASH)
 			continue;

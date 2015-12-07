@@ -1257,7 +1257,7 @@ void mvpp2_skb_dump(struct sk_buff *skb, int size, int access)
 {
 	int i, j;
 	void *addr = skb->head + NET_SKB_PAD;
-	u32 memAddr = (u32)addr;
+	uintptr_t memAddr = (uintptr_t)addr;
 
 	printk("skb=%p, buf=%p, ksize=%d\n", skb, skb->head, ksize(skb->head));
 
@@ -1268,15 +1268,15 @@ void mvpp2_skb_dump(struct sk_buff *skb, int size, int access)
 		printk("%d wrong access size. Access must be 1 or 2 or 4\n", access);
 		return;
 	}
-	memAddr = MV_ALIGN_DOWN((unsigned int)addr, 4);
+	memAddr = MV_ALIGN_DOWN((uintptr_t)addr, 4);
 	size = MV_ALIGN_UP(size, 4);
-	addr = (void *)MV_ALIGN_DOWN((unsigned int)addr, access);
+	addr = (void *)MV_ALIGN_DOWN((uintptr_t)addr, access);
 	while (size > 0) {
-		printk("%08x: ", memAddr);
+		printk("%08lx: ", memAddr);
 		i = 0;
 		/* 32 bytes in the line */
 		while (i < 32) {
-			if (memAddr >= (u32)addr) {
+			if (memAddr >= (uintptr_t)addr) {
 				switch (access) {
 				case 1:
 					printk("%02x ", MV_MEMIO8_READ(memAddr));
@@ -1444,4 +1444,11 @@ int mvpp2_cls_c2_mtu_set(struct mvpp2_cls_c2_entry *c2, int mtu_inx)
 	return MV_OK;
 }
 EXPORT_SYMBOL(mvpp2_cls_c2_mtu_set);
+
+int mvpp2_debug_param_set(u32 param)
+{
+	debug_param = param;
+	return 0;
+}
+EXPORT_SYMBOL(mvpp2_debug_param_set);
 

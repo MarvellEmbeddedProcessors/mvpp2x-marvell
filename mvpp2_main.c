@@ -1,4 +1,4 @@
-/*
+ /*
  * Driver for Marvell PPv2x family network controllers.
  *
  * Copyright (C) 2015 Marvell
@@ -52,6 +52,11 @@
 #include <uapi/linux/ppp_defs.h>
 #include <net/ip.h>
 #include <net/ipv6.h>
+#include <asm/cacheflush.h>
+#include <asm/dma-mapping.h>
+
+
+
 #ifdef CONFIG_MV_PP2_FPGA
 #include <linux/pci.h>
 #endif
@@ -60,6 +65,10 @@
 #include "mvpp2_debug.h"
 
 #define MVPP2_SKB_TEST_SIZE 64
+#define MVPP2_ADDRESS 0xf2000000
+#define CPN110_ADDRESS_SPACE_SIZE (16*1024*1024)
+
+
 /* Declaractions */
 u8 mvpp2_num_cos_queues = 4;
 static u8 mvpp2_queue_mode = MVPP2_QDIST_MULTI_MODE;
@@ -77,14 +86,28 @@ static u8 first_bm_pool = 0;
 static u8 first_addr_space = 0;
 static u8 first_log_rxq_queue = 0;
 
-#ifdef CONFIG_MV_PP2_FPGA
-#define FPGA_PORTS_BASE          0
-#define MV_PP2_FPGA_PERODIC_TIME 10
-#define FPGA_PORT_0_OFFSET       0x104000
 
+u32 debug_param=0;
+
+
+#ifdef CONFIG_MV_PP2_FPGA
+#define MV_PP2_FPGA_PERODIC_TIME 10
+#endif
+#ifdef CONFIG_MV_PP2_PALLADIUM
+#define MV_PP2_FPGA_PERODIC_TIME 2
+#endif
+#ifdef CONFIG_MV_PP2_FPGA
+#define MAC_PORT0_OFFSET       0x104000
+#endif
+#ifdef CONFIG_MV_PP2_PALLADIUM
+#define MAC_PORT0_OFFSET       0x130E00
+#endif
+
+
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
 void * mv_pp2_vfpga_address;
 struct timer_list cpu_poll_timer;
-static int cpu_poll_timer_ref_cnt;
+static int cpu_poll_timer_ref_cnt=0;
 static void mv_pp22_cpu_timer_callback(unsigned long data);
 #endif
 
@@ -120,6 +143,9 @@ MODULE_PARM_DESC(tx_queue_size, "Tx queue size");
 
 module_param(buffer_scaling, ushort, S_IRUGO);
 MODULE_PARM_DESC(buffer_scaling, "Buffer scaling (TBD)");
+
+module_param(debug_param, uint, S_IRUGO);
+MODULE_PARM_DESC(debug_param, "Ad-hoc parameter, which can be used for various debug operations.");
 
 
 /*TODO:  Below module_params will not go to ML. Created for testing. */
@@ -383,7 +409,6 @@ static struct sk_buff *mvpp2_skb_alloc(struct mvpp2_port *port,
 		pr_crit_once("%s skb alloc failed\n",__func__);
 		return NULL;
 	}
-
 	phys_addr = dma_map_single(port->dev->dev.parent, skb->head,
 				   MVPP2_RX_BUF_SIZE(bm_pool->pkt_size),
 				    DMA_FROM_DEVICE);
@@ -393,8 +418,8 @@ static struct sk_buff *mvpp2_skb_alloc(struct mvpp2_port *port,
 			phys_addr, MVPP2_RX_BUF_SIZE(bm_pool->pkt_size));
 
 	if (unlikely(dma_mapping_error(port->dev->dev.parent, phys_addr))) {
+		MVPP2_PRINT_2LINE();
 		dev_kfree_skb_any(skb);
-		MVPP2_PRINT_LINE();
 		return NULL;
 	}
 	*buf_phys_addr = phys_addr;
@@ -415,21 +440,33 @@ static int mvpp2_bm_bufs_add(struct mvpp2_port *port,
 	buf_size = MVPP2_RX_BUF_SIZE(bm_pool->pkt_size);
 	total_size = MVPP2_RX_TOTAL_SIZE(buf_size);
 
+	PALAD(MVPP2_PRINT_LINE());
+
+
 	if (buf_num < 0 ||
 	    (buf_num + bm_pool->buf_num > bm_pool->size)) {
 		netdev_err(port->dev,
 			   "cannot allocate %d buffers for pool %d\n",
 			   buf_num, bm_pool->id);
+
+		PALAD(MVPP2_PRINT_LINE());
 		return 0;
 	}
-	MVPP2_PRINT_LINE();
+
+	MVPP2_PRINT_VAR(buf_num);
 
 	for (i = 0; i < buf_num; i++) {
 		skb = mvpp2_skb_alloc(port, bm_pool, &phys_addr, GFP_KERNEL);
-		if (!skb)
+		if (!skb) {
+			PALAD(MVPP2_PRINT_LINE());
 			break;
+		}
+		if ((i&0xF) == 0)
+			PALAD(MVPP2_PRINT_LINE());
 
 		mvpp2_pool_refill(port->priv, (u32)bm_pool->id, phys_addr, skb);
+		if ((i&0xF) == 0)
+			PALAD(MVPP2_PRINT_LINE());
 	}
 
 	/* Update BM driver with number of buffers added to pool */
@@ -477,12 +514,14 @@ static struct mvpp2_bm_pool * mvpp2_bm_pool_use_internal(
 
 	if (add_port) {
 		pkts_num = mvpp2_bm_buf_calc(log_pool, pool->port_map |(1 << port->id));
+		MVPP2_PRINT_VAR(pkts_num);
 	}
 	else {
 		pkts_num = mvpp2_bm_buf_calc(log_pool, pool->port_map & ~(1 << port->id));
 	}
 
 	add_num = pkts_num - pool->buf_num;
+	MVPP2_PRINT_VAR(add_num);
 
 	/* Allocate buffers for this pool */
 	if (add_num > 0) {
@@ -522,31 +561,39 @@ static int mvpp2_swf_bm_pool_init(struct mvpp2_port *port)
 	int rxq;
 	struct mvpp2_hw *hw = &(port->priv->hw);
 
+	MVPP2_PRINT_LINE();
+
 	if (!port->pool_long) {
+		MVPP2_PRINT_LINE();
 		port->pool_long =
 		       mvpp2_bm_pool_use(port, MVPP2_BM_SWF_LONG_POOL);
 		if (!port->pool_long)
 			return -ENOMEM;
 		port->pool_long->port_map |= (1 << port->id);
+		MVPP2_PRINT_LINE();
 
 		for (rxq = 0; rxq < port->num_rx_queues; rxq++) {
 			port->priv->pp2xdata->mvpp2x_rxq_long_pool_set(hw,
 				port->rxqs[rxq]->id, port->pool_long->id);
 		}
 	}
+	MVPP2_PRINT_LINE();
 
 	if (!port->pool_short) {
+		MVPP2_PRINT_LINE();
 		port->pool_short =
 			mvpp2_bm_pool_use(port, MVPP2_BM_SWF_SHORT_POOL);
 		if (!port->pool_short)
 			return -ENOMEM;
 
 		port->pool_short->port_map |= (1 << port->id);
+		MVPP2_PRINT_LINE();
 
 		for (rxq = 0; rxq < port->num_rx_queues; rxq++)
 			port->priv->pp2xdata->mvpp2x_rxq_short_pool_set(hw,
 			port->rxqs[rxq]->id, port->pool_short->id);
 	}
+	MVPP2_PRINT_LINE();
 
 	return 0;
 }
@@ -853,10 +900,8 @@ static int mvpp2_rxq_init(struct mvpp2_port *port,
 	/* Set Rx descriptors queue starting address - indirect access */
 	mvpp2_write(hw, MVPP2_RXQ_NUM_REG, rxq->id);
 
-	MVPP2_PRINT_LINE();
 	mvpp2_write(hw, MVPP2_RXQ_DESC_ADDR_REG, (first_desc_phy >> port->priv->pp2xdata->hw.desc_queue_addr_shift));
 
-	MVPP2_PRINT_LINE();
 	mvpp2_write(hw, MVPP2_RXQ_DESC_SIZE_REG, rxq->size);
 	mvpp2_write(hw, MVPP2_RXQ_INDEX_REG, 0);
 
@@ -1225,6 +1270,7 @@ err_cleanup:
 }
 
 
+#if !defined(CONFIG_MV_PP2_PALLADIUM)
 /* Adjust link */
 static void mvpp2_link_event(struct net_device *dev)
 {
@@ -1285,16 +1331,20 @@ static void mvpp2_link_event(struct net_device *dev)
 		phy_print_status(phydev);
 	}
 }
-
+#endif
 static void mvpp2_timer_set(struct mvpp2_port_pcpu *port_pcpu)
 {
 	ktime_t interval;
 
 	if (!port_pcpu->timer_scheduled) {
 		port_pcpu->timer_scheduled = true;
+#ifdef CONFIG_MV_PP2_PALLADIUM
+		mod_timer(&port_pcpu->slow_tx_done_timer, jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME)); /*CONFIG_HZ=20*/
+#else
 		interval = ktime_set(0, MVPP2_TXDONE_HRTIMER_PERIOD_NS);
-		hrtimer_start(&port_pcpu->tx_done_timer, interval,
-			      HRTIMER_MODE_REL_PINNED);
+		hrtimer_start(&port_pcpu->tx_done_timer, interval, HRTIMER_MODE_REL_PINNED);
+#endif
+
 	}
 }
 
@@ -1318,6 +1368,16 @@ static void mvpp2_tx_proc_cb(unsigned long data)
 		mvpp2_timer_set(port_pcpu);
 }
 
+#ifdef CONFIG_MV_PP2_PALLADIUM
+void  mvpp2_timer_cb(unsigned long data)
+{
+	struct mvpp2_port_pcpu *port_pcpu = (struct mvpp2_port_pcpu *) data;
+
+	tasklet_schedule(&port_pcpu->tx_done_tasklet);
+
+	return;
+}
+#else
 static enum hrtimer_restart mvpp2_hr_timer_cb(struct hrtimer *timer)
 {
 	struct mvpp2_port_pcpu *port_pcpu = container_of(timer,
@@ -1328,6 +1388,10 @@ static enum hrtimer_restart mvpp2_hr_timer_cb(struct hrtimer *timer)
 
 	return HRTIMER_NORESTART;
 }
+#endif
+
+
+
 
 /* The function get the number of cpu online */
 static inline int mvpp2x_num_online_cpu_get(struct mvpp2 *pp2)
@@ -1440,6 +1504,7 @@ int mvpp2_cos_classifier_set(struct mvpp2_port *port, enum mvpp2_cos_classifier 
 		flow_idx = min(data[0], min(data[1], data[2]));
 
 		mvpp2_cls_lkp_flow_set(hw, lkpid, 0, flow_idx);
+		PALAD(MVPP2_PRINT_LINE());
 		mvpp2_cls_lkp_flow_set(hw, lkpid, 1, flow_idx);
 	}
 
@@ -1584,6 +1649,7 @@ int mvpp22_rss_rxfh_indir_set(struct mvpp2_port *port)
 				return -1;
 			/* Value of rss_tbl equals to cos queue */
 			rss_entry.u.entry.rxq = (cpu_id << cos_width) | rss_tbl;
+			PALAD(MVPP2_PRINT_LINE());
 			if (mvpp22_rss_tbl_entry_set(&port->priv->hw, &rss_entry))
 				return -1;
 		}
@@ -1634,6 +1700,7 @@ int mvpp22_rss_mode_set(struct mvpp2_port *port, int rss_mode)
 		return -1;
 
 	for (index = 0; index < (MVPP2_PRS_FL_LAST - MVPP2_PRS_FL_START); index++) {
+		PALAD(MVPP2_PRINT_LINE());
 		data[0] = MVPP2_FLOW_TBL_SIZE;
 		data[1] = MVPP2_FLOW_TBL_SIZE;
 		data[2] = MVPP2_FLOW_TBL_SIZE;
@@ -1712,6 +1779,7 @@ int mvpp22_rss_default_cpu_set(struct mvpp2_port *port, int default_cpu)
 	/* Update LSB[cpu_width + cos_width - 1 : cos_width] of queue on pbit table, table id equals to port id */
 	for (index = 0; index < MVPP2_QOS_TBL_LINE_NUM_PRI; index++) {
 		queue = mvpp2_cls_c2_pbit_tbl_queue_get(&port->priv->hw, port->id, index);
+		PALAD(MVPP2_PRINT_LINE());
 		queue &= ~(q_cpu_mask << cos_width);
 		queue |= (default_cpu << cos_width);
 		mvpp2_cls_c2_pbit_tbl_queue_set(&port->priv->hw, port->id, index, queue);
@@ -1829,7 +1897,7 @@ static int mvpp2_rx(struct mvpp2_port *port, struct napi_struct *napi,
 	/* Get number of received packets and clamp the to-do */
 	rx_received = mvpp2_rxq_received(port, rxq->id);
 
-	//MVPP2_PRINT_VAR(rx_received);
+	PALAD(MVPP2_PRINT_VAR(rx_received));
 
 	if (rx_todo > rx_received)
 		rx_todo = rx_received;
@@ -1846,6 +1914,9 @@ static int mvpp2_rx(struct mvpp2_port *port, struct napi_struct *napi,
 		rx_filled++;
 		rx_status = rx_desc->status;
 		rx_bytes = rx_desc->data_size - MVPP2_MH_SIZE;
+
+		PALAD(mvpp2_rx_desc_print(port->priv, rx_desc));
+
 
 		pool = MVPP2_RX_DESC_POOL(rx_desc);
 		bm_pool = &port->priv->bm_pools[pool];
@@ -1867,6 +1938,8 @@ static int mvpp2_rx(struct mvpp2_port *port, struct napi_struct *napi,
 		skb = (uintptr_t)skb | port->priv->pp2xdata->skb_base_addr;
 #endif
 
+		//mvpp2_skb_dump(skb, rx_desc->data_size, 4);
+
 
 		/* In case of an error, release the requested buffer pointer
 		 * to the Buffer Manager. This request process is controlled
@@ -1874,23 +1947,19 @@ static int mvpp2_rx(struct mvpp2_port *port, struct napi_struct *napi,
 		 * comprised by the RX descriptor.
 		 */
 		if (rx_status & MVPP2_RXD_ERR_SUMMARY) {
-
-			MVPP2_PRINT_LINE();
+			printk("MVPP2_RXD_ERR_SUMMARY \n");
 			dev->stats.rx_errors++;
 			mvpp2_rx_error(port, rx_desc);
 			mvpp2_pool_refill(port->priv, pool, buf_phys_addr, skb);
 			continue;
 		}
-		MVPP2_PRINT_LINE();
 
 
 		rcvd_pkts++;
 		rcvd_bytes += rx_bytes;
 		atomic_inc(&bm_pool->in_use);
-		MVPP2_PRINT_LINE();
 
 		skb_reserve(skb, MVPP2_MH_SIZE);
-		MVPP2_PRINT_LINE();
 		skb_put(skb, rx_bytes);
 		skb->protocol = eth_type_trans(skb, dev);
 		mvpp2_rx_csum(port, rx_status, skb);
@@ -1993,7 +2062,6 @@ error:
 static inline void mvpp2_tx_done_post_proc(struct mvpp2_tx_queue *txq,
 	struct mvpp2_txq_pcpu *txq_pcpu, struct mvpp2_port *port, int frags)
 {
-	MVPP2_PRINT_LINE();
 
 	/* Finalize TX processing */
 	if (txq_pcpu->count >= txq->pkts_coal)
@@ -2020,21 +2088,19 @@ static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 	u16 txq_id;
 	u32 tx_cmd;
 
-	MVPP2_PRINT_LINE();
 	txq_id = skb_get_queue_mapping(skb);
 	txq = port->txqs[txq_id];
 	txq_pcpu = this_cpu_ptr(txq->pcpu);
 	aggr_txq = &port->priv->aggr_txqs[smp_processor_id()];
 
 	frags = skb_shinfo(skb)->nr_frags + 1;
-	//pr_crit("txq_id=%d, frags=%d\n", txq_id, frags);
+	PALAD(pr_crit("txq_id=%d, frags=%d\n", txq_id, frags));
 
 	/* Check number of available descriptors */
 	if (mvpp2_aggr_desc_num_check(port->priv, aggr_txq, frags) ||
 	    mvpp2_txq_reserved_desc_num_proc(port->priv, txq,
 					     txq_pcpu, frags)) {
 		frags = 0;
-		MVPP2_PRINT_LINE();
 		goto out;
 	}
 
@@ -2042,28 +2108,25 @@ static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 	tx_desc = mvpp2_txq_next_desc_get(aggr_txq);
 	tx_desc->phys_txq = txq->id;
 	tx_desc->data_size = skb_headlen(skb);
-
-	//pr_crit("tx_desc=%p, phys_txq=%d, data_size=%d\n", tx_desc, tx_desc->phys_txq, tx_desc->data_size);
+	PALAD(pr_crit("tx_desc=%p, phys_txq=%d, data_size=%d, len=%d, data_len=%d\n", tx_desc, tx_desc->phys_txq, tx_desc->data_size, skb->len, skb->data_len));
 
 	buf_phys_addr = dma_map_single(dev->dev.parent, skb->data,
 				       tx_desc->data_size, DMA_TO_DEVICE);
 	if (unlikely(dma_mapping_error(dev->dev.parent, buf_phys_addr))) {
 		mvpp2_txq_desc_put(txq);
 		frags = 0;
-		MVPP2_PRINT_LINE();
 		goto out;
 	}
-	//pr_crit("buf_phys_addr=%x\n", buf_phys_addr);
+	PALAD(pr_crit("buf_phys_addr=%x\n", buf_phys_addr));
 
 	tx_desc->packet_offset = buf_phys_addr & MVPP2_TX_DESC_ALIGN;
 	mvpp2x_txdesc_phys_addr_set(port->priv->pp2_version,
 		buf_phys_addr & ~MVPP2_TX_DESC_ALIGN, tx_desc);
 
 	tx_cmd = mvpp2_skb_tx_csum(port, skb);
-	//pr_debug("mvpp2_tx(%d): trace\n", __LINE__);
+
 	if (frags == 1) {
 		/* First and Last descriptor */
-		MVPP2_PRINT_LINE();
 
 		tx_cmd |= MVPP2_TXD_F_DESC | MVPP2_TXD_L_DESC;
 		tx_desc->command = tx_cmd;
@@ -2072,7 +2135,6 @@ static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 	} else {
 		/* First but not Last */
 		MVPP2_PRINT_LINE();
-
 		tx_cmd |= MVPP2_TXD_F_DESC | MVPP2_TXD_PADDING_DISABLE;
 		tx_desc->command = tx_cmd;
 		mvpp2_txq_inc_put(port->priv->pp2_version,
@@ -2080,11 +2142,13 @@ static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 
 		/* Continue with other skb fragments */
 		if (mvpp2_tx_frag_process(port, skb, aggr_txq, txq)) {
+			MVPP2_PRINT_LINE();
 			tx_desc_unmap_put(port->dev->dev.parent, txq, tx_desc);
 			frags = 0;
 			goto out;
 		}
 	}
+	MVPP2_PRINT_2LINE();
 	txq_pcpu->reserved_num -= frags;
 	txq_pcpu->count += frags;
 	aggr_txq->count += frags;
@@ -2118,6 +2182,7 @@ out:
 	if (port->priv->pp2xdata->interrupt_tx_done == false)
 		mvpp2_tx_done_post_proc(txq, txq_pcpu, port, frags);
 #endif
+	MVPP2_PRINT_2LINE();
 	return NETDEV_TX_OK;
 }
 static inline void mvpp2_cause_misc_handle(struct mvpp2_port *port,
@@ -2280,7 +2345,7 @@ void mvpp2_start_dev(struct mvpp2_port *port)
 	mvpp2_port_interrupts_enable(port);
 
 	mvpp2_port_enable(port);
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	phy_start(port->phy_dev);
 #else
 if(!netif_carrier_ok(port->dev))
@@ -2307,7 +2372,7 @@ void mvpp2_stop_dev(struct mvpp2_port *port)
 
 	mvpp2_egress_disable(port);
 	mvpp2_port_disable(port);
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	phy_stop(port->phy_dev);
 #endif
 }
@@ -2379,7 +2444,7 @@ int mvpp2_check_ringparam_valid(struct net_device *dev,
 }
 
 
-
+#if !defined(CONFIG_MV_PP2_PALLADIUM)
 static int mvpp2_phy_connect(struct mvpp2_port *port)
 {
 	struct phy_device *phy_dev;
@@ -2406,6 +2471,7 @@ static void mvpp2_phy_disconnect(struct mvpp2_port *port)
 	phy_disconnect(port->phy_dev);
 	port->phy_dev = NULL;
 }
+#endif
 
 static int mvpp2_open(struct net_device *dev)
 {
@@ -2424,12 +2490,15 @@ static int mvpp2_open(struct net_device *dev)
 		netdev_err(dev, "cpu or cos queue width invalid\n");
 		return err;
 	}
+	PALAD(MVPP2_PRINT_LINE());
 
 	err = mvpp2_prs_mac_da_accept(hw, port->id, mac_bcast, true);
 	if (err) {
 		netdev_err(dev, "mvpp2_prs_mac_da_accept BC failed\n");
 		return err;
 	}
+
+	PALAD(MVPP2_PRINT_LINE());
 	err = mvpp2_prs_mac_da_accept(hw, port->id,
 				      dev->dev_addr, true);
 	if (err) {
@@ -2437,21 +2506,27 @@ static int mvpp2_open(struct net_device *dev)
 		return err;
 	}
 	err = mvpp2_prs_tag_mode_set(hw, port->id, MVPP2_TAG_TYPE_MH);
+
+	PALAD(MVPP2_PRINT_LINE());
 	if (err) {
 		netdev_err(dev, "mvpp2_prs_tag_mode_set failed\n");
 		return err;
 	}
+
 	err = mvpp2_prs_def_flow(port);
+	PALAD(MVPP2_PRINT_LINE());
 	if (err) {
 		netdev_err(dev, "mvpp2_prs_def_flow failed\n");
 		return err;
 	}
 
 	err = mvpp2_prs_flow_set(port);
+	PALAD(MVPP2_PRINT_LINE());
 	if (err) {
 		netdev_err(dev, "mvpp2_prs_flow_set failed\n");
 		return err;
 	}
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Allocate the Rx/Tx queues */
 	err = mvpp2_setup_rxqs(port);
@@ -2460,13 +2535,17 @@ static int mvpp2_open(struct net_device *dev)
 		return err;
 	}
 
+	PALAD(MVPP2_PRINT_LINE());
+
 	err = mvpp2_setup_txqs(port);
 	if (err) {
 		netdev_err(port->dev, "cannot allocate Tx queues\n");
 		goto err_cleanup_rxqs;
 	}
 
-#ifndef CONFIG_MV_PP2_FPGA
+	MVPP2_PRINT_2LINE();
+
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	err = mvpp2_setup_irqs(dev, port);
 	if (err) {
 		netdev_err(port->dev, "cannot allocate irq's \n");
@@ -2475,26 +2554,36 @@ static int mvpp2_open(struct net_device *dev)
 #endif
 	/* In default link is down */
 	netif_carrier_off(port->dev);
+	PALAD(MVPP2_PRINT_LINE());
 
-#ifdef CONFIG_MV_PP2_FPGA
+
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
 	mvpp2_egress_enable(port); //Enable here, because there is no link event
+
+	PALAD(MVPP2_PRINT_LINE());
 	mvpp2_ingress_enable(port);
+
+	PALAD(MVPP2_PRINT_LINE());
 #endif
 
 
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	err = mvpp2_phy_connect(port);
 	if (err < 0)
 		goto err_free_irq;
 #endif
 
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 
 	/* Unmask interrupts on all CPUs */
 	on_each_cpu(mvpp2_interrupts_unmask, port, 1);
+	PALAD(MVPP2_PRINT_LINE());
+
 
 	/* Unmask shared interrupts */
 	mvpp2_shared_thread_interrupts_unmask(port);
+
+	PALAD(MVPP2_PRINT_LINE());
 #endif
 
 	/* Set CoS classifier */
@@ -2503,6 +2592,7 @@ static int mvpp2_open(struct net_device *dev)
 		netdev_err(port->dev, "cannot set cos classifier \n");
 		goto err_free_irq;
 	}
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Init C2 rules */
 	bound_cpu_first_rxq  = mvpp2_bound_cpu_first_rxq_calc(port);
@@ -2511,6 +2601,8 @@ static int mvpp2_open(struct net_device *dev)
 		netdev_err(port->dev, "cannot init C2 rules \n");
 		goto err_free_irq;
 	}
+	PALAD(MVPP2_PRINT_LINE());
+
 
 	/* Assign rss table for rxq belong to this port */
 	err = mvpp22_rss_rxq_set(port, cos_width);
@@ -2518,6 +2610,7 @@ static int mvpp2_open(struct net_device *dev)
 		netdev_err(port->dev, "cannot allocate rss table for rxq \n");
 		goto err_free_irq;
 	}
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* RSS related config */
 	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_MULTI_MODE) {
@@ -2527,12 +2620,16 @@ static int mvpp2_open(struct net_device *dev)
 			netdev_err(port->dev, "cannot set rss mode \n");
 			goto err_free_irq;
 		}
+
+		PALAD(MVPP2_PRINT_LINE());
 		/* Init RSS table */
 		err = mvpp22_rss_rxfh_indir_set(port);
 		if (err) {
 			netdev_err(port->dev, "cannot init rss rxfh indir \n");
 			goto err_free_irq;
 		}
+
+		PALAD(MVPP2_PRINT_LINE());
 
 		/* Set rss default CPU only when rss enabled */
 		if (port->priv->pp2_cfg.rss_cfg.rss_en) {
@@ -2542,29 +2639,44 @@ static int mvpp2_open(struct net_device *dev)
 				goto err_free_irq;
 			}
 		}
+
+		PALAD(MVPP2_PRINT_LINE());
 	}
-#ifdef CONFIG_MV_PP2_FPGA
-	if (cpu_poll_timer_ref_cnt == 0)
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
+	if (cpu_poll_timer_ref_cnt == 0) {
+		cpu_poll_timer.expires  = jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME*1000);
 		add_timer(&cpu_poll_timer);
-	cpu_poll_timer_ref_cnt++;
+		cpu_poll_timer_ref_cnt++;
+	}
 #endif
+	PALAD(MVPP2_PRINT_LINE());
 
 	mvpp2_start_dev(port);
+	PALAD(MVPP2_PRINT_LINE());
 
-#ifdef CONFIG_MV_PP2_FPGA
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
 	netif_carrier_on(port->dev);
+	PALAD(MVPP2_PRINT_LINE());
+
 	netif_tx_start_all_queues(port->dev);
+
+	PALAD(MVPP2_PRINT_LINE());
 #endif
+	MVPP2_PRINT_2LINE();
 	return 0;
 
 err_free_irq:
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	mvpp2_cleanup_irqs(port);
+	PALAD(MVPP2_PRINT_LINE());
+
 #endif
 err_cleanup_txqs:
 	mvpp2_cleanup_txqs(port);
+	MVPP2_PRINT_2LINE();
 err_cleanup_rxqs:
 	mvpp2_cleanup_rxqs(port);
+	MVPP2_PRINT_2LINE();
 	return err;
 }
 
@@ -2574,14 +2686,14 @@ static int mvpp2_stop(struct net_device *dev)
 	struct mvpp2_port_pcpu *port_pcpu;
 	int cpu;
 
-#ifdef CONFIG_MV_PP2_FPGA
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
 	cpu_poll_timer_ref_cnt--;
 	if (cpu_poll_timer_ref_cnt == 0)
 		del_timer_sync(&cpu_poll_timer);
 #endif
 	mvpp2_stop_dev(port);
 
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	mvpp2_phy_disconnect(port);
 #endif
 
@@ -2590,13 +2702,17 @@ static int mvpp2_stop(struct net_device *dev)
 
 	/* Mask shared interrupts */
 	mvpp2_shared_thread_interrupts_mask(port);
-#ifndef CONFIG_MV_PP2_FPGA
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
 	mvpp2_cleanup_irqs(port);
 #endif
 	if (port->priv->pp2xdata->interrupt_tx_done == false) {
 		for_each_online_cpu(cpu) {
 			port_pcpu = per_cpu_ptr(port->pcpu, cpu);
+#ifdef CONFIG_MV_PP2_PALLADIUM
+			del_timer(&port_pcpu->slow_tx_done_timer);
+#else
 			hrtimer_cancel(&port_pcpu->tx_done_timer);
+#endif
 			port_pcpu->timer_scheduled = false;
 			tasklet_kill(&port_pcpu->tx_done_tasklet);
 		}
@@ -2757,14 +2873,15 @@ mvpp2_get_stats64(struct net_device *dev, struct rtnl_link_stats64 *stats)
 static int mvpp2_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 {
 	struct mvpp2_port *port = netdev_priv(dev);
-	int ret;
+	int ret=0;
 
 	if (!port->phy_dev)
 		return -ENOTSUPP;
-
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	ret = phy_mii_ioctl(port->phy_dev, ifr, cmd);
 	if (!ret)
 		mvpp2_link_event(dev);
+#endif
 
 	return ret;
 }
@@ -2918,7 +3035,7 @@ static void mvpp22_port_queue_vectors_init(struct mvpp2_port *port)
 		q_vec[cpu].sw_thread_id = first_addr_space+cpu;
 		q_vec[cpu].sw_thread_mask = (1<<q_vec[cpu].sw_thread_id);
 		q_vec[cpu].pending_cause_rx = 0;
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 		q_vec[cpu].irq = port->of_irqs[first_addr_space+cpu];
 #endif
 		netif_napi_add(port->dev, &q_vec[cpu].napi, mvpp22_poll,
@@ -2939,7 +3056,7 @@ static void mvpp22_port_queue_vectors_init(struct mvpp2_port *port)
 		q_vec[cpu].sw_thread_id = first_addr_space+cpu;
 		q_vec[cpu].sw_thread_mask = (1<<q_vec[cpu].sw_thread_id);
 		q_vec[cpu].pending_cause_rx = 0;
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 		q_vec[cpu].irq = port->of_irqs[first_addr_space+cpu];
 #endif
 		netif_napi_add(port->dev, &q_vec[cpu].napi, mvpp22_poll,
@@ -3009,39 +3126,57 @@ static int mvpp2_port_init(struct mvpp2_port *port)
 	struct mvpp2 *priv = port->priv;
 	int queue, err;
 
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Disable port */
 	mvpp2_egress_disable(port);
+
+	PALAD(MVPP2_PRINT_LINE());
 	mvpp2_port_disable(port);
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Allocate queues */
 	port->txqs = devm_kcalloc(dev, port->num_tx_queues, sizeof(*port->txqs),
 				  GFP_KERNEL);
+	PALAD(MVPP2_PRINT_LINE());
+
 	if (!port->txqs)
 		return -ENOMEM;
+	PALAD(MVPP2_PRINT_LINE());
 
 	port->rxqs = devm_kcalloc(dev, port->num_rx_queues, sizeof(*port->rxqs),
 				  GFP_KERNEL);
+	PALAD(MVPP2_PRINT_LINE());
+
 	if (!port->rxqs) {
 		return -ENOMEM;
 	}
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Associate physical Tx queues to port and initialize.  */
 	err = mvpp2_port_txqs_init(dev, port);
+
+	PALAD(MVPP2_PRINT_LINE());
 	if (err)
 		goto err_free_percpu;
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Associate physical Rx queues to port and initialize.  */
 	err = mvpp2_port_rxqs_init(dev, port);
+
+	PALAD(MVPP2_PRINT_LINE());
 	if (err)
 		goto err_free_percpu;
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Configure queue_vectors */
 	priv->pp2xdata->mvpp2x_port_queue_vectors_init(port);
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Configure Rx queue group interrupt for this port */
 	priv->pp2xdata->mvpp2x_port_isr_rx_group_cfg(port);
 
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Create Rx descriptor rings */
 	for (queue = 0; queue < port->num_rx_queues; queue++) {
@@ -3051,24 +3186,30 @@ static int mvpp2_port_init(struct mvpp2_port *port)
 		rxq->pkts_coal = MVPP2_RX_COAL_PKTS;
 		rxq->time_coal = MVPP2_RX_COAL_USEC;
 	}
+	PALAD(MVPP2_PRINT_LINE());
 
 	mvpp2_ingress_disable(port);
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Port default configuration */
 	mvpp2_defaults_set(port);
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Port's classifier configuration */
 	mvpp2_cls_oversize_rxq_set(port);
+	PALAD(MVPP2_PRINT_LINE());
 	mvpp2_cls_port_config(port);
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Provide an initial Rx packet size */
 	port->pkt_size = MVPP2_RX_PKT_SIZE(port->dev->mtu);
 
 	/* Initialize pools for swf */
 	err = mvpp2_swf_bm_pool_init(port);
+	PALAD(MVPP2_PRINT_LINE());
 	if (err)
 		goto err_free_percpu;
-
+	PALAD(MVPP2_PRINT_LINE());
 	return 0;
 
 err_free_percpu:
@@ -3080,9 +3221,9 @@ err_free_percpu:
 	return err;
 }
 
-#ifndef CONFIG_MV_PP2_FPGA
 
 /* Ports initialization */
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 static int mvpp2_port_probe(struct platform_device *pdev,
 			    struct device_node *port_node,
 			    struct mvpp2 *priv)
@@ -3242,7 +3383,8 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	netdev_info(dev, "Using %s mac address %pM\n", mac_from, dev->dev_addr);
 
 
-	priv->port_list[id] = port;
+	priv->port_list[priv->num_ports] = port;
+	priv->num_ports++;
 	return 0;
 	dev_err(&pdev->dev, "%s failed for port_id(%d)\n", __func__, id);
 
@@ -3254,7 +3396,7 @@ err_free_txq_pcpu:
 err_free_stats:
 	free_percpu(port->stats);
 err_free_irq:
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	mvpp2_port_irqs_dispose_mapping(port);
 #endif
 err_free_netdev:
@@ -3280,6 +3422,7 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 	unsigned int * port_irqs;
 	int features, phy_mode, err=0, i, port_num_irq, cpu;
 	int priv_common_regs_num = 2;
+	PALAD(MVPP2_PRINT_LINE());
 
 	dev = alloc_etherdev_mqs(sizeof(struct mvpp2_port), mvpp2_txq_number,
 				 mvpp2_rxq_number);
@@ -3291,6 +3434,7 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 	dev->watchdog_timeo = 5 * HZ;
 	dev->netdev_ops = &mvpp2_netdev_ops;
 	mvpp2_set_ethtool_ops(dev);
+	PALAD(MVPP2_PRINT_LINE());
 
 	port = netdev_priv(dev);
 
@@ -3304,23 +3448,28 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 		first_log_rxq_queue;
 	port->phy_node = phy_node;
 	port->phy_interface = phy_mode;
-	port->base = ((mv_pp2_vfpga_address + FPGA_PORT_0_OFFSET) + ((port->id) * 0x1000));
+	port->base = ((mv_pp2_vfpga_address + MAC_PORT0_OFFSET) + ((port->id) * 0x1000));
 	DBG_MSG("mvpp2(%d): mvpp2_port_probe: port_id-%d mv_pp2_vfpga_address=0x%p port->base=0x%p\n",
 		   __LINE__, port->id, mv_pp2_vfpga_address, port->base);
 	MVPP2_PRINT_LINE();
 
 	if (IS_ERR(port->base)) {
+		PALAD(MVPP2_PRINT_LINE());
 		err = PTR_ERR(port->base);
 		goto err_free_irq;
 	}
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Alloc per-cpu stats */
 	port->stats = netdev_alloc_pcpu_stats(struct mvpp2_pcpu_stats);
+
+	PALAD(MVPP2_PRINT_LINE());
 	if (!port->stats) {
+		MVPP2_PRINT_LINE();
+
 		err = -ENOMEM;
 		goto err_free_irq;
 	}
-	MVPP2_PRINT_LINE();
 
 
 	mac_from = "hardware";
@@ -3338,6 +3487,8 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 	port->dev = dev;
 	SET_NETDEV_DEV(dev, &pdev->dev);
 	err = mvpp2_port_init(port);
+
+	PALAD(MVPP2_PRINT_LINE());
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to init port %d\n", port->id);
 		goto err_free_stats;
@@ -3355,22 +3506,25 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 	if (port->priv->pp2xdata->interrupt_tx_done == false) {
 		for_each_online_cpu(cpu) {
 			port_pcpu = per_cpu_ptr(port->pcpu, cpu);
-			MVPP2_PRINT_LINE();
 
+#ifdef CONFIG_MV_PP2_PALLADIUM
+			init_timer(&port_pcpu->slow_tx_done_timer);
+			port_pcpu->slow_tx_done_timer.function = mvpp2_timer_cb;
+			port_pcpu->slow_tx_done_timer.data = (unsigned long) (port_pcpu);
+#else
 			hrtimer_init(&port_pcpu->tx_done_timer, CLOCK_MONOTONIC,
 				     HRTIMER_MODE_REL_PINNED);
 			port_pcpu->tx_done_timer.function = mvpp2_hr_timer_cb;
+#endif
 			port_pcpu->timer_scheduled = false;
-			MVPP2_PRINT_LINE();
 
 			tasklet_init(&port_pcpu->tx_done_tasklet, mvpp2_tx_proc_cb,
 				     (unsigned long)dev);
 
-			MVPP2_PRINT_LINE();
 		}
 	}
-
 	MVPP2_PRINT_LINE();
+
 	features = NETIF_F_SG | NETIF_F_IP_CSUM;
 	dev->features = features | NETIF_F_RXCSUM;
 	dev->hw_features |= features | NETIF_F_RXCSUM | NETIF_F_GRO;
@@ -3380,14 +3534,18 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 	dev->vlan_features |= features;
 
 	err = register_netdev(dev);
+	PALAD(MVPP2_PRINT_LINE());
+
 	if (err < 0) {
+		MVPP2_PRINT_LINE();
+
 		dev_err(&pdev->dev, "failed to register netdev\n");
 		goto err_free_port_pcpu;
 	}
 
-	MVPP2_PRINT_LINE();
 	netdev_info(dev, "Using %s mac address %pM\n", mac_from, dev->dev_addr);
-	priv->port_list[port_i] = port;
+	priv->port_list[priv->num_ports] = port;
+	priv->num_ports++;
 	return 0;
 	dev_err(&pdev->dev, "%s failed for port_id(%d)\n", __func__, id);
 
@@ -3399,13 +3557,14 @@ err_free_txq_pcpu:
 err_free_stats:
 	free_percpu(port->stats);
 err_free_irq:
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	mvpp2_port_irqs_dispose_mapping(port);
 #endif
 err_free_netdev:
 	free_netdev(dev);
 	return err;
 }
+
 
 #endif
 
@@ -3419,7 +3578,7 @@ static void mvpp2_port_remove(struct mvpp2_port *port)
 	free_percpu(port->stats);
 	for (i = 0; i < port->num_tx_queues; i++)
 		free_percpu(port->txqs[i]->pcpu);
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	mvpp2_port_irqs_dispose_mapping(port);
 #endif
 	free_netdev(port->dev);
@@ -3492,11 +3651,14 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 		dev_err(&pdev->dev, "too high num_cos_queue parameter\n");
 		return -EINVAL;
 	}
+
+	PALAD(MVPP2_PRINT_LINE());
 	/*TODO: YuvalC, replace this with a per-pp2x validation function. */
 	if ((pp2_ver == PPV21) && (mvpp2_rxq_number % 4)) {
 		dev_err(&pdev->dev, "invalid num_cos_queue parameter\n");
 		return -EINVAL;
 	}
+	PALAD(MVPP2_PRINT_LINE());
 
 	if (mvpp2_txq_number > MVPP2_MAX_TXQ) {
 		dev_err(&pdev->dev, "invalid num_cos_queue parameter\n");
@@ -3510,8 +3672,21 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 		mvpp2_conf_mbus_windows(dram_target_info, hw);
 	MVPP2_PRINT_LINE();
 
+#if !defined(CONFIG_MV_PP2_FPGA)
+	/*AXI Bridge Configuration */
+	mvpp2_write(hw, MVPP22_AXI_BM_WR_ATTR_REG, MVPP22_AXI_ATTR_SNOOP_CNTRL_BIT);
+	mvpp2_write(hw, MVPP22_AXI_BM_RD_ATTR_REG, MVPP22_AXI_ATTR_SNOOP_CNTRL_BIT);
+	mvpp2_write(hw, MVPP22_AXI_AGGRQ_DESCR_RD_ATTR_REG, MVPP22_AXI_ATTR_SNOOP_CNTRL_BIT);
+	mvpp2_write(hw, MVPP22_AXI_TXQ_DESCR_WR_ATTR_REG, MVPP22_AXI_ATTR_SNOOP_CNTRL_BIT);
+	mvpp2_write(hw, MVPP22_AXI_TXQ_DESCR_RD_ATTR_REG, MVPP22_AXI_ATTR_SNOOP_CNTRL_BIT);
+	mvpp2_write(hw, MVPP22_AXI_RXQ_DESCR_WR_ATTR_REG, MVPP22_AXI_ATTR_SNOOP_CNTRL_BIT);
+	mvpp2_write(hw, MVPP22_AXI_RX_DATA_WR_ATTR_REG, MVPP22_AXI_ATTR_SNOOP_CNTRL_BIT);
+	mvpp2_write(hw, MVPP22_AXI_TX_DATA_RD_ATTR_REG, MVPP22_AXI_ATTR_SNOOP_CNTRL_BIT);
+	MVPP2_PRINT_LINE();
+#endif
+
 	/* Disable HW PHY polling */
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	val = readl(hw->lms_base + MVPP2_PHY_AN_CFG0_REG);
 	val |= MVPP2_PHY_AN_STOP_SMI0_MASK;
 	writel(val, hw->lms_base + MVPP2_PHY_AN_CFG0_REG);
@@ -3522,11 +3697,16 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 	priv->aggr_txqs = devm_kcalloc(&pdev->dev, num_active_cpus(),
 				       sizeof(struct mvpp2_aggr_tx_queue),
 				       GFP_KERNEL);
+	PALAD(MVPP2_PRINT_LINE());
+
 	if (!priv->aggr_txqs)
 		return -ENOMEM;
 	priv->num_aggr_qs = num_active_cpus();
+	PALAD(MVPP2_PRINT_LINE());
+
 	i = 0;
 	for_each_online_cpu(cpu) {
+		PALAD(MVPP2_PRINT_LINE());
 		priv->aggr_txqs[i].id = cpu;
 		priv->aggr_txqs[i].size = MVPP2_AGGR_TXQ_SIZE;
 
@@ -3540,17 +3720,18 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 
 	/* Rx Fifo Init */
 	mvpp2_rx_fifo_init(hw);
+
 	MVPP2_PRINT_LINE();
 
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	writel(MVPP2_EXT_GLOBAL_CTRL_DEFAULT,
 	       hw->lms_base + MVPP2_MNG_EXTENDED_GLOBAL_CTRL_REG);
 #endif
-	MVPP2_PRINT_LINE();
 
 	/* Allow cache snoop when transmiting packets */
 	mvpp2_write(hw, MVPP2_TX_SNOOP_REG, 0x1);
 	MVPP2_PRINT_LINE();
+
 
 	/* Buffer Manager initialization */
 	err = mvpp2_bm_init(pdev, priv);
@@ -3560,6 +3741,8 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 
 	/* Parser flow id attribute tbl init */
 	mvpp2_prs_flow_id_attr_init();
+
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Parser default initialization */
 	err = mvpp2_prs_default_init(pdev, hw);
@@ -3571,13 +3754,14 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 	err = mvpp2_cls_init(pdev, hw);
 	if (err < 0)
 		return err;
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Classifier engine2 initialization */
 	err = mvpp2_c2_init(pdev, hw);
 	if (err < 0)
 		return err;
-
 	MVPP2_PRINT_LINE();
+
 
 	/*NEW : Disable all rx_queues */
 	/*TBD - this is TEMP_HACK */
@@ -3694,6 +3878,9 @@ void mvpp2_pp2_basic_print(struct platform_device *pdev, struct mvpp2 *priv)
 	DBG_MSG("dev->bus.name(%s) pdev.dev->bus.dev_name(%s)\n",
 		pdev->dev.bus->name, pdev->dev.bus->dev_name);
 
+	DBG_MSG("Device dma_coherent(%d)\n", pdev->dev.archdata.dma_coherent);
+
+
 	DBG_MSG("pp2_ver(%d)\n", priv->pp2_version);
 	DBG_MSG("queue_mode(%d)\n", priv->pp2_cfg.queue_mode);
 	DBG_MSG("first_bm_pool(%d) jumbo_pool(%d)\n", priv->pp2_cfg.first_bm_pool, priv->pp2_cfg.jumbo_pool);
@@ -3763,7 +3950,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 	struct device_node *port_node;
 	struct mvpp2 *priv;
 	struct mvpp2_hw *hw;
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA)
 	struct resource *res;
 #endif
 	const struct of_device_id *match;
@@ -3772,6 +3959,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 	u16 cpu_map;
 	u32 cell_index = 0;
 
+	PALAD(MVPP2_PRINT_LINE());
 
 	err = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
 	if (err) {
@@ -3779,26 +3967,28 @@ static int mvpp2_probe(struct platform_device *pdev)
 		return -EIO; //TODO
 	}
 
+	PALAD(MVPP2_PRINT_LINE());
 	priv = devm_kzalloc(&pdev->dev, sizeof(struct mvpp2), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
 
 	hw = &priv->hw;
+	PALAD(MVPP2_PRINT_LINE());
 
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	match = of_match_node(mvpp2_match_tbl, dn);
 #else
 	match = &mvpp2_match_tbl[1];
+	PALAD(MVPP2_PRINT_LINE());
 #endif
 
 	if (!match)
 		return -ENODEV;
 
 
-MVPP2_PRINT_LINE();
 	priv->pp2xdata = (const struct mvpp2x_platform_data *) match->data;
 	priv->pp2_version = priv->pp2xdata->pp2x_ver;
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	if (priv->pp2xdata->multi_hw_instance) {
 		if (of_property_read_u32(pdev->dev.of_node, "cell-index",
 					  &cell_index)) {
@@ -3825,25 +4015,30 @@ MVPP2_PRINT_LINE();
 #endif
 
 
-#ifndef CONFIG_MV_PP2_FPGA
+	pr_crit("pdev: num_resources(%d)", pdev->num_resources);
+	if (pdev->num_resources)
+		pr_crit("pdev: start:%llx, end:%llx\n", pdev->resource[0].start, pdev->resource[0].end);
+#if !defined(CONFIG_MV_PP2_FPGA)
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	hw->base = devm_ioremap_resource(&pdev->dev, res);
+	mv_pp2_vfpga_address = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(hw->base))
 		return PTR_ERR(hw->base);
+	hw->base = mv_pp2_vfpga_address;
 
-
-
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	hw->lms_base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(hw->lms_base))
 		return PTR_ERR(hw->lms_base);
-#else
+#endif
+#else /*CONFIG_MV_PP2_FPGA*/
 	hw->base = mv_pp2_vfpga_address;
 	pr_debug("mvpp2(%d): mvpp2_probe:mv_pp2_vfpga_address=0x%p\n", __LINE__, mv_pp2_vfpga_address);
 #endif
-MVPP2_PRINT_LINE();
 
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
+	MVPP2_PRINT_LINE();
 	hw->pp_clk = devm_clk_get(&pdev->dev, "pp_clk");
 	if (IS_ERR(hw->pp_clk))
 		return PTR_ERR(hw->pp_clk);
@@ -3865,10 +4060,14 @@ MVPP2_PRINT_LINE();
 #else
 	hw->tclk = 25000000;
 #endif
+	MVPP2_PRINT_LINE();
+
 	/* Save cpu_present_mask + populate the per_cpu address space */
 	cpu_map = 0;
 	i = 0;
+
 	for_each_online_cpu(cpu) {
+		PALAD(MVPP2_PRINT_LINE());
 		cpu_map |= (1<<cpu);
 		hw->cpu_base[cpu] = hw->base;
 		if (priv->pp2xdata->multi_addr_space) {
@@ -3876,8 +4075,9 @@ MVPP2_PRINT_LINE();
 			i++;
 		}
 	}
-	priv->cpu_map = cpu_map;
 	MVPP2_PRINT_LINE();
+
+	priv->cpu_map = cpu_map;
 
 
 	/* Initialize network controller */
@@ -3886,9 +4086,10 @@ MVPP2_PRINT_LINE();
 		dev_err(&pdev->dev, "failed to initialize controller\n");
 		goto err_gop_clk;
 	}
+
 	MVPP2_PRINT_LINE();
 
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	port_count = of_get_available_child_count(dn);
 	if (port_count == 0) {
 		dev_err(&pdev->dev, "no ports enabled\n");
@@ -3897,44 +4098,61 @@ MVPP2_PRINT_LINE();
 	}
 #else
 	port_count = 2;
+	PALAD(MVPP2_PRINT_LINE());
+
 #endif
-	MVPP2_PRINT_LINE();
 
 	priv->port_list = devm_kcalloc(&pdev->dev, port_count,
 				      sizeof(struct mvpp2_port *),
 				      GFP_KERNEL);
+	PALAD(MVPP2_PRINT_LINE());
+
 	if (!priv->port_list) {
 		err = -ENOMEM;
 		goto err_gop_clk;
 	}
-	priv->num_ports = port_count;
+
+	PALAD(MVPP2_PRINT_LINE());
+
+	/*Set dma_coherency to 0 */
+#ifdef CONFIG_MV_PP2_FPGA
+	pdev->dev.archdata.dma_coherent = 0;
+#else
+	pdev->dev.archdata.dma_coherent = 1;
+#endif
+
 
 	/*Init PP2 Configuration */
 	mvpp2_init_config(&priv->pp2_cfg, cell_index);
 	mvpp2_pp2_basic_print(pdev, priv);
 
+
 	/* Init PP22 rxfhindir table evenly in probe */
 	mvpp2_init_rxfhindir(priv);
 
 	/* Initialize ports */
-#ifndef CONFIG_MV_PP2_FPGA
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	for_each_available_child_of_node(dn, port_node) {
 		err = mvpp2_port_probe(pdev, port_node, priv);
 		if (err < 0)
 			goto err_gop_clk;
 	}
 #else
-	for(i = 0 ; i < port_count ; i++) {
+#ifdef CONFIG_MV_PP2_PALLADIUM
+	int start_port=1;
+#else
+	int start_port=0;
+#endif
+	for(i = start_port ; i < (start_port+port_count) ; i++) {
 		err = mvpp2_port_probe_fpga(pdev, i, priv);
 		if (err < 0)
 			goto err_gop_clk;
 	}
 #endif
 	mvpp2_pp2_ports_print(priv);
-#ifdef CONFIG_MV_PP2_FPGA
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
 	init_timer(&cpu_poll_timer);
 	cpu_poll_timer.function = mv_pp22_cpu_timer_callback;
-	cpu_poll_timer.expires  = jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME);
 	cpu_poll_timer.data     = pdev;
 #endif
 
@@ -3959,6 +4177,7 @@ static int mvpp2_remove(struct platform_device *pdev)
 	for(i = 0; i < priv->num_ports; i++) {
 		if (priv->port_list[i])
 		mvpp2_port_remove(priv->port_list[i]);
+		priv->num_ports--;
 	}
 
 	for (i = 0; i < priv->num_pools; i++) {
@@ -4013,16 +4232,20 @@ static int mvpp2_rxq_number_get(void) {
 
 static int mv_pp2_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
+	unsigned long flags;
+
 	/* code below relevant for FPGA only */
 	if (pci_enable_device(pdev)) {
 		pr_err("mvpp2: can not enable PCI device\n");
 		return -1;
 	}
+	flags = pci_resource_flags(pdev, 0);
 
 	if (!(pci_resource_flags(pdev, 0) & IORESOURCE_MEM)) {
 		pr_err("mvpp2: can not find proper PCI device base address\n");
 		return -ENODEV;
 	}
+	pr_crit("pci flags:0x%lx\n", flags);
 
 	if (pci_request_regions(pdev, "mv_pp2_pci")) {
 		pr_err("mvpp2: can not obtain PCI resources\n");
@@ -4058,14 +4281,6 @@ static const struct pci_device_id fpga_id_table[] = {
 
 MODULE_DEVICE_TABLE(pci, fpga_id_table);
 
-static struct resource mvpp2_resources[] = {
-	{
-		.name = MVPP2_DRIVER_NAME,
-/*		.start = __NSS_MGMT_PHYS_BASE + 0x200000,
-		.end   = __NSS_MGMT_PHYS_BASE + 0x200000 + 0x200000 - 1,*/
-		.flags = IORESOURCE_MEM,
-	},
-};
 
 static struct pci_driver mv_pp2_pci_driver = {
 	.name	= "mv_pp2_pci",
@@ -4074,11 +4289,26 @@ static struct pci_driver mv_pp2_pci_driver = {
 	.remove		= mv_pp2_pci_remove,
 };
 
+#endif
+
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
+
+static struct resource mvpp2_resources[] = {
+#ifdef 	CONFIG_MV_PP2_PALLADIUM
+	{
+		.name = MVPP2_DRIVER_NAME,
+		.start = MVPP2_ADDRESS,
+		.end   = MVPP2_ADDRESS + (CPN110_ADDRESS_SPACE_SIZE- 1),
+		.flags = IORESOURCE_MEM,
+	},
+#endif
+};
+
 static struct platform_device mvpp2_device = {
 	.name           = MVPP2_DRIVER_NAME,
 	.id             = 0,
 	.num_resources	= ARRAY_SIZE(mvpp2_resources),
-	.resource		= mvpp2_resources,
+	.resource       = mvpp2_resources,
 	.dev            = {
 		.platform_data = 0,
 		.init_name = "f10f0000.ethernet",
@@ -4091,33 +4321,50 @@ static int __init mpp2_module_init(void)
 {
 	int ret = 0;
 
-#ifdef CONFIG_MV_PP2_FPGA
+
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
 
 	if(platform_device_register(&mvpp2_device)) {
-		pr_debug("mvpp2(%d): platform_device_register failed\n", __LINE__);
+		pr_crit("mvpp2(%d): platform_device_register failed\n", __LINE__);
 		return -1;
 	}
+	pr_crit("mvpp2_device list_empty=%d line=%d \n", list_empty(&mvpp2_device.dev.devres_head), __LINE__);
 
+#ifdef CONFIG_MV_PP2_FPGA
+	MVPP2_PRINT_LINE();
 	ret = pci_register_driver(&mv_pp2_pci_driver);
 	if (ret < 0) {
 		pr_err("mvpp2: PCI card not found, driver not installed. rc=%d\n", ret);
 		return ret;
 	}
+#endif
 
-	mvpp2_device.dev.dma_mask = kmalloc(sizeof(mvpp2_device.dev.dma_mask), GFP_KERNEL);
+	//pr_crit("mvpp2_device list_empty=%d line=%d \n", list_empty(&mvpp2_device.dev.devres_head), __LINE__);
+
+	mvpp2_device.dev.dma_mask = &(mvpp2_device.dev.coherent_dma_mask);
+
+	//pr_crit("mvpp2_device list_empty=%d line=%d \n", list_empty(&mvpp2_device.dev.devres_head), __LINE__);
 
 	mvpp2_num_cos_queues=4;
 
 #endif
 	mvpp2_rxq_number = mvpp2_rxq_number_get();
 	mvpp2_txq_number = mvpp2_num_cos_queues;
+	PALAD(MVPP2_PRINT_LINE());
 
 	/* Compiler does not allow below Init in structure definition */
 	mvpp2_pools[MVPP2_BM_SWF_SHORT_POOL].pkt_size = MVPP2_BM_SHORT_PKT_SIZE;
 	mvpp2_pools[MVPP2_BM_SWF_LONG_POOL].pkt_size = MVPP2_BM_LONG_PKT_SIZE;
 	mvpp2_pools[MVPP2_BM_SWF_JUMBO_POOL].pkt_size = MVPP2_BM_JUMBO_PKT_SIZE;
 
+	//pr_crit("mvpp2_device list_empty=%d line=%d \n", list_empty(&mvpp2_device.dev.devres_head), __LINE__);
+
+	PALAD(MVPP2_PRINT_LINE());
+
 	ret = platform_driver_register(&mvpp2_driver);
+
+	//pr_crit("mvpp2_device list_empty=%d line=%d \n", list_empty(&mvpp2_device.dev.devres_head), __LINE__);
+	PALAD(MVPP2_PRINT_LINE());
 
 	return ret;
 }
@@ -4125,15 +4372,15 @@ static int __init mpp2_module_init(void)
 static void __exit mpp2_module_exit(void)
 {
 	platform_driver_unregister(&mvpp2_driver);
-#ifdef CONFIG_MV_PP2_FPGA
 	if (mvpp2_device.dev.dma_mask)
 		kfree(mvpp2_device.dev.dma_mask);
+#ifdef CONFIG_MV_PP2_FPGA
 	pci_unregister_driver(&mv_pp2_pci_driver);
-	platform_device_unregister(&mvpp2_device);
 #endif
+	platform_device_unregister(&mvpp2_device);
 }
 
-#ifdef CONFIG_MV_PP2_FPGA
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
 
 static void mv_pp22_cpu_timer_callback(unsigned long data)
 {
@@ -4143,13 +4390,18 @@ static void mv_pp22_cpu_timer_callback(unsigned long data)
 	struct device_node *port_node;
 	int i = 0, j, err;
 	struct mvpp2_port *port;
+	u32 timeout;
 
 	for(i = 0 ; i < priv->num_ports; i++) {
 		port = priv->port_list[i];
 		if (port && netif_carrier_ok(port->dev)) {
+				//PALAD(MVPP2_PRINT_LINE());
 			for(j = 0 ; j < num_active_cpus(); j++) {
-				if (j==smp_processor_id())
+				if (j==smp_processor_id()) {
+					//PALAD(MVPP2_PRINT_LINE());
 					napi_schedule(&port->q_vector[j].napi);
+					//PALAD(MVPP2_PRINT_LINE());
+				}
 				else {
 					err = smp_call_function_single(j, napi_schedule, &port->q_vector[j].napi, 1);
 					if (err)
@@ -4165,7 +4417,17 @@ static void mv_pp22_cpu_timer_callback(unsigned long data)
 		}
 	}
 
-	mod_timer(&cpu_poll_timer, jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME));
+	PALAD(MVPP2_PRINT_2LINE());
+
+	if (debug_param)
+		timeout = debug_param;
+	else
+		timeout = MV_PP2_FPGA_PERODIC_TIME;
+#ifdef CONFIG_MV_PP2_PALLADIUM
+	timeout = timeout*1000;
+#endif
+	mod_timer(&cpu_poll_timer, jiffies + msecs_to_jiffies(timeout));
+
 }
 
 #endif

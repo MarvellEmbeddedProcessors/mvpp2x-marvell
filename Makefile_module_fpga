@@ -4,16 +4,22 @@ ifndef KDIR
 $(error KDIR is not set. must declare kernel directory. example: export KDIR=~/linux-4.0.4/kernel/)
 endif
 
+config := CONFIG_MV_PP2_FPGA
 obj-m := mvpp2x.o
 mvpp2x-objs := mvpp2_ethtool.o mvpp2_hw.o mvpp2_main.o mvpp2_debug.o
 
 ccflags-y := -I$(M)
 ccflags-y += -I${KDIR}/include
-ccflags-y += -DDEBUG -DCONFIG_MV_PP2_FPGA -DARMADA_390
+ccflags-y += -DDEBUG
+ccflags-y += -D$(config)
 
 
 all:
 	make -C ${KDIR} M=$(M) modules
 
+
 clean:
 	make -C ${KDIR} SUBDIRS=$(M) clean
+	
+	
+$(info NOTICE: config=$(config))

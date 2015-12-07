@@ -27,3 +27,4 @@ IGNORED/*
 
 
 xilinx_axi_pcie_ep.bit
+*.diff
