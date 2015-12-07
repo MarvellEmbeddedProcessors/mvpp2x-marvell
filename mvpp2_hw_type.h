@@ -105,17 +105,20 @@
 /* Parser Registers */
 #define MVPP2_PRS_INIT_LOOKUP_REG		0x1000
 #define MVPP2_PRS_PORT_LU_MAX			0xf
+#define MVPP2_PRS_MAX_LOOP_MIN			0x1
 #define MVPP2_PRS_PORT_LU_MASK(port)		(0xff << ((port) * 4))
 #define MVPP2_PRS_PORT_LU_VAL(port, val)	((val) << ((port) * 4))
 #define MVPP2_PRS_INIT_OFFS_REG(port)		(0x1004 + ((port) & 4))
 #define MVPP2_PRS_INIT_OFF_MASK(port)		(0x3f << (((port) % 4) * 8))
 #define MVPP2_PRS_INIT_OFF_VAL(port, val)	((val) << (((port) % 4) * 8))
+#define MVPP2_PRS_INIT_OFF_BITS			6
+#define MVPP2_PRS_INIT_OFF_MAX			((1 << MVPP2_PRS_INIT_OFF_BITS) - 1)
 #define MVPP2_PRS_MAX_LOOP_REG(port)		(0x100c + ((port) & 4))
 #define MVPP2_PRS_MAX_LOOP_MASK(port)		(0xff << (((port) % 4) * 8))
 #define MVPP2_PRS_MAX_LOOP_VAL(port, val)	((val) << (((port) % 4) * 8))
 #define MVPP2_PRS_TCAM_IDX_REG			0x1100
 #define MVPP2_PRS_TCAM_DATA_REG(idx)		(0x1104 + (idx) * 4)
-#define 	MVPP2_PRS_TCAM_INV_MASK			BIT(31)
+#define MVPP2_PRS_TCAM_INV_MASK			BIT(31)
 #define MVPP2_PRS_SRAM_IDX_REG			0x1200
 #define MVPP2_PRS_SRAM_DATA_REG(idx)		(0x1204 + (idx) * 4)
 

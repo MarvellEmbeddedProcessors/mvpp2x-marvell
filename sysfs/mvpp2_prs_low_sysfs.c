@@ -41,11 +41,36 @@ static ssize_t mv_prs_low_help(char *buf)
 {
 	int off = 0;
 
+	off += scnprintf(buf + off, PAGE_SIZE - off, "cat          sw_dump       - dump parser SW entry.\n");
 	off += scnprintf(buf + off, PAGE_SIZE - off, "cat          hw_dump       - dump all valid HW entries\n");
 	off += scnprintf(buf + off, PAGE_SIZE - off, "cat          hw_regs       - dump parser registers.\n");
 	off += scnprintf(buf + off, PAGE_SIZE - off, "cat          hw_hits       - dump non zeroed hit counters and the associated HW entries\n");
 	off += scnprintf(buf + off, PAGE_SIZE - off, "\n");
 
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo id      > hw_write    - write parser SW entry into HW place <id>.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo id      > hw_read     - read parser entry <id> into SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo 1       > sw_clear    - clear parser SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo id      > hw_inv      - invalidate parser entry <id> in hw.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo         > hw_inv_all  - invalidate all parser entries in HW.\n");
+
+	off += scnprintf(buf + off, PAGE_SIZE - off, "\n");
+
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo p m     > t_port      - add<m=1> or delete<m=0> port<p> in SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo pmap    > t_port_map  - set port map <pmap> to SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo v m     > t_ai        - update ainfo value <v> with mask <m> in SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo o d m   > t_byte      - set byte of data <d> with mask <m> and offset <o> to SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo v       > t_lu        - set lookup id <v> to SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo v m     > s_ri        - set result info value <v> with mask <m> to SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo v m     > s_ai        - set ainfo value <v> with mask <m> to sw entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo v       > s_next_lu   - set next lookup id value <v> to SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo v       > s_shift     - set packet shift value <v> for next lookup to SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo t v     > s_offs      - set offset value <v> for type <t> to SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo v       > s_lu_done   - set (v=1) or clear (v=0) lookup done bit to SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo v       > s_fid_gen   - set (v=1) or clear (v=0) flowid generate bit in SW entry.\n");
+
+	off += scnprintf(buf + off, PAGE_SIZE - off, "echo p l m o > hw_frst_itr - set values for first iteration port <p>, lookupid <l>, \n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "                             max loops <m>, init offs <o>.\n");
+	off += scnprintf(buf + off, PAGE_SIZE - off, "\n");
 
 	return off;
 }
@@ -64,12 +89,13 @@ static ssize_t mv_prs_low_show(struct device *dev,
 		mvpp2_prs_hw_regs_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "hw_hits"))
 		mvpp2_prs_hw_hits_dump(sysfs_cur_hw);
+	else if (!strcmp(name, "sw_dump"))
+		mvpp2_prs_sw_dump(&pe);
 	else
 		off += mv_prs_low_help(buf);
 
 	return off;
 }
-
 
 static ssize_t mv_prs_low_store_unsigned(struct device *dev,
 				   struct device_attribute *attr, const char *buf, size_t len)
@@ -77,6 +103,7 @@ static ssize_t mv_prs_low_store_unsigned(struct device *dev,
 	const char    *name = attr->attr.name;
 	unsigned int  err = 0, a = 0, b = 0, c = 0;
 	unsigned long flags;
+	int index;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -85,10 +112,39 @@ static ssize_t mv_prs_low_store_unsigned(struct device *dev,
 
 	local_irq_save(flags);
 
-	if (!strcmp(name, "hw_read")) {
+	if (!strcmp(name, "hw_write")) {
+		pe.index = a;
+		mvpp2_prs_hw_write(sysfs_cur_hw, &pe);
+	} else if (!strcmp(name, "hw_read")) {
 		pe.index = a;
 		mvpp2_prs_hw_read(sysfs_cur_hw, &pe);
-	}
+	} else if (!strcmp(name, "sw_clear"))
+		mvpp2_prs_sw_clear(&pe);
+	else if (!strcmp(name, "hw_inv"))
+		mvpp2_prs_hw_inv(sysfs_cur_hw, a);
+	else if (!strcmp(name, "hw_inv_all")) {
+		for (index = 0; index < MVPP2_PRS_TCAM_SRAM_SIZE; index++)
+			mvpp2_prs_hw_inv(sysfs_cur_hw, index);
+	} else if (!strcmp(name, "t_port"))
+		mvpp2_prs_tcam_port_set(&pe, a, b);
+	else if (!strcmp(name, "t_port_map"))
+		mvpp2_prs_tcam_port_map_set(&pe, a);
+	else if (!strcmp(name, "t_lu"))
+		mvpp2_prs_tcam_lu_set(&pe, a);
+	else if (!strcmp(name, "t_ai"))
+		mvpp2_prs_tcam_ai_update(&pe, a, b);
+	else if (!strcmp(name, "t_byte"))
+		mvpp2_prs_tcam_data_byte_set(&pe, a, b, c);
+	else if (!strcmp(name, "s_ri"))
+		mvpp2_prs_sram_ri_update(&pe, a, b);
+	else if (!strcmp(name, "s_ai"))
+		mvpp2_prs_sram_ai_update(&pe, a, b);
+	else if (!strcmp(name, "s_next_lu"))
+		mvpp2_prs_sram_next_lu_set(&pe, a);
+	else if (!strcmp(name, "s_lu_done"))
+		(a == 1) ? mvpp2_prs_sw_sram_lu_done_set(&pe) : mvpp2_prs_sw_sram_lu_done_clear(&pe);
+	else if (!strcmp(name, "s_fid_gen"))
+		(a == 1) ? mvpp2_prs_sw_sram_flowid_set(&pe) : mvpp2_prs_sw_sram_flowid_clear(&pe);
 	else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
@@ -101,20 +157,84 @@ static ssize_t mv_prs_low_store_unsigned(struct device *dev,
 	return err ? -EINVAL : len;
 }
 
+static ssize_t mv_prs_low_store_signed(struct device *dev,
+				   struct device_attribute *attr, const char *buf, size_t len)
+{
+	const char    *name = attr->attr.name;
+	int  err = 0, a = 0, b = 0, c = 0, d = 0;
+	unsigned long flags;
+
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
+
+	sscanf(buf, "%d %d %d %d", &a, &b, &c, &d);
+	local_irq_save(flags);
+
+	if (!strcmp(name, "s_shift"))
+		mvpp2_prs_sw_sram_shift_set(&pe, a, MVPP2_PRS_SRAM_OP_SEL_SHIFT_ADD);
+	else if (!strcmp(name, "s_offs"))
+		mvpp2_prs_sw_sram_offset_set(&pe, a, b, MVPP2_PRS_SRAM_OP_SEL_SHIFT_ADD);
+	else if (!strcmp(name, "hw_frst_itr"))
+		mvpp2_prs_hw_port_init(sysfs_cur_hw, a, b, c, d);
+	else {
+		err = 1;
+		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
+	}
+	local_irq_restore(flags);
+
+	if (err)
+		printk(KERN_ERR "%s: <%s>, error %d\n", __func__, attr->attr.name, err);
+
+	return err ? -EINVAL : len;
+}
 
 static DEVICE_ATTR(hw_dump,		S_IRUSR, mv_prs_low_show, NULL);
-static DEVICE_ATTR(help,			S_IRUSR, mv_prs_low_show, NULL);
+static DEVICE_ATTR(sw_dump,		S_IRUSR, mv_prs_low_show, NULL);
+static DEVICE_ATTR(help,		S_IRUSR, mv_prs_low_show, NULL);
 static DEVICE_ATTR(hw_regs,		S_IRUSR, mv_prs_low_show, NULL);
 static DEVICE_ATTR(hw_hits,		S_IRUSR, mv_prs_low_show, NULL);
 static DEVICE_ATTR(hw_read,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
-
-
+static DEVICE_ATTR(sw_clear,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(hw_write,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(hw_inv,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(hw_inv_all,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(t_byte,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(t_port,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(t_port_map,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(t_ai,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(t_lu,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(s_ri,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(s_ai,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(s_next_lu,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(s_lu_done,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(s_fid_gen,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_unsigned);
+static DEVICE_ATTR(s_shift,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_signed);
+static DEVICE_ATTR(s_offs,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_signed);
+static DEVICE_ATTR(hw_frst_itr,		S_IWUSR, mv_prs_low_show, mv_prs_low_store_signed);
 
 static struct attribute *prs_low_attrs[] = {
 	&dev_attr_hw_dump.attr,
+	&dev_attr_sw_dump.attr,
 	&dev_attr_hw_hits.attr,
 	&dev_attr_hw_regs.attr,
+	&dev_attr_hw_write.attr,
 	&dev_attr_hw_read.attr,
+	&dev_attr_hw_inv.attr,
+	&dev_attr_hw_inv_all.attr,
+	&dev_attr_sw_clear.attr,
+	&dev_attr_t_byte.attr,
+	&dev_attr_t_port.attr,
+	&dev_attr_t_port_map.attr,
+	&dev_attr_t_ai.attr,
+	&dev_attr_t_lu.attr,
+	&dev_attr_s_ri.attr,
+	&dev_attr_s_ai.attr,
+	&dev_attr_s_next_lu.attr,
+	&dev_attr_s_shift.attr,
+	&dev_attr_s_offs.attr,
+	&dev_attr_s_lu_done.attr,
+	&dev_attr_s_fid_gen.attr,
+	&dev_attr_hw_frst_itr.attr,
 	&dev_attr_help.attr,
 	NULL
 };

@@ -542,6 +542,7 @@ void mvpp2_get_mac_address(struct mvpp2_port *port, unsigned char *addr);
 
 int mvpp2_c2_init(struct platform_device *pdev, struct mvpp2_hw *hw);
 
+int mvpp2_prs_sw_sram_shift_set(struct mvpp2_prs_entry *pe, int shift, unsigned int op);
 int mvpp2_prs_sw_sram_shift_get(struct mvpp2_prs_entry *pe, int *shift);
 int mvpp2_prs_sw_sram_next_lu_get(struct mvpp2_prs_entry *pe, unsigned int *lu);
 int mvpp2_prs_sram_bit_get(struct mvpp2_prs_entry *pe, int bitNum, unsigned int *bit);
@@ -549,10 +550,27 @@ int mvpp2_prs_sw_sram_lu_done_get(struct mvpp2_prs_entry *pe, unsigned int *bit)
 int mvpp2_prs_sw_sram_flowid_gen_get(struct mvpp2_prs_entry *pe, unsigned int *bit);
 int mvpp2_prs_sw_sram_ri_get(struct mvpp2_prs_entry *pe, unsigned int *bits, unsigned int *enable);
 int mvpp2_prs_sw_sram_ai_get(struct mvpp2_prs_entry *pe, unsigned int *bits, unsigned int *enable);
+int mvpp2_prs_sw_sram_offset_set(struct mvpp2_prs_entry *pe, unsigned int type, int offset, unsigned int op);
 int mvpp2_prs_sw_dump(struct mvpp2_prs_entry *pe);
 int mvpp2_prs_hw_dump(struct mvpp2_hw *hw);
 int mvpp2_prs_hw_regs_dump(struct mvpp2_hw *hw);
 int mvpp2_prs_hw_hits_dump(struct mvpp2_hw *hw);
+void mvpp2_prs_hw_port_init(struct mvpp2_hw *hw, int port, int lu_first, int lu_max, int offset);
+void mvpp2_prs_sw_clear(struct mvpp2_prs_entry *pe);
+void mvpp2_prs_hw_inv(struct mvpp2_hw *hw, int index);
+void mvpp2_prs_tcam_lu_set(struct mvpp2_prs_entry *pe, unsigned int lu);
+void mvpp2_prs_tcam_port_set(struct mvpp2_prs_entry *pe, unsigned int port, bool add);
+void mvpp2_prs_tcam_port_map_set(struct mvpp2_prs_entry *pe, unsigned int ports);
+void mvpp2_prs_tcam_data_byte_set(struct mvpp2_prs_entry *pe, unsigned int offs, unsigned char byte, unsigned char enable);
+void mvpp2_prs_tcam_ai_update(struct mvpp2_prs_entry *pe, unsigned int bits, unsigned int enable);
+void mvpp2_prs_sram_ri_update(struct mvpp2_prs_entry *pe, unsigned int bits, unsigned int mask);
+void mvpp2_prs_sram_ai_update(struct mvpp2_prs_entry *pe, unsigned int bits, unsigned int mask);
+void mvpp2_prs_sram_next_lu_set(struct mvpp2_prs_entry *pe, unsigned int lu);
+void mvpp2_prs_sw_sram_lu_done_set(struct mvpp2_prs_entry *pe);
+void mvpp2_prs_sw_sram_lu_done_clear(struct mvpp2_prs_entry *pe);
+void mvpp2_prs_sw_sram_flowid_set(struct mvpp2_prs_entry *pe);
+void mvpp2_prs_sw_sram_flowid_clear(struct mvpp2_prs_entry *pe);
+int mvpp2_prs_hw_write(struct mvpp2_hw *hw, struct mvpp2_prs_entry *pe);
 int mvpp2_cls_hw_lkp_read(struct mvpp2_hw * hw, int lkpid, int way, struct mvpp2_cls_lookup_entry *fe);
 int mvpp2_cls_hw_lkp_print(struct mvpp2_hw * hw, int lkpid, int way);
 int mvpp2_cls_sw_lkp_rxq_get(struct mvpp2_cls_lookup_entry *lkp, int *rxq);
