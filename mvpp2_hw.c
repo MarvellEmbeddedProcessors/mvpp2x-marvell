@@ -2839,14 +2839,14 @@ int mvpp2_prs_flow_id_attr_get(int flow_id)
 /* Classifier configuration routines */
 
 /* Update classification flow table registers */
-static void mvpp2_cls_flow_write(struct mvpp2_hw *hw,
-				 struct mvpp2_cls_flow_entry *fe)
+void mvpp2_cls_flow_write(struct mvpp2_hw *hw, struct mvpp2_cls_flow_entry *fe)
 {
 	mvpp2_write(hw, MVPP2_CLS_FLOW_INDEX_REG, fe->index);
 	mvpp2_write(hw, MVPP2_CLS_FLOW_TBL0_REG,  fe->data[0]);
 	mvpp2_write(hw, MVPP2_CLS_FLOW_TBL1_REG,  fe->data[1]);
 	mvpp2_write(hw, MVPP2_CLS_FLOW_TBL2_REG,  fe->data[2]);
 }
+EXPORT_SYMBOL(mvpp2_cls_flow_write);
 
 static void mvpp2_cls_flow_read(struct mvpp2_hw *hw, int index, struct mvpp2_cls_flow_entry *fe)
 {
@@ -2883,11 +2883,17 @@ void mvpp2_cls_lookup_read(struct mvpp2_hw *hw, int lkpid, int way, struct mvpp2
 }
 
 /* Operations on flow entry */
-static void mvpp2_cls_sw_flow_hek_num_set(struct mvpp2_cls_flow_entry *fe, int num_of_fields)
+int mvpp2_cls_sw_flow_hek_num_set(struct mvpp2_cls_flow_entry *fe, int num_of_fields)
 {
+	PTR_VALIDATE(fe);
+	POS_RANGE_VALIDATE(num_of_fields, MVPP2_CLS_FLOWS_TBL_FIELDS_MAX);
+
 	fe->data[1] &= ~MVPP2_FLOW_FIELDS_NUM_MASK;
 	fe->data[1] |= (num_of_fields << MVPP2_FLOW_FIELDS_NUM);
+
+	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_sw_flow_hek_num_set);
 
 int mvpp2_cls_sw_flow_hek_set(struct mvpp2_cls_flow_entry *fe, int field_index, int field_id)
 {
@@ -2906,6 +2912,7 @@ int mvpp2_cls_sw_flow_hek_set(struct mvpp2_cls_flow_entry *fe, int field_index, 
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_sw_flow_hek_set);
 
 static void mvpp2_cls_sw_flow_eng_set(struct mvpp2_cls_flow_entry *fe, int engine, int is_last)
 {
@@ -2915,15 +2922,6 @@ static void mvpp2_cls_sw_flow_eng_set(struct mvpp2_cls_flow_entry *fe, int engin
 	fe->data[0] |= is_last;
 	fe->data[0] |= (engine << MVPP2_FLOW_ENGINE);
 	fe->data[0] |= MVPP2_FLOW_PORT_ID_SEL_MASK;
-}
-
-static void mvpp2_cls_sw_flow_extra_set(struct mvpp2_cls_flow_entry *fe, int type, int prio)
-{
-	fe->data[1] &= ~MVPP2_FLOW_LKP_TYPE_MASK;
-	fe->data[1] |= (type << MVPP2_FLOW_LKP_TYPE);
-
-	fe->data[1] &= ~MVPP2_FLOW_FIELD_PRIO_MASK;
-	fe->data[1] |= (prio << MVPP2_FLOW_FIELD_PRIO);
 }
 
 /* To init flow table waccording to different flow */
@@ -3099,24 +3097,6 @@ void mvpp2_cls_flow_tbl_config(struct mvpp2_hw *hw)
 	}
 }
 
-static inline void mvpp2_cls_sw_lkp_rxq_set(struct mvpp2_cls_lookup_entry *le, int rxq)
-{
-	le->data &= ~MVPP2_FLOWID_RXQ_MASK;
-	le->data |= (rxq << MVPP2_FLOWID_RXQ);
-}
-
-static inline void mvpp2_cls_sw_lkp_en_set(struct mvpp2_cls_lookup_entry *le, int en)
-{
-	le->data &= ~MVPP2_FLOWID_EN_MASK;
-	le->data |= (en << MVPP2_FLOWID_EN);
-}
-
-static inline void mvpp2_cls_sw_lkp_flow_set(struct mvpp2_cls_lookup_entry *le, int flow_idx)
-{
-	le->data &= ~MVPP2_FLOWID_FLOW_MASK;
-	le->data |= (flow_idx << MVPP2_FLOWID_FLOW);
-}
-
 /* Update the flow index for flow of lkpid */
 void mvpp2_cls_lkp_flow_set(struct mvpp2_hw *hw, int lkpid, int way, int flow_idx)
 {
@@ -3126,6 +3106,48 @@ void mvpp2_cls_lkp_flow_set(struct mvpp2_hw *hw, int lkpid, int way, int flow_id
 	mvpp2_cls_sw_lkp_flow_set(&le, flow_idx);
 	mvpp2_cls_lookup_write(hw, &le);
 }
+
+int mvpp2_cls_lkp_port_way_set(struct mvpp2_hw *hw, int port, int way)
+{
+	unsigned int val;
+
+	POS_RANGE_VALIDATE(port, MVPP2_MAX_PORTS - 1);
+	POS_RANGE_VALIDATE(way, ONE_BIT_MAX);
+
+	val = mvpp2_read(hw, MVPP2_CLS_PORT_WAY_REG);
+	if (way == 1)
+		val |= MVPP2_CLS_PORT_WAY_MASK(port);
+	else
+		val &= ~MVPP2_CLS_PORT_WAY_MASK(port);
+	mvpp2_write(hw, MVPP2_CLS_PORT_WAY_REG, val);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_lkp_port_way_set);
+
+int mvpp2_cls_hw_udf_set(struct mvpp2_hw *hw, int udf_no, int offs_id, int offs_bits, int size_bits)
+{
+	unsigned int regVal;
+
+	POS_RANGE_VALIDATE(offs_id, MVPP2_CLS_UDF_OFFSET_ID_MAX);
+	POS_RANGE_VALIDATE(offs_bits, MVPP2_CLS_UDF_REL_OFFSET_MAX);
+	POS_RANGE_VALIDATE(size_bits, MVPP2_CLS_UDF_SIZE_MASK);
+	POS_RANGE_VALIDATE(udf_no, MVPP2_CLS_UDF_REGS_NUM - 1);
+
+	regVal = mvpp2_read(hw, MVPP2_CLS_UDF_REG(udf_no));
+	regVal &= ~MVPP2_CLS_UDF_OFFSET_ID_MASK;
+	regVal &= ~MVPP2_CLS_UDF_REL_OFFSET_MASK;
+	regVal &= ~MVPP2_CLS_UDF_SIZE_MASK;
+
+	regVal |= (offs_id << MVPP2_CLS_UDF_OFFSET_ID_OFFS);
+	regVal |= (offs_bits << MVPP2_CLS_UDF_REL_OFFSET_OFFS);
+	regVal |= (size_bits << MVPP2_CLS_UDF_SIZE_OFFS);
+
+	mvpp2_write(hw, MVPP2_CLS_UDF_REG(udf_no), regVal);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_hw_udf_set);
 
 /* Init lookup decoding table with lookup id */
 void mvpp2_cls_lookup_tbl_config(struct mvpp2_hw *hw)
@@ -4399,6 +4421,25 @@ int mvpp2_cls_hw_lkp_read(struct mvpp2_hw * hw, int lkpid, int way,
 }
 EXPORT_SYMBOL(mvpp2_cls_hw_lkp_read);
 
+int mvpp2_cls_hw_lkp_write(struct mvpp2_hw * hw, int lkpid, int way, struct mvpp2_cls_lookup_entry *fe)
+{
+	unsigned int regVal = 0;
+
+	PTR_VALIDATE(fe);
+
+	BIT_RANGE_VALIDATE(way);
+	POS_RANGE_VALIDATE(lkpid, MVPP2_CLS_FLOWS_TBL_SIZE);
+
+	/* write index reg */
+	regVal = (way << MVPP2_CLS_LKP_INDEX_WAY_OFFS) | (lkpid << MVPP2_CLS_LKP_INDEX_LKP_OFFS);
+	mvpp2_write(hw, MVPP2_CLS_LKP_INDEX_REG, regVal);
+
+	/* write flowId reg */
+	mvpp2_write(hw, MVPP2_CLS_LKP_TBL_REG, fe->data);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_hw_lkp_write);
 
 int mvpp2_cls_hw_lkp_print(struct mvpp2_hw * hw, int lkpid, int way)
 {
@@ -4440,6 +4481,20 @@ int mvpp2_cls_sw_lkp_rxq_get(struct mvpp2_cls_lookup_entry *lkp, int *rxq)
 	*rxq =  (lkp->data & MVPP2_FLOWID_RXQ_MASK) >> MVPP2_FLOWID_RXQ;
 	return MV_OK;
 }
+
+int mvpp2_cls_sw_lkp_rxq_set(struct mvpp2_cls_lookup_entry *lkp, int rxq)
+{
+	PTR_VALIDATE(lkp);
+
+	POS_RANGE_VALIDATE(rxq, (1 << MVPP2_FLOWID_RXQ_BITS) - 1);
+
+	lkp->data &= ~MVPP2_FLOWID_RXQ_MASK;
+	lkp->data |= (rxq << MVPP2_FLOWID_RXQ);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_lkp_rxq_set);
+
 /*-------------------------------------------------------------------------------*/
 
 int mvpp2_cls_sw_lkp_en_get(struct mvpp2_cls_lookup_entry *lkp, int *en)
@@ -4450,6 +4505,20 @@ int mvpp2_cls_sw_lkp_en_get(struct mvpp2_cls_lookup_entry *lkp, int *en)
 	*en = (lkp->data & MVPP2_FLOWID_EN_MASK) >> MVPP2_FLOWID_EN;
 	return MV_OK;
 }
+
+int mvpp2_cls_sw_lkp_en_set(struct mvpp2_cls_lookup_entry *lkp, int en)
+{
+	PTR_VALIDATE(lkp);
+
+	BIT_RANGE_VALIDATE(en);
+
+	lkp->data &= ~MVPP2_FLOWID_EN_MASK;
+	lkp->data |= (en << MVPP2_FLOWID_EN);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_lkp_en_set);
+
 /*-------------------------------------------------------------------------------*/
 
 int mvpp2_cls_sw_lkp_flow_get(struct mvpp2_cls_lookup_entry *lkp, int *flow_idx)
@@ -4460,6 +4529,20 @@ int mvpp2_cls_sw_lkp_flow_get(struct mvpp2_cls_lookup_entry *lkp, int *flow_idx)
 	*flow_idx = (lkp->data & MVPP2_FLOWID_FLOW_MASK) >> MVPP2_FLOWID_FLOW;
 	return MV_OK;
 }
+
+int mvpp2_cls_sw_lkp_flow_set(struct mvpp2_cls_lookup_entry *lkp, int flow_idx)
+{
+	PTR_VALIDATE(lkp);
+
+	POS_RANGE_VALIDATE(flow_idx, MVPP2_CLS_FLOWS_TBL_SIZE);
+
+	lkp->data &= ~MVPP2_FLOWID_FLOW_MASK;
+	lkp->data |= (flow_idx << MVPP2_FLOWID_FLOW);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_lkp_flow_set);
+
 /*-------------------------------------------------------------------------------*/
 
 int mvpp2_cls_sw_lkp_mod_get(struct mvpp2_cls_lookup_entry *lkp, int *mod_base)
@@ -4470,6 +4553,19 @@ int mvpp2_cls_sw_lkp_mod_get(struct mvpp2_cls_lookup_entry *lkp, int *mod_base)
 	*mod_base = (lkp->data & MVPP2_FLOWID_MODE_MASK) >> MVPP2_FLOWID_MODE;
 	return MV_OK;
 }
+
+int mvpp2_cls_sw_lkp_mod_set(struct mvpp2_cls_lookup_entry *lkp, int mod_base)
+{
+	PTR_VALIDATE(lkp);
+	/* TODO: what is the max value of mode base */
+	POS_RANGE_VALIDATE(mod_base, (1 << MVPP2_FLOWID_MODE_BITS) - 1);
+
+	lkp->data &= ~MVPP2_FLOWID_MODE_MASK;
+	lkp->data |= (mod_base << MVPP2_FLOWID_MODE);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_lkp_mod_set);
 
 /******************************************************************************/
 /***************** Classifier Top Public flows table APIs  ********************/
@@ -4534,6 +4630,98 @@ int mvpp2_cls_sw_flow_port_get(struct mvpp2_cls_flow_entry *fe, int *type, int *
 
 	return MV_OK;
 }
+
+int mvpp2_cls_sw_flow_port_set(struct mvpp2_cls_flow_entry *fe, int type, int portid)
+{
+	PTR_VALIDATE(fe);
+
+	POS_RANGE_VALIDATE(type, ((1 << MVPP2_FLOW_PORT_TYPE_BITS) - 1));
+	POS_RANGE_VALIDATE(portid, ((1 << MVPP2_FLOW_PORT_ID_BITS) - 1));
+
+	fe->data[0] &= ~MVPP2_FLOW_PORT_ID_MASK;
+	fe->data[0] &= ~MVPP2_FLOW_PORT_TYPE_MASK;
+
+	fe->data[0] |= (portid << MVPP2_FLOW_PORT_ID);
+	fe->data[0] |= (type << MVPP2_FLOW_PORT_TYPE);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_flow_port_set);
+
+/*-------------------------------------------------------------------------------*/
+
+int mvpp2_cls_sw_flow_portid_select(struct mvpp2_cls_flow_entry *fe, int from)
+{
+	PTR_VALIDATE(fe);
+	BIT_RANGE_VALIDATE(from);
+
+	if (from)
+		fe->data[0] |= MVPP2_FLOW_PORT_ID_SEL_MASK;
+	else
+		fe->data[0] &= ~MVPP2_FLOW_PORT_ID_SEL_MASK;
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_flow_portid_select);
+
+int mvpp2_cls_sw_flow_pppoe_set(struct mvpp2_cls_flow_entry *fe, int mode)
+{
+	PTR_VALIDATE(fe);
+	POS_RANGE_VALIDATE(mode, MVPP2_FLOW_PPPOE_MAX);
+
+	fe->data[0] &= ~MVPP2_FLOW_PPPOE_MASK;
+	fe->data[0] |= (mode << MVPP2_FLOW_PPPOE);
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_flow_pppoe_set);
+
+int mvpp2_cls_sw_flow_vlan_set(struct mvpp2_cls_flow_entry *fe, int mode)
+{
+	PTR_VALIDATE(fe);
+	POS_RANGE_VALIDATE(mode, MVPP2_FLOW_VLAN_MAX);
+
+	fe->data[0] &= ~MVPP2_FLOW_VLAN_MASK;
+	fe->data[0] |= (mode << MVPP2_FLOW_VLAN);
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_flow_vlan_set);
+
+/*-------------------------------------------------------------------------------*/
+int mvpp2_cls_sw_flow_macme_set(struct mvpp2_cls_flow_entry *fe, int mode)
+{
+	PTR_VALIDATE(fe);
+	POS_RANGE_VALIDATE(mode, MVPP2_FLOW_MACME_MAX);
+
+	fe->data[0] &= ~MVPP2_FLOW_MACME_MASK;
+	fe->data[0] |= (mode << MVPP2_FLOW_MACME);
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_flow_macme_set);
+
+/*-------------------------------------------------------------------------------*/
+int mvpp2_cls_sw_flow_udf7_set(struct mvpp2_cls_flow_entry *fe, int mode)
+{
+	PTR_VALIDATE(fe);
+	POS_RANGE_VALIDATE(mode, MVPP2_FLOW_UDF7_MAX);
+
+	fe->data[0] &= ~MVPP2_FLOW_UDF7_MASK;
+	fe->data[0] |= (mode << MVPP2_FLOW_UDF7);
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_flow_udf7_set);
+
+int mvpp2_cls_sw_flow_seq_ctrl_set(struct mvpp2_cls_flow_entry *fe, int mode)
+{
+	PTR_VALIDATE(fe);
+	POS_RANGE_VALIDATE(mode, MVPP2_FLOW_ENGINE_MAX);
+
+	fe->data[1] &= ~MVPP2_FLOW_SEQ_CTRL_MASK;
+	fe->data[1] |= (mode << MVPP2_FLOW_SEQ_CTRL);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_flow_seq_ctrl_set);
+
 /*-------------------------------------------------------------------------------*/
 
 int mvpp2_cls_sw_flow_engine_get(struct mvpp2_cls_flow_entry *fe, int *engine, int *is_last)
@@ -4549,6 +4737,23 @@ int mvpp2_cls_sw_flow_engine_get(struct mvpp2_cls_flow_entry *fe, int *engine, i
 }
 
 /*-------------------------------------------------------------------------------*/
+int mvpp2_cls_sw_flow_engine_set(struct mvpp2_cls_flow_entry *fe, int engine, int is_last)
+{
+	PTR_VALIDATE(fe);
+	BIT_RANGE_VALIDATE(is_last);
+
+	fe->data[0] &= ~MVPP2_FLOW_LAST_MASK;
+	fe->data[0] &= ~MVPP2_FLOW_ENGINE_MASK;
+
+	fe->data[0] |= is_last;
+	fe->data[0] |= (engine << MVPP2_FLOW_ENGINE);
+
+	return MV_OK;
+
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_flow_engine_set);
+
+/*-------------------------------------------------------------------------------*/
 
 int mvpp2_cls_sw_flow_extra_get(struct mvpp2_cls_flow_entry *fe, int *type, int *prio)
 {
@@ -4562,6 +4767,21 @@ int mvpp2_cls_sw_flow_extra_get(struct mvpp2_cls_flow_entry *fe, int *type, int 
 	return MV_OK;
 }
 
+int mvpp2_cls_sw_flow_extra_set(struct mvpp2_cls_flow_entry *fe, int type, int prio)
+{
+	PTR_VALIDATE(fe);
+	POS_RANGE_VALIDATE(type, MVPP2_FLOW_PORT_ID_MAX);
+	POS_RANGE_VALIDATE(prio, ((1 << MVPP2_FLOW_FIELD_ID_BITS) - 1));
+
+	fe->data[1] &= ~MVPP2_FLOW_LKP_TYPE_MASK;
+	fe->data[1] |= (type << MVPP2_FLOW_LKP_TYPE);
+
+	fe->data[1] &= ~MVPP2_FLOW_FIELD_PRIO_MASK;
+	fe->data[1] |= (prio << MVPP2_FLOW_FIELD_PRIO);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_flow_extra_set);
 
 /*-------------------------------------------------------------------------------*/
 
@@ -4612,6 +4832,7 @@ int mvpp2_cls_sw_flow_dump(struct mvpp2_cls_flow_entry *fe)
 
 	return MV_OK;
 }
+EXPORT_SYMBOL(mvpp2_cls_sw_flow_dump);
 
 /*-------------------------------------------------------------------------------*/
 
@@ -4780,7 +5001,40 @@ int mvpp2_cls_hw_lkp_hits_dump(struct mvpp2_hw * hw)
 EXPORT_SYMBOL(mvpp2_cls_hw_lkp_hits_dump);
 
 /*-------------------------------------------------------------------------------*/
-/*PPv2.1 new counters MAS 3.20*/
+int mvpp2_cls_sw_lkp_dump(struct mvpp2_cls_lookup_entry *lkp)
+{
+	int int32bit;
+	int status = 0;
+
+	PTR_VALIDATE(lkp);
+
+	printk("< ID  WAY >:	RXQ  	EN	FLOW	MODE_BASE\n");
+
+	/* id */
+	printk(" 0x%2.2x  %1.1d\t", lkp->lkpid, lkp->way);
+
+	/*rxq*/
+	status |= mvpp2_cls_sw_lkp_rxq_get(lkp, &int32bit);
+	printk("0x%2.2x\t", int32bit);
+
+	/*enabe bit*/
+	status |= mvpp2_cls_sw_lkp_en_get(lkp, &int32bit);
+	printk("%1.1d\t", int32bit);
+
+	/*flow*/
+	status |= mvpp2_cls_sw_lkp_flow_get(lkp, &int32bit);
+	printk("0x%3.3x\t", int32bit);
+
+	/*mode*/
+	status |= mvpp2_cls_sw_lkp_mod_get(lkp, &int32bit);
+	printk(" 0x%2.2x\t", int32bit);
+
+	printk("\n");
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_sw_lkp_dump);
+
 int mvpp2_cls_hw_lkp_dump(struct mvpp2_hw * hw)
 {
 	int index, way, int32bit, ind;

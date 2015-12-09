@@ -40,6 +40,9 @@ static struct mvpp2_cls_flow_entry flow_entry;
 static ssize_t mv_cls_help(char *buf)
 {
 	int off = 0;
+
+	off += scnprintf(buf + off, PAGE_SIZE,  "cat             lkp_sw_dump          - dump lookup ID table sw entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "cat             flow_sw_dump         - dump flow table SW entry.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "cat             lkp_hw_dump          - dump lookup ID tabel from hardware.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "cat             flow_hw_hits         - dump non zeroed hit counters  and the associated flow tabel entries from hardware.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "cat             lkp_hw_hits          - dump non zeroed hit counters and the associated lookup ID entires from hardware.\n");
@@ -47,10 +50,44 @@ static ssize_t mv_cls_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE,  "cat             hw_regs              - dump classifier top registers.\n");
 
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
-	off += scnprintf(buf + off, PAGE_SIZE,  "echo idx way    > lkp_hw_read        - read lookup ID table entry from HW <idx,way>.\n");
-	off += scnprintf(buf + off, PAGE_SIZE,  "echo id         > flow_hw_read       - read flow table entry <id> from HW.\n");
-	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset val > mvpp2_reg_write    - Write mvpp2 register.\n");
-	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset     > mvpp2_reg_read     - Read mvpp2 register.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo 1          >lkp_sw_clear        - clear lookup ID table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo 1          >flow_sw_clear       - clear flow table SW entry.\n");
+
+	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo en         >hw_enable           - classifier enable/disable <en = 1/0>.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo p w        >hw_port_way         - set lookup way <w> for physical port <p>.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo a b c d    >hw_udf              - set UDF field <a> as: base <b>, offset <c> bits, size<d> bits.\n");
+
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo p q        >hw_over_rxq_low     - set oversize rx low queue <q> for ingress port <p>.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo idx way    >lkp_hw_write        - write lookup ID table SW entry HW <idx,way>.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo idx way    >lkp_hw_read         - read lookup ID table entry from HW <idx,way>.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo rxq        >lkp_sw_rxq          - set default RXQ <rxq> to lookup ID table.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo f          >lkp_sw_flow         - set index of firs insruction <f> in flow table\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "                                       to lookup ID SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo m          >lkp_sw_mod          - set modification instruction offset <m> to lookup ID SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo e          >lkp_sw_en           - Enable <e=1> or disable <e=0> lookup ID table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo id         >flow_hw_write       - write flow table SW entry to HW <id>.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo id         >flow_hw_read        - read flow table entry <id> from HW.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo t id       >flow_sw_port        - set port type <t> and id <p> to flow table SW entry\n");
+
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo from       >flow_sw_portid      - set cls to recive portid via packet <from=1>\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "                                       or via user configurration <from=0>  to flow table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo mode       >flow_sw_pppoe       - Set PPPoE lookup skip mode <mode> to flow table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo mode       >flow_sw_vlan        - Set VLAN lookup skip mode <mode> to flow table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo mode       >flow_sw_macme       - Set MAC ME lookup skip mode <mode> to flow table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo mode       >flow_sw_udf7        - Set UDF7 lookup skip mode <mode> to flow table SW entry.\n");
+
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo mode       >flow_sw_sq          - Set sequence type <mode> to flow table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo e l        >flow_sw_engin       - set engine <e> nember to flow table SW entry.  <l> - last bit.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo l p        >flow_sw_extra       - set lookup type <l> and priority <p> to flow table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo idx id     >flow_sw_hek         - set HEK field <idx, id> flow table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo n          >flow_sw_num_of_heks - set number of HEK fields <n> to flow table SW entry.\n");
+
+	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset val >mvpp2_reg_write    - Write mvpp2 register.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset     >mvpp2_reg_read     - Read mvpp2 register.\n");
 
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
 
@@ -77,6 +114,10 @@ static ssize_t mv_cls_show(struct device *dev,
 		mvpp2_cls_hw_flow_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "hw_regs"))
 		mvpp2_cls_hw_regs_dump(sysfs_cur_hw);
+	else if (!strcmp(name, "flow_sw_dump"))
+		mvpp2_cls_sw_flow_dump(&flow_entry);
+	else if (!strcmp(name, "lkp_sw_dump"))
+		mvpp2_cls_sw_lkp_dump(&lkp_entry);
 	else
 		off += mv_cls_help(buf);
 
@@ -112,8 +153,55 @@ static ssize_t mv_cls_store_unsigned(struct device *dev,
 		mvpp2_write(sysfs_cur_hw, a, b);
 		val = mvpp2_read(sysfs_cur_hw, a);
 		printk("mvpp2_write_read(0x%x)=0x%x\n", a, val);
-	}
-
+	} else if (!strcmp(name, "lkp_sw_clear"))
+		memset(&lkp_entry, 0, sizeof(struct mvpp2_cls_lookup_entry));
+	else if (!strcmp(name, "lkp_hw_write"))
+		mvpp2_cls_hw_lkp_write(sysfs_cur_hw, a, b, &lkp_entry);
+	else if (!strcmp(name, "lkp_sw_rxq"))
+		mvpp2_cls_sw_lkp_rxq_set(&lkp_entry, a);
+	else if (!strcmp(name, "lkp_sw_flow"))
+		mvpp2_cls_sw_lkp_flow_set(&lkp_entry, a);
+	else if (!strcmp(name, "lkp_sw_mod"))
+		mvpp2_cls_sw_lkp_mod_set(&lkp_entry, a);
+	else if (!strcmp(name, "lkp_sw_en"))
+		mvpp2_cls_sw_lkp_en_set(&lkp_entry, a);
+	else if (!strcmp(name, "flow_sw_clear"))
+		memset(&flow_entry, 0, sizeof(struct mvpp2_cls_flow_entry));
+	else if (!strcmp(name, "flow_hw_write")) {
+		flow_entry.index = a;
+		mvpp2_cls_flow_write(sysfs_cur_hw, &flow_entry);
+	} else if (!strcmp(name, "flow_sw_port"))
+		mvpp2_cls_sw_flow_port_set(&flow_entry, a, b);
+	else if (!strcmp(name, "flow_sw_portid"))
+		mvpp2_cls_sw_flow_portid_select(&flow_entry, a);
+	else if (!strcmp(name, "flow_sw_pppoe"))
+		mvpp2_cls_sw_flow_pppoe_set(&flow_entry, a);
+	else if (!strcmp(name, "flow_sw_vlan"))
+		mvpp2_cls_sw_flow_vlan_set(&flow_entry, a);
+	else if (!strcmp(name, "flow_sw_macme"))
+		mvpp2_cls_sw_flow_macme_set(&flow_entry, a);
+	else if (!strcmp(name, "flow_sw_udf7"))
+		mvpp2_cls_sw_flow_udf7_set(&flow_entry, a);
+	else if (!strcmp(name, "flow_sw_sq"))
+		mvpp2_cls_sw_flow_seq_ctrl_set(&flow_entry, a);
+	else if (!strcmp(name, "flow_sw_engine"))
+		mvpp2_cls_sw_flow_engine_set(&flow_entry, a, b);
+	else if (!strcmp(name, "flow_sw_extra"))
+		mvpp2_cls_sw_flow_extra_set(&flow_entry, a, b);
+	else if (!strcmp(name, "flow_sw_hek"))
+		mvpp2_cls_sw_flow_hek_set(&flow_entry, a, b);
+	else if (!strcmp(name, "flow_sw_num_of_heks"))
+		mvpp2_cls_sw_flow_hek_num_set(&flow_entry, a);
+	else if (!strcmp(name, "hw_enable"))
+		mvpp2_write(sysfs_cur_hw, MVPP2_CLS_MODE_REG, (unsigned int)a);
+	else if (!strcmp(name, "hw_port_way"))
+		mvpp2_cls_lkp_port_way_set(sysfs_cur_hw, a, b);
+	else if (!strcmp(name, "hw_udf"))
+		mvpp2_cls_hw_udf_set(sysfs_cur_hw, a, b, c, d);
+	else if (!strcmp(name, "hw_mtu"))
+		mvpp2_write(sysfs_cur_hw, MVPP2_CLS_MTU_REG(a), b);
+	else if (!strcmp(name, "hw_over_rxq_low"))
+		mvpp2_write(sysfs_cur_hw, MVPP2_CLS_OVERSIZE_RXQ_LOW_REG(a), b);
 	else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
@@ -126,31 +214,77 @@ static ssize_t mv_cls_store_unsigned(struct device *dev,
 	return err ? -EINVAL : len;
 }
 
-
-
-static DEVICE_ATTR(lkp_hw_dump,		S_IRUSR, mv_cls_show, NULL);
-static DEVICE_ATTR(lkp_hw_hits,		S_IRUSR, mv_cls_show, NULL);
+static DEVICE_ATTR(lkp_hw_dump,			S_IRUSR, mv_cls_show, NULL);
+static DEVICE_ATTR(lkp_hw_hits,			S_IRUSR, mv_cls_show, NULL);
 static DEVICE_ATTR(flow_hw_hits,		S_IRUSR, mv_cls_show, NULL);
 static DEVICE_ATTR(flow_hw_dump,		S_IRUSR, mv_cls_show, NULL);
+static DEVICE_ATTR(lkp_sw_dump,			S_IRUSR, mv_cls_show, NULL);
+static DEVICE_ATTR(flow_sw_dump,		S_IRUSR, mv_cls_show, NULL);
 static DEVICE_ATTR(help,			S_IRUSR, mv_cls_show, NULL);
-static DEVICE_ATTR(hw_regs,		S_IRUSR, mv_cls_show, NULL);
-static DEVICE_ATTR(lkp_hw_read,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(hw_regs,			S_IRUSR, mv_cls_show, NULL);
+static DEVICE_ATTR(lkp_sw_clear,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(lkp_hw_write,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(lkp_hw_read,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(lkp_sw_rxq,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(lkp_sw_flow,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(lkp_sw_mod,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(lkp_sw_en,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(flow_sw_clear,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(flow_hw_write,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
 static DEVICE_ATTR(flow_hw_read,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
-static DEVICE_ATTR(mvpp2_reg_read,	S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
-static DEVICE_ATTR(mvpp2_reg_write,	S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
-
-
-
-
+static DEVICE_ATTR(flow_sw_port,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(flow_sw_portid,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(flow_sw_pppoe,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(flow_sw_macme,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(flow_sw_vlan,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(flow_sw_udf7,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(flow_sw_sq,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(flow_sw_engine,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(flow_sw_extra,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(flow_sw_hek,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(flow_sw_num_of_heks,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(hw_enable,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(hw_port_way,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(hw_udf,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(hw_mtu,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(hw_over_rxq_low,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(mvpp2_reg_read,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
+static DEVICE_ATTR(mvpp2_reg_write,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
 
 static struct attribute *cls_attrs[] = {
+	&dev_attr_lkp_sw_dump.attr,
+	&dev_attr_flow_sw_dump.attr,
 	&dev_attr_lkp_hw_hits.attr,
 	&dev_attr_flow_hw_hits.attr,
 	&dev_attr_lkp_hw_dump.attr,
 	&dev_attr_flow_hw_dump.attr,
 	&dev_attr_hw_regs.attr,
+	&dev_attr_lkp_sw_clear.attr,
+	&dev_attr_lkp_hw_write.attr,
 	&dev_attr_lkp_hw_read.attr,
+	&dev_attr_lkp_sw_rxq.attr,
+	&dev_attr_lkp_sw_flow.attr,
+	&dev_attr_lkp_sw_mod.attr,
+	&dev_attr_lkp_sw_en.attr,
+	&dev_attr_flow_sw_clear.attr,
+	&dev_attr_flow_hw_write.attr,
 	&dev_attr_flow_hw_read.attr,
+	&dev_attr_flow_sw_port.attr,
+	&dev_attr_flow_sw_portid.attr,
+	&dev_attr_flow_sw_engine.attr,
+	&dev_attr_flow_sw_vlan.attr,
+	&dev_attr_flow_sw_pppoe.attr,
+	&dev_attr_flow_sw_macme.attr,
+	&dev_attr_flow_sw_sq.attr,
+	&dev_attr_flow_sw_udf7.attr,
+	&dev_attr_flow_sw_extra.attr,
+	&dev_attr_flow_sw_hek.attr,
+	&dev_attr_flow_sw_num_of_heks.attr,
+	&dev_attr_hw_enable.attr,
+	&dev_attr_hw_port_way.attr,
+	&dev_attr_hw_udf.attr,
+	&dev_attr_hw_mtu.attr,
+	&dev_attr_hw_over_rxq_low.attr,
 	&dev_attr_mvpp2_reg_read.attr,
 	&dev_attr_mvpp2_reg_write.attr,
 	&dev_attr_help.attr,
