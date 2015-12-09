@@ -3582,8 +3582,10 @@ static struct mvpp2x_platform_data pp21_pdata = {
 	.mvpp2x_port_isr_rx_group_cfg = mvpp21x_port_isr_rx_group_cfg,
 	.num_port_irq = 1,
 	.hw.desc_queue_addr_shift = MVPP21_DESC_ADDR_SHIFT,
+#ifdef CONFIG_64BIT
 	.skb_base_addr = 0,
 	.skb_base_mask = DMA_BIT_MASK(32),
+#endif
 };
 
 static struct mvpp2x_platform_data pp22_pdata = {
@@ -3598,8 +3600,10 @@ static struct mvpp2x_platform_data pp22_pdata = {
 	.mvpp2x_port_isr_rx_group_cfg = mvpp22_port_isr_rx_group_cfg,
 	.num_port_irq = 9,
 	.hw.desc_queue_addr_shift = MVPP22_DESC_ADDR_SHIFT,
+#ifdef CONFIG_64BIT
 	.skb_base_addr = 0,
 	.skb_base_mask = DMA_BIT_MASK(40),
+#endif
 };
 
 
@@ -3670,8 +3674,9 @@ void mvpp2_pp2_basic_print(struct platform_device *pdev, struct mvpp2 *priv)
 	DBG_MSG("queue_mode(%d)\n", priv->pp2_cfg.queue_mode);
 	DBG_MSG("first_bm_pool(%d) jumbo_pool(%d)\n", priv->pp2_cfg.first_bm_pool, priv->pp2_cfg.jumbo_pool);
 	DBG_MSG("cell_index(%d) num_ports(%d)\n", priv->pp2_cfg.cell_index, priv->num_ports);
-
+#ifdef CONFIG_64BIT
 	DBG_MSG("skb_base_addr(%p)\n", priv->pp2xdata->skb_base_addr);
+#endif
 	DBG_MSG("hw->base(%p)\n", priv->hw.base);
 
 }
