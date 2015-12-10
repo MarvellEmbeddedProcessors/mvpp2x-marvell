@@ -2299,7 +2299,9 @@ void mvpp2_stop_dev(struct mvpp2_port *port)
 
 	mvpp2_egress_disable(port);
 	mvpp2_port_disable(port);
+#ifndef CONFIG_MV_PP2_FPGA
 	phy_stop(port->phy_dev);
+#endif
 }
 
 /* Return positive if MTU is valid */
@@ -2468,6 +2470,7 @@ static int mvpp2_open(struct net_device *dev)
 
 #ifdef CONFIG_MV_PP2_FPGA
 	mvpp2_egress_enable(port); //Enable here, because there is no link event
+	mvpp2_ingress_enable(port);
 #endif
 
 
@@ -2532,6 +2535,9 @@ static int mvpp2_open(struct net_device *dev)
 			}
 		}
 	}
+#ifdef CONFIG_MV_PP2_FPGA
+	add_timer(&cpu_poll_timer);
+#endif
 
 	mvpp2_start_dev(port);
 
@@ -2542,7 +2548,9 @@ static int mvpp2_open(struct net_device *dev)
 	return 0;
 
 err_free_irq:
+#ifndef CONFIG_MV_PP2_FPGA
 	mvpp2_cleanup_irqs(port);
+#endif
 err_cleanup_txqs:
 	mvpp2_cleanup_txqs(port);
 err_cleanup_rxqs:
@@ -2556,17 +2564,23 @@ static int mvpp2_stop(struct net_device *dev)
 	struct mvpp2_port_pcpu *port_pcpu;
 	int cpu;
 
-
+#ifdef CONFIG_MV_PP2_FPGA
+	del_timer_sync(&cpu_poll_timer);
+#endif
 	mvpp2_stop_dev(port);
+
+#ifndef CONFIG_MV_PP2_FPGA
 	mvpp2_phy_disconnect(port);
+#endif
 
 	/* Mask interrupts on all CPUs */
 	on_each_cpu(mvpp2_interrupts_mask, port, 1);
 
 	/* Mask shared interrupts */
 	mvpp2_shared_thread_interrupts_mask(port);
-
+#ifndef CONFIG_MV_PP2_FPGA
 	mvpp2_cleanup_irqs(port);
+#endif
 	if (port->priv->pp2xdata->interrupt_tx_done == false) {
 		for_each_online_cpu(cpu) {
 			port_pcpu = per_cpu_ptr(port->pcpu, cpu);
@@ -2575,6 +2589,7 @@ static int mvpp2_stop(struct net_device *dev)
 			tasklet_kill(&port_pcpu->tx_done_tasklet);
 		}
 	}
+
 	mvpp2_cleanup_rxqs(port);
 	mvpp2_cleanup_txqs(port);
 
@@ -3319,7 +3334,6 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 	}
 	mvpp2_port_power_up(port);
 	MVPP2_PRINT_LINE();
-	mvpp2_ingress_enable(port); //Enable here, because there is no link event
 
 	port->pcpu = alloc_percpu(struct mvpp2_port_pcpu);
 	if (!port->pcpu) {
@@ -3912,7 +3926,6 @@ MVPP2_PRINT_LINE();
 	cpu_poll_timer.function = mv_pp22_cpu_timer_callback;
 	cpu_poll_timer.expires  = jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME);
 	cpu_poll_timer.data     = pdev;
-	add_timer(&cpu_poll_timer);
 #endif
 
 	platform_set_drvdata(pdev, priv);
