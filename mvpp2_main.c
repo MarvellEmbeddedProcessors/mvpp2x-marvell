@@ -293,7 +293,7 @@ static int mvpp2_bm_pool_destroy(struct platform_device *pdev,
 
 	mvpp2_bm_bufs_free(hw, bm_pool, bm_pool->buf_num);
 	if (bm_pool->buf_num) {
-		WARN(1, "cannot free all buffers in pool %d\n", bm_pool->id);
+		WARN(1, "cannot free all buffers in pool %d, buf_num left %d\n", bm_pool->id, bm_pool->buf_num);
 		return 0;
 	}
 
@@ -4036,6 +4036,9 @@ static int mv_pp2_pci_probe(struct pci_dev *pdev, const struct pci_device_id *en
 
 static void mv_pp2_pci_remove(struct pci_dev *pdev)
 {
+	if (mv_pp2_vfpga_address)
+		pci_iounmap(pdev, mv_pp2_vfpga_address);
+	pci_release_regions(pdev);
 	pr_info("mvpp2: PCI device removed\n");
 }
 
@@ -4111,11 +4114,13 @@ static int __init mpp2_module_init(void)
 
 static void __exit mpp2_module_exit(void)
 {
-#ifdef CONFIG_MV_PP2_FPGA
-	pci_unregister_driver(&mv_pp2_pci_driver);
-#endif
 	platform_driver_unregister(&mvpp2_driver);
-
+#ifdef CONFIG_MV_PP2_FPGA
+	if (mvpp2_device.dev.dma_mask)
+		kfree(mvpp2_device.dev.dma_mask);
+	pci_unregister_driver(&mv_pp2_pci_driver);
+	platform_device_unregister(&mvpp2_device);
+#endif
 }
 
 #ifdef CONFIG_MV_PP2_FPGA
