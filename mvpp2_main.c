@@ -84,6 +84,7 @@ static u8 first_log_rxq_queue = 0;
 
 void * mv_pp2_vfpga_address;
 struct timer_list cpu_poll_timer;
+static int cpu_poll_timer_ref_cnt;
 static void mv_pp22_cpu_timer_callback(unsigned long data);
 #endif
 
@@ -2540,7 +2541,9 @@ static int mvpp2_open(struct net_device *dev)
 		}
 	}
 #ifdef CONFIG_MV_PP2_FPGA
-	add_timer(&cpu_poll_timer);
+	if (cpu_poll_timer_ref_cnt == 0)
+		add_timer(&cpu_poll_timer);
+	cpu_poll_timer_ref_cnt++;
 #endif
 
 	mvpp2_start_dev(port);
@@ -2569,7 +2572,9 @@ static int mvpp2_stop(struct net_device *dev)
 	int cpu;
 
 #ifdef CONFIG_MV_PP2_FPGA
-	del_timer_sync(&cpu_poll_timer);
+	cpu_poll_timer_ref_cnt--;
+	if (cpu_poll_timer_ref_cnt == 0)
+		del_timer_sync(&cpu_poll_timer);
 #endif
 	mvpp2_stop_dev(port);
 
