@@ -3808,8 +3808,10 @@ void mvpp2_port_reset(struct mvpp2_port *port)
 void mvpp2_pool_refill(struct mvpp2 *priv, u32 pool,
 			      dma_addr_t phys_addr, struct sk_buff *cookie)
 {
+	struct mvpp2_bm_pool *bm_pool = &priv->bm_pools[pool];
 
 	mvpp2_bm_pool_put(&priv->hw, pool, phys_addr, cookie);
+	STAT_DBG(bm_pool->stats.bm_put++);
 }
 
 /* Set pool buffer size */
@@ -3823,7 +3825,6 @@ void mvpp2_bm_pool_bufsize_set(struct mvpp2_hw *hw,
 	val = ALIGN(buf_size, 1 << MVPP2_POOL_BUF_SIZE_OFFSET);
 	mvpp2_write(hw, MVPP2_POOL_BUF_SIZE_REG(bm_pool->id), val);
 }
-
 
 
 /* Attach long pool to rxq */

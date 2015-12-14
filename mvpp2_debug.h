@@ -72,6 +72,7 @@ void mvpp2_print_reg2(struct mvpp2_hw *hw, unsigned int reg_addr, char *reg_name
 void mvpp2_bm_pool_regs(struct mvpp2_hw *hw, int pool);
 void mvpp2_bm_pool_drop_count(struct mvpp2_hw *hw, int pool);
 void mvpp2_pool_status(struct mvpp2 *priv, int log_pool_num);
+void mv_pp2_pool_stats_print(struct mvpp2 *priv, int log_pool_num);
 
 
 void mvPp2RxDmaRegsPrint(struct mvpp2 *priv, bool print_all, int start, int stop);
@@ -113,6 +114,7 @@ int mvpp22_wrap_rss_dflt_cpu_set(struct mvpp2_port *port, int default_cpu);
 int mvpp2_port_bind_cpu_set(struct mvpp2_port *port, u8 bind_cpu);
 int mvpp2_debug_param_set(u32 param);
 
+void mvpp2_bm_queue_map_dump_all(struct mvpp2_hw *hw);
 
 int mvpp2_cls_c2_qos_prio_set(struct mvpp2_cls_c2_qos_entry *qos, u8 pri);
 int mvpp2_cls_c2_qos_dscp_set(struct mvpp2_cls_c2_qos_entry *qos, u8 dscp);

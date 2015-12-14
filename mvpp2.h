@@ -86,6 +86,12 @@
 #endif /*DEBUG*/
 #endif /*VERBOSE*/
 
+#if DEBUG
+#define STAT_DBG(c) c
+#else
+#define STAT_DBG(c)
+#endif
+
 
 #define MV_ETH_SKB_SHINFO_SIZE	SKB_DATA_ALIGN(sizeof(struct skb_shared_info))
 

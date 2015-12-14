@@ -44,19 +44,23 @@ static ssize_t mv_pp2_help(char *buf)
 	off += sprintf(buf+off, "echo [pool]                  > poolDropCnt     - print BM pool drop counters\n");
 	off += sprintf(buf+off, "echo [pool]                  > poolRegs        - print BM pool registers\n");
 	off += sprintf(buf+off, "echo [pool]                  > poolStatus      - print BM pool status\n");
+	off += sprintf(buf+off, "cat                          queueMappDump   - print BM all rxq/txq to qSet mapp\n");
 	return off;
 }
 
 static ssize_t mv_pp2_show(struct device *dev,
 				  struct device_attribute *attr, char *buf)
 {
-	//const char	*name = attr->attr.name;
+	const char	*name = attr->attr.name;
 	int             off = 0;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
-	off = mv_pp2_help(buf);
+	if (!strcmp(name, "queueMappDump"))
+		mvpp2_bm_queue_map_dump_all(sysfs_cur_hw);
+	else
+		off = mv_pp2_help(buf);
 
 	return off;
 }
@@ -84,6 +88,7 @@ static ssize_t mv_pp2_port_store(struct device *dev,
 		mvpp2_bm_pool_drop_count(sysfs_cur_hw, a);
 	} else if (!strcmp(name, "poolStatus")) {
 		mvpp2_pool_status(sysfs_cur_priv, a);
+		mv_pp2_pool_stats_print(sysfs_cur_priv, a);
 	} else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
@@ -97,13 +102,15 @@ static ssize_t mv_pp2_port_store(struct device *dev,
 	return err ? -EINVAL : len;
 }
 
-static DEVICE_ATTR(help,			S_IRUSR, mv_pp2_show, NULL);
+static DEVICE_ATTR(help,		S_IRUSR, mv_pp2_show, NULL);
+static DEVICE_ATTR(queueMappDump,	S_IRUSR, mv_pp2_show, NULL);
 static DEVICE_ATTR(poolRegs,		S_IWUSR, NULL, mv_pp2_port_store);
 static DEVICE_ATTR(poolDropCnt,		S_IWUSR, NULL, mv_pp2_port_store);
 static DEVICE_ATTR(poolStatus,		S_IWUSR, NULL, mv_pp2_port_store);
 
 static struct attribute *bm_attrs[] = {
 	&dev_attr_help.attr,
+	&dev_attr_queueMappDump.attr,
 	&dev_attr_poolRegs.attr,
 	&dev_attr_poolDropCnt.attr,
 	&dev_attr_poolStatus.attr,

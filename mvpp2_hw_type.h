@@ -916,6 +916,40 @@ SCAN STATUS
 #define MVPP22_BM_MC_ID_MASK			0xfff
 #define MVPP22_BM_FORCE_RELEASE_MASK		BIT(12)
 
+#define MVPP2_BM_PRIO_CTRL_REG			0x6800
+
+#define MVPP2_BM_PRIO_IDX_REG			0x6810
+#define MVPP2_BM_PRIO_IDX_BITS			8
+#define MVPP2_BM_PRIO_IDX_MAX			255
+#define MVPP2_BM_PRIO_IDX_MASK			0xff
+
+#define MVPP2_BM_CPU_QSET_REG			0x6814
+
+#define MVPP2_BM_CPU_SHORT_QSET_OFFS		0
+#define MVPP2_BM_CPU_SHORT_QSET_MASK		(0x7f << MVPP2_BM_CPU_SHORT_QSET_OFFS)
+
+#define MVPP2_BM_CPU_LONG_QSET_OFFS		8
+#define MVPP2_BM_CPU_LONG_QSET_MASK		(0x7f << MVPP2_BM_CPU_LONG_QSET_OFFS)
+
+#define MVPP2_BM_HWF_QSET_REG			0x6818
+
+#define MVPP2_BM_HWF_SHORT_QSET_OFFS		0
+#define MVPP2_BM_HWF_SHORT_QSET_MASK		(0x7f << MVPP2_BM_HWF_SHORT_QSET_OFFS)
+
+#define MVPP2_BM_HWF_LONG_QSET_OFFS		8
+#define MVPP2_BM_HWF_LONG_QSET_MASK		(0x7f << MVPP2_BM_HWF_LONG_QSET_OFFS)
+
+#define MVPP2_BM_QSET_SET_MAX_REG		0x6820
+
+#define MVPP2_BM_QSET_MAX_SHARED_OFFS		0
+#define MVPP2_BM_QSET_MAX_GRNTD_OFFS		16
+
+#define MVPP2_BM_QSET_MAX_SHARED_MASK		(0xffff << MVPP2_BM_QSET_MAX_SHARED_OFFS)
+#define MVPP2_BM_QSET_MAX_GRNTD_MASK		(0xffff << MVPP2_BM_QSET_MAX_GRNTD_OFFS)
+
+
+#define MVPP2_BM_QSET_SET_CNTRS_REG		0x6824
+
 /* TX Scheduler registers */
 #define MVPP2_TXP_SCHED_PORT_INDEX_REG		0x8000
 #define MVPP2_TXP_SCHED_Q_CMD_REG		0x8004
@@ -2061,6 +2095,15 @@ struct mvpp2_c2_shadow {
 	struct mvpp2_c2_rule_idx rule_idx_info[8];	/* Per src port */
 };
 
+/* BM specific defines */
+#if DEBUG
+struct mvpp2_bm_pool_stats {
+	u32 skb_alloc_oom;
+	u32 skb_alloc_ok;
+	u32 bm_put;
+};
+#endif
+
 struct mvpp2_bm_pool {
 	/* Pool number in the range 0-7 */
 	int id;
@@ -2088,7 +2131,10 @@ struct mvpp2_bm_pool {
 	/* Occupied buffers indicator */
 	atomic_t in_use;
 	int in_use_thresh;
-
+	/* Stats info */
+#if DEBUG
+	struct mvpp2_bm_pool_stats stats;
+#endif
 };
 
 struct mvpp2_buff_hdr {

@@ -137,9 +137,33 @@ void mvpp2_pool_status(struct mvpp2 *priv, int log_pool_num)
 }
 EXPORT_SYMBOL(mvpp2_pool_status);
 
+void mv_pp2_pool_stats_print(struct mvpp2 *priv, int log_pool_num)
+{
+	int i, pool;
+	struct mvpp2_bm_pool *bm_pool = NULL;
 
+	if (mvpp2_max_check(log_pool_num, MVPP2_BM_SWF_POOL_OUT_OF_RANGE, "log_pool"))
+		return;
 
+	for (i=0;i<priv->num_pools;i++) {
+		if (priv->bm_pools[i].log_id == log_pool_num) {
+			bm_pool = &priv->bm_pools[i];
+			pool = bm_pool->id;
+		}
+	}
+	if (bm_pool == NULL) {
+		pr_err("%s: Logical BM pool %d is not initialized\n", __func__, log_pool_num);
+		return;
+	}
 
+#if DEBUG
+	printk("skb_alloc_oom    = %u\n", bm_pool->stats.skb_alloc_oom);
+	printk("skb_alloc_ok     = %u\n", bm_pool->stats.skb_alloc_ok);
+	printk("bm_put           = %u\n", bm_pool->stats.bm_put);
+	memset(&bm_pool->stats, 0, sizeof(bm_pool->stats));
+#endif /* DEBUG */
+}
+EXPORT_SYMBOL(mv_pp2_pool_stats_print);
 
 void mvPp2RxDmaRegsPrint(struct mvpp2 *priv, bool print_all, int start, int stop)
 {
@@ -1413,6 +1437,45 @@ int mvpp2_port_bind_cpu_set(struct mvpp2_port *port, u8 bind_cpu)
 	return ret;
 }
 EXPORT_SYMBOL(mvpp2_port_bind_cpu_set);
+
+static void mvpp2_bm_queue_map_dump(struct mvpp2_hw *hw, int queue)
+{
+	unsigned int regVal, shortQset, longQset;
+
+	printk("-------- queue #%d --------\n", queue);
+
+	mvpp2_write(hw, MVPP2_BM_PRIO_IDX_REG, queue);
+	regVal = mvpp2_read(hw, MVPP2_BM_CPU_QSET_REG);
+
+	shortQset = ((regVal & (MVPP2_BM_CPU_SHORT_QSET_MASK)) >> MVPP2_BM_CPU_SHORT_QSET_OFFS);
+	longQset = ((regVal & (MVPP2_BM_CPU_LONG_QSET_MASK)) >> MVPP2_BM_CPU_LONG_QSET_OFFS);
+	printk("CPU SHORT QSET = 0x%02x\n", shortQset);
+	printk("CPU LONG QSET  = 0x%02x\n", longQset);
+
+	regVal = mvpp2_read(hw, MVPP2_BM_HWF_QSET_REG);
+	shortQset = ((regVal & (MVPP2_BM_HWF_SHORT_QSET_MASK)) >> MVPP2_BM_HWF_SHORT_QSET_OFFS);
+	longQset = ((regVal & (MVPP2_BM_HWF_LONG_QSET_MASK)) >> MVPP2_BM_HWF_LONG_QSET_OFFS);
+	printk("HWF SHORT QSET = 0x%02x\n", shortQset);
+	printk("HWF LONG QSET  = 0x%02x\n", longQset);
+}
+
+static bool mvpp2_bm_priority_en(struct mvpp2_hw *hw)
+{
+	return ((mvpp2_read(hw, MVPP2_BM_PRIO_CTRL_REG) == 0) ? false : true);
+}
+
+void mvpp2_bm_queue_map_dump_all(struct mvpp2_hw *hw)
+{
+	int queue;
+
+	if (!mvpp2_bm_priority_en(hw))
+		printk("Note: The buffers priority algorithms is disabled.\n");
+
+	for (queue = 0; queue <= MVPP2_BM_PRIO_IDX_MAX; queue++)
+		mvpp2_bm_queue_map_dump(hw, queue);
+}
+EXPORT_SYMBOL(mvpp2_bm_queue_map_dump_all);
+
 
 int mvpp2_cls_c2_qos_prio_set(struct mvpp2_cls_c2_qos_entry *qos, u8 pri)
 {

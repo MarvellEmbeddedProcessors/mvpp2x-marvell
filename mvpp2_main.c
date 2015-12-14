@@ -417,16 +417,19 @@ static struct sk_buff *mvpp2_skb_alloc(struct mvpp2_port *port,
 	skb = __dev_alloc_skb(bm_pool->pkt_size, gfp_mask);
 	if (!skb) {
 		pr_crit_once("%s skb alloc failed\n",__func__);
+		STAT_DBG(bm_pool->stats.skb_alloc_oom++);
 		return NULL;
 	}
+	STAT_DBG(bm_pool->stats.skb_alloc_ok++);
+
 	phys_addr = dma_map_single(port->dev->dev.parent, skb->head,
 				   MVPP2_RX_BUF_SIZE(bm_pool->pkt_size),
 				    DMA_FROM_DEVICE);
-	if (DEBUG)
+#if DEBUG
 		pr_crit_once("dev_ptr:%p, dev_name:%s, sizeof(dma_addr_t):%d, sizeof(long):%d, phys_addr:%llx, size:%d\n",
 			port->dev->dev.parent, port->dev->dev.parent->init_name, sizeof(dma_addr_t), sizeof(long),
 			phys_addr, MVPP2_RX_BUF_SIZE(bm_pool->pkt_size));
-
+#endif
 	if (unlikely(dma_mapping_error(port->dev->dev.parent, phys_addr))) {
 		MVPP2_PRINT_2LINE();
 		dev_kfree_skb_any(skb);
