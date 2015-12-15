@@ -257,7 +257,7 @@ static int mvpp2_bm_pool_create(struct platform_device *pdev,
 	return 0;
 }
 
-void mvpp2_bm_bufs_free(struct mvpp2_hw *hw, struct mvpp2_bm_pool *bm_pool,
+void mvpp2_bm_bufs_free(struct mvpp2 *priv, struct mvpp2_bm_pool *bm_pool,
 			int buf_num)
 {
 	int i;
@@ -272,10 +272,14 @@ void mvpp2_bm_bufs_free(struct mvpp2_hw *hw, struct mvpp2_bm_pool *bm_pool,
 		struct sk_buff *vaddr;
 
 		/* Get buffer virtual adress (indirect access) */
-		vaddr = mvpp2_bm_virt_addr_get(hw, bm_pool->id);
+		vaddr = mvpp2_bm_virt_addr_get(&priv->hw, bm_pool->id);
 		if (!vaddr)
 			break;
+#ifdef CONFIG_64BIT
+		dev_kfree_skb_any((struct sk_buff *)(priv->pp2xdata->skb_base_addr | (uintptr_t)vaddr));
+#else
 		dev_kfree_skb_any(vaddr);
+#endif
 	}
 
 	/* Update BM driver with number of buffers removed from pool */
@@ -285,26 +289,26 @@ void mvpp2_bm_bufs_free(struct mvpp2_hw *hw, struct mvpp2_bm_pool *bm_pool,
 
 /* Cleanup pool */
 static int mvpp2_bm_pool_destroy(struct platform_device *pdev,
-				 struct mvpp2_hw *hw,
+				 struct mvpp2 *priv,
 				 struct mvpp2_bm_pool *bm_pool)
 {
 	u32 val;
 	int size_bytes;
 
-	mvpp2_bm_bufs_free(hw, bm_pool, bm_pool->buf_num);
+	mvpp2_bm_bufs_free(priv, bm_pool, bm_pool->buf_num);
 	if (bm_pool->buf_num) {
 		WARN(1, "cannot free all buffers in pool %d, buf_num left %d\n", bm_pool->id, bm_pool->buf_num);
 		return 0;
 	}
 
-	val = mvpp2_read(hw, MVPP2_BM_POOL_CTRL_REG(bm_pool->id));
+	val = mvpp2_read(&priv->hw, MVPP2_BM_POOL_CTRL_REG(bm_pool->id));
 	val |= MVPP2_BM_STOP_MASK;
-	mvpp2_write(hw, MVPP2_BM_POOL_CTRL_REG(bm_pool->id), val);
+	mvpp2_write(&priv->hw, MVPP2_BM_POOL_CTRL_REG(bm_pool->id), val);
 
 	size_bytes = 2 * sizeof(uintptr_t) * bm_pool->size;
 	dma_free_coherent(&pdev->dev, size_bytes, bm_pool->virt_addr,
 			  bm_pool->phys_addr);
-	mvpp2_bm_pool_bufsize_set(hw, bm_pool,0);
+	mvpp2_bm_pool_bufsize_set(&priv->hw, bm_pool,0);
 	return 0;
 }
 
@@ -331,7 +335,7 @@ static int mvpp2_bm_pools_init(struct platform_device *pdev,
 err_unroll_pools:
 	dev_err(&pdev->dev, "failed to create BM pool %d, size %d\n", i, size);
 	for (i = i - 1; i >= 0; i--)
-		mvpp2_bm_pool_destroy(pdev, &priv->hw, &priv->bm_pools[i]);
+		mvpp2_bm_pool_destroy(pdev, priv, &priv->bm_pools[i]);
 		return err;
 }
 
@@ -488,7 +492,7 @@ static struct mvpp2_bm_pool * mvpp2_bm_pool_use_internal(
 			return NULL;
 		}
 	} else if (add_num < 0) {
-		mvpp2_bm_bufs_free(hw, pool, -add_num);
+		mvpp2_bm_bufs_free(port->priv, pool, -add_num);
 	}
 
 	return pool;
@@ -3954,7 +3958,7 @@ static int mvpp2_remove(struct platform_device *pdev)
 	for (i = 0; i < priv->num_pools; i++) {
 		struct mvpp2_bm_pool *bm_pool = &priv->bm_pools[i];
 
-		mvpp2_bm_pool_destroy(pdev, hw, bm_pool);
+		mvpp2_bm_pool_destroy(pdev, priv, bm_pool);
 	}
 
 	for_each_online_cpu(i) {
