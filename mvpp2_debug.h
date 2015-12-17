@@ -32,6 +32,10 @@
 #include <linux/skbuff.h>
 #include <linux/platform_device.h>
 
+#define MV_AMPLIFY_FACTOR_MTU				(3)
+#define MV_BIT_NUM_OF_BYTE				(8)
+#define MV_WRR_WEIGHT_UNIT				(256)
+
 /* Macro for alignment up. For example, MV_ALIGN_UP(0x0330, 0x20) = 0x0340   */
 #define MV_ALIGN_UP(number, align)                                          \
 (((number) & ((align) - 1)) ? (((number) + (align)) & ~((align)-1)) : (number))
@@ -56,6 +60,9 @@
 
 #define MV_MEMIO8_READ(addr)            \
 	((*((volatile unsigned char *)(addr))))
+
+/* This macro returns absolute value                                        */
+#define MV_ABS(number)  (((int)(number) < 0) ? -(int)(number) : (int)(number))
 
 
 void mvpp2_print_reg(struct mvpp2_hw *hw, unsigned int reg_addr, char *reg_name);
@@ -86,8 +93,13 @@ void mvPp2PortTxqRegs(struct mvpp2 *priv, int port, int txq);
 void mvPp2AggrTxqRegs(struct mvpp2 *priv, int cpu);
 void mvPp2V1TxqDbgCntrs(struct mvpp2 *priv, int port, int txq);
 void mvPp2TxRegs(struct mvpp2 *priv);
-
-
+void mvPp2TxSchedRegs(struct mvpp2 *priv, int port);
+int mvPp2TxpRateSet(struct mvpp2 *priv, int port, int rate);
+int mvPp2TxpBurstSet(struct mvpp2 *priv, int port, int burst);
+int mvPp2TxqRateSet(struct mvpp2 *priv, int port, int txq, int rate);
+int mvPp2TxqBurstSet(struct mvpp2 *priv, int port, int txq, int burst);
+int mvPp2TxqFixPrioSet(struct mvpp2 *priv, int port, int txq);
+int mvPp2TxqWrrPrioSet(struct mvpp2 *priv, int port, int txq, int weight);
 
 int mvpp2_wrap_cos_mode_set(struct mvpp2_port *port, enum mvpp2_cos_classifier cos_mode);
 int mvpp2_wrap_cos_mode_get(struct mvpp2_port *port);

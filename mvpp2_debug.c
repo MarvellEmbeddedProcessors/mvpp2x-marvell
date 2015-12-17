@@ -550,6 +550,316 @@ void mvPp2TxRegs(struct mvpp2 *priv)
 }
 EXPORT_SYMBOL(mvPp2TxRegs);
 
+void mvPp2TxSchedRegs(struct mvpp2 *priv, int port)
+{
+	struct mvpp2_hw *hw = &priv->hw;
+	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+	int physTxp, txq;
+
+	physTxp = mvpp2_egress_port(pp2_port);
+
+	printk("\n[TXP Scheduler registers: port=%d, physPort=%d]\n", port, physTxp);
+
+	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, physTxp);
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, "MV_PP2_TXP_SCHED_PORT_INDEX_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_Q_CMD_REG, "MV_PP2_TXP_SCHED_Q_CMD_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_CMD_1_REG, "MV_PP2_TXP_SCHED_CMD_1_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG, "MV_PP2_TXP_SCHED_FIXED_PRIO_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_PERIOD_REG, "MV_PP2_TXP_SCHED_PERIOD_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_MTU_REG, "MV_PP2_TXP_SCHED_MTU_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_REFILL_REG, "MV_PP2_TXP_SCHED_REFILL_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_TOKEN_SIZE_REG, "MV_PP2_TXP_SCHED_TOKEN_SIZE_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_TOKEN_CNTR_REG, "MV_PP2_TXP_SCHED_TOKEN_CNTR_REG");
+
+	for (txq = 0; txq < MVPP2_MAX_TXQ; txq++) {
+		printk("\n[TxQ Scheduler registers: port=%d, txq=%d]\n", port, txq);
+		mvpp2_print_reg(hw, MVPP2_TXQ_SCHED_REFILL_REG(txq), "MV_PP2_TXQ_SCHED_REFILL_REG");
+		mvpp2_print_reg(hw, MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq), "MV_PP2_TXQ_SCHED_TOKEN_SIZE_REG");
+		mvpp2_print_reg(hw, MVPP2_TXQ_SCHED_TOKEN_CNTR_REG(txq), "MV_PP2_TXQ_SCHED_TOKEN_CNTR_REG");
+	}
+}
+EXPORT_SYMBOL(mvPp2TxSchedRegs);
+
+/* Calculate period and tokens accordingly with required rate and accuracy */
+int mvPp2RateCalc(int rate, unsigned int accuracy, unsigned int *pPeriod, unsigned int *pTokens)
+{
+	/* Calculate refill tokens and period - rate [Kbps] = tokens [bits] * 1000 / period [usec] */
+	/* Assume:  Tclock [MHz] / BasicRefillNoOfClocks = 1 */
+	unsigned int period, tokens, calc;
+
+	if (rate == 0) {
+		/* Disable traffic from the port: tokens = 0 */
+		if (pPeriod != NULL)
+			*pPeriod = 1000;
+
+		if (pTokens != NULL)
+			*pTokens = 0;
+
+		return 0;
+	}
+
+	/* Find values of "period" and "tokens" match "rate" and "accuracy" when period is minimal */
+	for (period = 1; period <= 1000; period++) {
+		tokens = 1;
+		while (1)	{
+			calc = (tokens * 1000) / period;
+			if (((MV_ABS(calc - rate) * 100) / rate) <= accuracy) {
+				if (pPeriod != NULL)
+					*pPeriod = period;
+
+				if (pTokens != NULL)
+					*pTokens = tokens;
+
+				return 0;
+			}
+			if (calc > rate)
+				break;
+
+			tokens++;
+		}
+	}
+	return -1;
+}
+
+/* Set bandwidth limitation for TX port
+ *   rate [Kbps]    - steady state TX bandwidth limitation
+ */
+int mvPp2TxpRateSet(struct mvpp2 *priv, int port, int rate)
+{
+	u32 regVal;
+	unsigned int tokens, period, txPortNum, accuracy = 0;
+	int status;
+	struct mvpp2_hw *hw = &priv->hw;
+	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+
+	if (port >= MVPP2_MAX_PORTS)
+		return -1;
+
+	txPortNum = mvpp2_egress_port(pp2_port);
+	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
+
+	regVal = mvpp2_read(hw, MVPP2_TXP_SCHED_PERIOD_REG);
+
+	status = mvPp2RateCalc(rate, accuracy, &period, &tokens);
+	if (status != MV_OK) {
+		printk("%s: Can't provide rate of %d [Kbps] with accuracy of %d [%%]\n",
+				__func__, rate, accuracy);
+		return status;
+	}
+	if (tokens > MVPP2_TXP_REFILL_TOKENS_MAX)
+		tokens = MVPP2_TXP_REFILL_TOKENS_MAX;
+
+	if (period > MVPP2_TXP_REFILL_PERIOD_MAX)
+		period = MVPP2_TXP_REFILL_PERIOD_MAX;
+
+	regVal = mvpp2_read(hw, MVPP2_TXP_SCHED_REFILL_REG);
+
+	regVal &= ~MVPP2_TXP_REFILL_TOKENS_ALL_MASK ;
+	regVal |= MVPP2_TXP_REFILL_TOKENS_MASK(tokens);
+
+	regVal &= ~MVPP2_TXP_REFILL_PERIOD_ALL_MASK;
+	regVal |= MVPP2_TXP_REFILL_PERIOD_MASK(period);
+
+	mvpp2_write(hw, MVPP2_TXP_SCHED_REFILL_REG, regVal);
+
+	return 0;
+}
+EXPORT_SYMBOL(mvPp2TxpRateSet);
+
+/* Set maximum burst size for TX port
+ *   burst [bytes] - number of bytes to be sent with maximum possible TX rate,
+ *                    before TX rate limitation will take place.
+ */
+int mvPp2TxpBurstSet(struct mvpp2 *priv, int port, int burst)
+{
+	u32 size, mtu;
+	int txPortNum;
+	struct mvpp2_hw *hw = &priv->hw;
+	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+
+	if (port >= MVPP2_MAX_PORTS)
+		return -1;
+
+	txPortNum = mvpp2_egress_port(pp2_port);
+	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
+
+	/* Calulate Token Bucket Size */
+	size = 8 * burst;
+
+	if (size > MVPP2_TXP_TOKEN_SIZE_MAX)
+		size = MVPP2_TXP_TOKEN_SIZE_MAX;
+
+	/* Token bucket size must be larger then MTU */
+	mtu = mvpp2_read(hw, MVPP2_TXP_SCHED_MTU_REG);
+	if (mtu > size) {
+		printk("%s Error: Bucket size (%d bytes) < MTU (%d bytes)\n",
+					__func__, (size / 8), (mtu / 8));
+		return -1;
+	}
+	mvpp2_write(hw, MVPP2_TXP_SCHED_TOKEN_SIZE_REG, size);
+
+	return 0;
+}
+EXPORT_SYMBOL(mvPp2TxpBurstSet);
+
+/* Set bandwidth limitation for TXQ
+ *   rate  [Kbps]  - steady state TX rate limitation
+ */
+int mvPp2TxqRateSet(struct mvpp2 *priv, int port, int txq, int rate)
+{
+	u32		regVal;
+	unsigned int	txPortNum, period, tokens, accuracy = 0;
+	int	status;
+	struct mvpp2_hw *hw = &priv->hw;
+	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+
+	if (port >= MVPP2_MAX_PORTS)
+		return -1;
+
+	if (txq >= MVPP2_MAX_TXQ)
+		return -1;
+
+	status = mvPp2RateCalc(rate, accuracy, &period, &tokens);
+	if (status != MV_OK) {
+		printk("%s: Can't provide rate of %d [Kbps] with accuracy of %d [%%]\n",
+				__func__, rate, accuracy);
+		return status;
+	}
+
+	txPortNum = mvpp2_egress_port(pp2_port);
+	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
+
+	if (tokens > MVPP2_TXQ_REFILL_TOKENS_MAX)
+		tokens = MVPP2_TXQ_REFILL_TOKENS_MAX;
+
+	if (period > MVPP2_TXQ_REFILL_PERIOD_MAX)
+		period = MVPP2_TXQ_REFILL_PERIOD_MAX;
+
+	regVal = mvpp2_read(hw, MVPP2_TXQ_SCHED_REFILL_REG(txq));
+
+	regVal &= ~MVPP2_TXQ_REFILL_TOKENS_ALL_MASK;
+	regVal |= MVPP2_TXQ_REFILL_TOKENS_MASK(tokens);
+
+	regVal &= ~MVPP2_TXQ_REFILL_PERIOD_ALL_MASK;
+	regVal |= MVPP2_TXQ_REFILL_PERIOD_MASK(period);
+
+	mvpp2_write(hw, MVPP2_TXQ_SCHED_REFILL_REG(txq), regVal);
+
+	return 0;
+}
+EXPORT_SYMBOL(mvPp2TxqRateSet);
+
+/* Set maximum burst size for TX port
+ *   burst [bytes] - number of bytes to be sent with maximum possible TX rate,
+ *                    before TX bandwidth limitation will take place.
+ */
+int mvPp2TxqBurstSet(struct mvpp2 *priv, int port, int txq, int burst)
+{
+	u32  size, mtu;
+	int txPortNum;
+	struct mvpp2_hw *hw = &priv->hw;
+	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+
+	if (port >= MVPP2_MAX_PORTS)
+		return -1;
+
+	if (txq >= MVPP2_MAX_TXQ)
+		return -1;
+
+	txPortNum = mvpp2_egress_port(pp2_port);
+	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
+
+	/* Calulate Tocket Bucket Size */
+	size = 8 * burst;
+
+	if (size > MVPP2_TXQ_TOKEN_SIZE_MAX)
+		size = MVPP2_TXQ_TOKEN_SIZE_MAX;
+
+	/* Tocken bucket size must be larger then MTU */
+	mtu = mvpp2_read(hw, MVPP2_TXP_SCHED_MTU_REG);
+	if (mtu > size) {
+		printk("%s Error: Bucket size (%d bytes) < MTU (%d bytes)\n",
+					__func__, (size / 8), (mtu / 8));
+		return -1;
+	}
+
+	mvpp2_write(hw, MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq), size);
+
+	return 0;
+}
+EXPORT_SYMBOL(mvPp2TxqBurstSet);
+
+/* Set TXQ to work in FIX priority mode */
+int mvPp2TxqFixPrioSet(struct mvpp2 *priv, int port, int txq)
+{
+	u32 regVal;
+	int txPortNum;
+	struct mvpp2_hw *hw = &priv->hw;
+	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+
+	if (port >= MVPP2_MAX_PORTS)
+		return -1;
+
+	if (txq >= MVPP2_MAX_TXQ)
+		return -1;
+
+	txPortNum = mvpp2_egress_port(pp2_port);
+	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
+
+	regVal = mvpp2_read(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG);
+	regVal |= (1 << txq);
+	mvpp2_write(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG, regVal);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2TxqFixPrioSet);
+
+/* Set TXQ to work in WRR mode and set relative weight. */
+/*   Weight range [1..N] */
+int mvPp2TxqWrrPrioSet(struct mvpp2 *priv, int port, int txq, int weight)
+{
+	u32 regVal, mtu, mtu_aligned, weight_min;
+	int txPortNum;
+	struct mvpp2_hw *hw = &priv->hw;
+	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+
+	if (port >= MVPP2_MAX_PORTS)
+		return -1;
+
+	if (txq >= MVPP2_MAX_TXQ)
+		return -1;
+
+	txPortNum = mvpp2_egress_port(pp2_port);
+	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
+
+	/* Weight * 256 bytes * 8 bits must be larger then MTU [bits] */
+	mtu = mvpp2_read(hw, MVPP2_TXP_SCHED_MTU_REG);
+
+	/* WA for wrong Token bucket update: Set MTU value = 3*real MTU value, now get read MTU*/
+	mtu /= MV_AMPLIFY_FACTOR_MTU;
+	mtu /= MV_BIT_NUM_OF_BYTE; /* move to bytes */
+	mtu_aligned = MV_ALIGN_UP(mtu, MV_WRR_WEIGHT_UNIT);
+	weight_min = mtu_aligned / MV_WRR_WEIGHT_UNIT;
+
+	if ((weight < weight_min) || (weight > MVPP2_TXQ_WRR_WEIGHT_MAX)) {
+		printk("%s Error: weight=%d is out of range %d...%d\n",
+				__func__, weight, weight_min, MVPP2_TXQ_WRR_WEIGHT_MAX);
+		return -1;
+	}
+
+	regVal = mvpp2_read(hw, MVPP2_TXQ_SCHED_WRR_REG(txq));
+
+	regVal &= ~MVPP2_TXQ_WRR_WEIGHT_ALL_MASK;
+	regVal |= MVPP2_TXQ_WRR_WEIGHT_MASK(weight);
+	mvpp2_write(hw, MVPP2_TXQ_SCHED_WRR_REG(txq), regVal);
+
+	regVal = mvpp2_read(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG);
+	regVal &= ~(1 << txq);
+	mvpp2_write(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG, regVal);
+
+	return 0;
+}
+EXPORT_SYMBOL(mvPp2TxqWrrPrioSet);
 
 #if 0
 void mvPp2IsrRegs(struct mvpp2_hw *hw, int port)

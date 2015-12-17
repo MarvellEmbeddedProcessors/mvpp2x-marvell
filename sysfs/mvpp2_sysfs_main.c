@@ -120,7 +120,7 @@ static int mv_pp2_sysfs_init(void)
 
 	mv_pp2_debug_sysfs_init(&pd->kobj);
 
-//	mv_pp2_tx_sched_sysfs_init(gbe_kobj);
+	mv_pp2_tx_sched_sysfs_init(&pd->kobj);
 //	mv_pp2_qos_sysfs_init(gbe_kobj);
 //	mv_pp2_gbe_pme_sysfs_init(gbe_kobj);
 //#ifdef CONFIG_MV_PP2_HWF
@@ -162,9 +162,12 @@ static void mv_pp2_sysfs_exit(void)
 	mv_pp2_cls2_sysfs_exit(&pd->kobj);
 	mv_pp2_cls_sysfs_exit(&pd->kobj);
 	mv_pp2_bm_sysfs_exit(&pd->kobj);
+	mv_pp2_rx_sysfs_exit(&pd->kobj);
+	mv_pp2_tx_sysfs_exit(&pd->kobj);
 	mv_pp2_rss_sysfs_exit(&pd->kobj);
 	mv_pp2_cos_sysfs_exit(&pd->kobj);
 	mv_pp2_debug_sysfs_exit(&pd->kobj);
+	mv_pp2_tx_sched_sysfs_exit(&pd->kobj);
 //	mv_pp2_plcr_sysfs_exit(&pd->kobj);
 //	mv_pp2_gbe_sysfs_exit(&pd->kobj);
 	/* can't delete, we call to init/clean function from this sysfs */

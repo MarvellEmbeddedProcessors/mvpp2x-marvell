@@ -32,20 +32,18 @@ disclaimer.
 #include <linux/platform_device.h>
 #include <linux/netdevice.h>
 
-#include "mv_eth_sysfs.h"
-#include "gbe/mvPp2Gbe.h"
-#include "mv_netdev.h"
+#include "mvPp2Common.h"
 
 static ssize_t mv_eth_help(char *buf)
 {
 	int off = 0;
 
-	off += sprintf(buf+off, "echo [p] [txp]               > txSchedRegs   - show TXP Scheduler registers for egress port <p/txp>\n");
-	off += sprintf(buf+off, "echo [p] [txp] [v]           > txpRate       - set outgoing rate <v> in [kbps] for <port/txp>\n");
-	off += sprintf(buf+off, "echo [p] [txp] [v]           > txpBurst      - set maximum burst <v> in [Bytes] for <port/txp>\n");
-	off += sprintf(buf+off, "echo [p] [txp] [txq] [v]     > txqRate       - set outgoing rate <v> in [kbps] for <port/txp/txq>\n");
-	off += sprintf(buf+off, "echo [p] [txp] [txq] [v]     > txqBurst      - set maximum burst <v> in [Bytes] for <port/txp/txq>\n");
-	off += sprintf(buf+off, "echo [p] [txp] [txq] [v]     > txqWrr        - set outgoing WRR weight for <port/txp/txq>. <v=0> - fixed\n");
+	off += sprintf(buf+off, "echo [txp]               > txSchedRegs   - show TXP Scheduler registers for egress port <p/txp>\n");
+	off += sprintf(buf+off, "echo [txp] [v]           > txpRate       - set outgoing rate <v> in [kbps] for <port/txp>\n");
+	off += sprintf(buf+off, "echo [txp] [v]           > txpBurst      - set maximum burst <v> in [Bytes] for <port/txp>\n");
+	off += sprintf(buf+off, "echo [txp] [txq] [v]     > txqRate       - set outgoing rate <v> in [kbps] for <port/txp/txq>\n");
+	off += sprintf(buf+off, "echo [txp] [txq] [v]     > txqBurst      - set maximum burst <v> in [Bytes] for <port/txp/txq>\n");
+	off += sprintf(buf+off, "echo [txp] [txq] [v]     > txqWrr        - set outgoing WRR weight for <port/txp/txq>. <v=0> - fixed\n");
 
 	return off;
 }
@@ -68,33 +66,33 @@ static ssize_t mv_eth_port_store(struct device *dev,
 {
 	const char      *name = attr->attr.name;
 	int             err;
-	unsigned int    p, v, a, b;
+	unsigned int    p, a, b;
 	unsigned long   flags;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
 	/* Read port and value */
-	err = p = v = a = b = 0;
-	sscanf(buf, "%d %d %d %d", &p, &v, &a, &b);
+	err = p = a = b = 0;
+	sscanf(buf, "%d %d %d", &p, &a, &b);
 
 	local_irq_save(flags);
 
 	if (!strcmp(name, "txSchedRegs")) {
-		mvPp2TxSchedRegs(p, v);
+		mvPp2TxSchedRegs(sysfs_cur_priv, p);
 	} else if (!strcmp(name, "txpRate")) {
-		err = mvPp2TxpRateSet(p, v, a);
+		err = mvPp2TxpRateSet(sysfs_cur_priv, p, a);
 	} else if (!strcmp(name, "txpBurst")) {
-		err = mvPp2TxpBurstSet(p, v, a);
+		err = mvPp2TxpBurstSet(sysfs_cur_priv, p, a);
 	} else if (!strcmp(name, "txqRate")) {
-		err = mvPp2TxqRateSet(p, v, a, b);
+		err = mvPp2TxqRateSet(sysfs_cur_priv, p, a, b);
 	} else if (!strcmp(name, "txqBurst")) {
-		err = mvPp2TxqBurstSet(p, v, a, b);
+		err = mvPp2TxqBurstSet(sysfs_cur_priv, p, a, b);
 	} else if (!strcmp(name, "txqWrr")) {
 		if (b == 0)
-			err = mvPp2TxqFixPrioSet(p, v, a);
+			err = mvPp2TxqFixPrioSet(sysfs_cur_priv, p, a);
 		else
-			err = mvPp2TxqWrrPrioSet(p, v, a, b);
+			err = mvPp2TxqWrrPrioSet(sysfs_cur_priv, p, a, b);
 	} else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
