@@ -111,4 +111,10 @@ int mvpp22_wrap_rss_mode_set(struct mvpp2_port *port, int rss_mode);
 int mvpp22_wrap_rss_dflt_cpu_set(struct mvpp2_port *port, int default_cpu);
 int mvpp2_port_bind_cpu_set(struct mvpp2_port *port, u8 bind_cpu);
 
+int mvpp2_cls_c2_qos_prio_set(struct mvpp2_cls_c2_qos_entry *qos, u8 pri);
+int mvpp2_cls_c2_qos_dscp_set(struct mvpp2_cls_c2_qos_entry *qos, u8 dscp);
+int mvpp2_cls_c2_qos_color_set(struct mvpp2_cls_c2_qos_entry *qos, u8 color);
+int mvpp2_cls_c2_queue_set(struct mvpp2_cls_c2_entry *c2, int cmd, int queue, int from);
+int mvpp2_cls_c2_mtu_set(struct mvpp2_cls_c2_entry *c2, int mtu_inx);
+
 #endif /* _MVPP2_DEBUG_H_ */

@@ -5106,6 +5106,7 @@ int mvpp2_cls_c2_qos_hw_read(struct mvpp2_hw *hw, int tbl_id, int tbl_sel, int t
 
 	return MV_OK;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_qos_hw_read);
 /*-------------------------------------------------------------------------------*/
 
 
@@ -5316,6 +5317,7 @@ int mvpp2_cls_c2_hw_read(struct mvpp2_hw *hw, int index, struct mvpp2_cls_c2_ent
 
 	return MV_OK;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_hw_read);
 /*-------------------------------------------------------------------------------*/
 
 int mvpp2_cls_c2_sw_words_dump(struct mvpp2_cls_c2_entry *c2)
@@ -5738,6 +5740,7 @@ int mvpp2_cls_c2_hw_write(struct mvpp2_hw *hw, int index, struct mvpp2_cls_c2_en
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_hw_write);
 
 int mvpp2_cls_c2_qos_hw_write(struct mvpp2_hw *hw, struct mvpp2_cls_c2_qos_entry *qos)
 {
@@ -5766,22 +5769,34 @@ int mvpp2_cls_c2_qos_hw_write(struct mvpp2_hw *hw, struct mvpp2_cls_c2_qos_entry
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_qos_hw_write);
 
-static void mvpp2_cls_c2_hw_inv_all(struct mvpp2_hw *hw)
+int mvpp2_cls_c2_hw_inv(struct mvpp2_hw *hw, int index)
+{
+	if (!hw || index >= MVPP2_CLS_C2_TCAM_SIZE)
+		return -EINVAL;
+
+	/* write index reg */
+	mvpp2_write(hw, MVPP2_CLS2_TCAM_IDX_REG, index);
+
+	/* set invalid bit*/
+	mvpp2_write(hw, MVPP2_CLS2_TCAM_INV_REG, (1 << MVPP2_CLS2_TCAM_INV_INVALID_OFF));
+
+	/* trigger */
+	mvpp2_write(hw, MVPP2_CLS2_TCAM_DATA_REG(4), 0);
+
+	return 0;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_hw_inv);
+
+void mvpp2_cls_c2_hw_inv_all(struct mvpp2_hw *hw)
 {
 	int index;
 
-	for (index = 0; index < MVPP2_CLS_C2_TCAM_SIZE; index++) {
-		/* write index reg */
-		mvpp2_write(hw, MVPP2_CLS2_TCAM_IDX_REG, index);
-
-		/* set invalid bit*/
-		mvpp2_write(hw, MVPP2_CLS2_TCAM_INV_REG, (1 << MVPP2_CLS2_TCAM_INV_INVALID_OFF));
-
-		/* trigger */
-		mvpp2_write(hw, MVPP2_CLS2_TCAM_DATA_REG(4), 0);
-	}
+	for (index = 0; index < MVPP2_CLS_C2_TCAM_SIZE; index++)
+		mvpp2_cls_c2_hw_inv(hw, index);
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_hw_inv_all);
 
 static void mvpp2_cls_c2_qos_hw_clear_all(struct mvpp2_hw *hw)
 {
@@ -5802,7 +5817,7 @@ static void mvpp2_cls_c2_qos_hw_clear_all(struct mvpp2_hw *hw)
 			mvpp2_cls_c2_qos_hw_write(hw, &qos);
 }
 
-static int mvpp2_cls_c2_qos_tbl_set(struct mvpp2_cls_c2_entry *c2, int tbl_id, int tbl_sel)
+int mvpp2_cls_c2_qos_tbl_set(struct mvpp2_cls_c2_entry *c2, int tbl_id, int tbl_sel)
 {
 	if (!c2 || tbl_sel > 1)
 		return -EINVAL;
@@ -5821,8 +5836,9 @@ static int mvpp2_cls_c2_qos_tbl_set(struct mvpp2_cls_c2_entry *c2, int tbl_id, i
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_qos_tbl_set);
 
-static int mvpp2_cls_c2_color_set(struct mvpp2_cls_c2_entry *c2, int cmd, int from)
+int mvpp2_cls_c2_color_set(struct mvpp2_cls_c2_entry *c2, int cmd, int from)
 {
 	if (!c2 || cmd > MVPP2_COLOR_ACTION_TYPE_RED_LOCK)
 		return -EINVAL;
@@ -5837,8 +5853,9 @@ static int mvpp2_cls_c2_color_set(struct mvpp2_cls_c2_entry *c2, int cmd, int fr
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_color_set);
 
-static int mvpp2_cls_c2_prio_set(struct mvpp2_cls_c2_entry *c2, int cmd, int prio, int from)
+int mvpp2_cls_c2_prio_set(struct mvpp2_cls_c2_entry *c2, int cmd, int prio, int from)
 {
 	if (!c2 || cmd > MVPP2_ACTION_TYPE_UPDT_LOCK || prio >= MVPP2_QOS_TBL_LINE_NUM_PRI)
 		return -EINVAL;
@@ -5858,8 +5875,9 @@ static int mvpp2_cls_c2_prio_set(struct mvpp2_cls_c2_entry *c2, int cmd, int pri
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_prio_set);
 
-static int mvpp2_cls_c2_dscp_set(struct mvpp2_cls_c2_entry *c2, int cmd, int dscp, int from)
+int mvpp2_cls_c2_dscp_set(struct mvpp2_cls_c2_entry *c2, int cmd, int dscp, int from)
 {
 	if (!c2 || cmd > MVPP2_ACTION_TYPE_UPDT_LOCK || dscp >= MVPP2_QOS_TBL_LINE_NUM_DSCP)
 		return -EINVAL;
@@ -5879,8 +5897,9 @@ static int mvpp2_cls_c2_dscp_set(struct mvpp2_cls_c2_entry *c2, int cmd, int dsc
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_dscp_set);
 
-static int mvpp2_cls_c2_queue_low_set(struct mvpp2_cls_c2_entry *c2, int cmd, int queue, int from)
+int mvpp2_cls_c2_queue_low_set(struct mvpp2_cls_c2_entry *c2, int cmd, int queue, int from)
 {
 	if (!c2 || cmd > MVPP2_ACTION_TYPE_UPDT_LOCK || queue >= (1 << MVPP2_CLS2_ACT_QOS_ATTR_QL_BITS))
 		return -EINVAL;
@@ -5900,8 +5919,9 @@ static int mvpp2_cls_c2_queue_low_set(struct mvpp2_cls_c2_entry *c2, int cmd, in
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_queue_low_set);
 
-static int mvpp2_cls_c2_queue_high_set(struct mvpp2_cls_c2_entry *c2, int cmd, int queue, int from)
+int mvpp2_cls_c2_queue_high_set(struct mvpp2_cls_c2_entry *c2, int cmd, int queue, int from)
 {
 	if (!c2 || cmd > MVPP2_ACTION_TYPE_UPDT_LOCK || queue >= (1 << MVPP2_CLS2_ACT_QOS_ATTR_QH_BITS))
 		return -EINVAL;
@@ -5921,8 +5941,9 @@ static int mvpp2_cls_c2_queue_high_set(struct mvpp2_cls_c2_entry *c2, int cmd, i
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_queue_high_set);
 
-static int mvpp2_cls_c2_forward_set(struct mvpp2_cls_c2_entry *c2, int cmd)
+int mvpp2_cls_c2_forward_set(struct mvpp2_cls_c2_entry *c2, int cmd)
 {
 	if (!c2 || cmd > MVPP2_ACTION_TYPE_UPDT_LOCK)
 		return -EINVAL;
@@ -5932,8 +5953,9 @@ static int mvpp2_cls_c2_forward_set(struct mvpp2_cls_c2_entry *c2, int cmd)
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_forward_set);
 
-static int mvpp2_cls_c2_rss_set(struct mvpp2_cls_c2_entry *c2, int cmd, int rss_en)
+int mvpp2_cls_c2_rss_set(struct mvpp2_cls_c2_entry *c2, int cmd, int rss_en)
 {
 	if (!c2 || cmd > MVPP2_ACTION_TYPE_UPDT_LOCK || rss_en >= (1 << MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_BITS))
 		return -EINVAL;
@@ -5946,8 +5968,9 @@ static int mvpp2_cls_c2_rss_set(struct mvpp2_cls_c2_entry *c2, int cmd, int rss_
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_rss_set);
 
-static int mvpp2_cls_c2_flow_id_en(struct mvpp2_cls_c2_entry *c2, int flowid_en)
+int mvpp2_cls_c2_flow_id_en(struct mvpp2_cls_c2_entry *c2, int flowid_en)
 {
 	if (!c2)
 		return -EINVAL;
@@ -5960,8 +5983,9 @@ static int mvpp2_cls_c2_flow_id_en(struct mvpp2_cls_c2_entry *c2, int flowid_en)
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_flow_id_en);
 
-static int mvpp2_cls_c2_tcam_byte_set(struct mvpp2_cls_c2_entry *c2, unsigned int offs,
+int mvpp2_cls_c2_tcam_byte_set(struct mvpp2_cls_c2_entry *c2, unsigned int offs,
 					unsigned char byte, unsigned char enable)
 {
 	if (!c2 || offs >= MVPP2_CLS_C2_TCAM_DATA_BYTES)
@@ -5972,8 +5996,9 @@ static int mvpp2_cls_c2_tcam_byte_set(struct mvpp2_cls_c2_entry *c2, unsigned in
 
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_tcam_byte_set);
 
-static int mvpp2_cls_c2_qos_queue_set(struct mvpp2_cls_c2_qos_entry *qos, u8 queue)
+int mvpp2_cls_c2_qos_queue_set(struct mvpp2_cls_c2_qos_entry *qos, u8 queue)
 {
 	if (!qos || queue >= (1 << MVPP2_CLS2_QOS_TBL_QUEUENUM_BITS))
 		return -EINVAL;
@@ -5982,6 +6007,7 @@ static int mvpp2_cls_c2_qos_queue_set(struct mvpp2_cls_c2_qos_entry *qos, u8 que
 	qos->data |= (((u32)queue) << MVPP2_CLS2_QOS_TBL_QUEUENUM_OFF);
 	return 0;
 }
+EXPORT_SYMBOL(mvpp2_cls_c2_qos_queue_set);
 
 static int mvpp2_c2_tcam_set(struct mvpp2_hw *hw, struct mvpp2_c2_add_entry *c2_add_entry, unsigned int c2_hw_idx)
 {

@@ -33,7 +33,8 @@ disclaimer.
 #include <linux/platform_device.h>
 #include "mvPp2Common.h"
 
-
+struct mvpp2_cls_c2_qos_entry qos_entry;
+struct mvpp2_cls_c2_entry c2_entry;
 
 static ssize_t mv_cls2_help(char *buf)
 {
@@ -45,6 +46,43 @@ static ssize_t mv_cls2_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE, "cat  hw_regs      - dump classifier C2 registers.\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "cat  cnt_dump     - dump all hit counters that are not zeroed.\n");
 
+	off += scnprintf(buf + off, PAGE_SIZE, "echo 1             > qos_sw_clear           - clear QoS table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo 1             > act_sw_clear           - clear action table SW entry.\n");
+
+	off += scnprintf(buf + off, PAGE_SIZE, "\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo id s ln       > qos_hw_write           - write QoS table SW entry into HW <id,s,ln>.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo id s ln       > qos_hw_read            - read QoS table entry from HW <id,s,ln>.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo prio          > qos_sw_prio            - set priority <prio> value to QoS table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo dscp          > qos_sw_dscp            - set DSCP <dscp> value to QoS table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo color         > qos_sw_color           - set color value to QoS table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo q             > qos_sw_queue           - set queue number <q> value to QoS table SW entry.\n");
+
+	off += scnprintf(buf + off, PAGE_SIZE, "\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo idx           > act_hw_write           - write action table SW entry into HW <idx>.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo idx           > act_hw_read            - read action table entry from HW <idx> into SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo idx           > act_hw_inv             - invalidate C2 entry <idx> in hw.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo               > act_hw_inv_all         - invalidate all C2 entries in HW.\n");
+
+	off += scnprintf(buf + off, PAGE_SIZE, "echo o d m         > act_sw_byte            - set byte <d,m> to TCAM offset <o> to action table SW entry.\n");
+
+	off += scnprintf(buf + off, PAGE_SIZE, "echo id sel        > act_sw_qos             - set QoS table <id,sel> to action table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo cmd from      > act_sw_color           - set color command <cmd> to action table SW.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "                                              <from> - source for color command.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo cmd prio from > act_sw_prio            - set priority command <cmd> and value <prio> to action\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "                                              table SW entry. <from> - source for priority command.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo cmd prio from > act_sw_dscp            - set DSCP command <cmd> and value <dscp> to action\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "                                              table SW entry. <from> - source for DSCP command.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo cmd q from    > act_sw_qh              - set queue high command <cmd> and value <q> to action\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "                                              table software entry. <from>-source for Queue High command.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo cmd q from    > act_sw_ql              - set queue low command <cmd> and value <q> to action\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "                                              table software entry. <from> -source for Queue Low command.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo cmd q from    > act_sw_queue           - set full queue command <cmd> and value <q> to action\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "                                              table software entry.  <from> -source for Queue command.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo cmd           > act_sw_hwf             - set Forwarding command <cmd> to action table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo cmd id bank   > act_sw_rss             - set RSS command <cmd> and enable RSS.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo en            > act_sw_flowid          - set FlowID enable/disable <1/0> to action table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo idx           > act_sw_mtu             - set MTU index to action table SW entry\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "echo               > cnt_clr_all            - clear all hit counters from action tabe.\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "echo idx           > cnt_read               - show hit counter for action table entry.\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "\n");
@@ -96,6 +134,57 @@ static ssize_t mv_cls2_store(struct device *dev,
 		mvpp2_cls_c2_hit_cntr_clear_all(sysfs_cur_hw);
 	else if (!strcmp(name, "cnt_read"))
 		mvpp2_cls_c2_hit_cntr_read(sysfs_cur_hw, a, NULL);
+	else if (!strcmp(name, "act_hw_inv_all"))
+		mvpp2_cls_c2_hw_inv_all(sysfs_cur_hw);
+	else if (!strcmp(name, "act_hw_inv"))
+		mvpp2_cls_c2_hw_inv(sysfs_cur_hw, a);
+	else if (!strcmp(name, "qos_sw_clear"))
+		memset(&qos_entry, 0, sizeof(struct mvpp2_cls_c2_qos_entry));
+	else if (!strcmp(name, "qos_hw_write")) {
+		qos_entry.tbl_id = a;
+		qos_entry.tbl_sel = b;
+		qos_entry.tbl_line = c;
+		mvpp2_cls_c2_qos_hw_write(sysfs_cur_hw, &qos_entry);
+	} else if (!strcmp(name, "qos_hw_read"))
+		mvpp2_cls_c2_qos_hw_read(sysfs_cur_hw, a, b, c, &qos_entry);
+	else if (!strcmp(name, "qos_sw_prio"))
+		mvpp2_cls_c2_qos_prio_set(&qos_entry, a);
+	else if (!strcmp(name, "qos_sw_dscp"))
+		mvpp2_cls_c2_qos_dscp_set(&qos_entry, a);
+	else if (!strcmp(name, "qos_sw_color"))
+		mvpp2_cls_c2_qos_color_set(&qos_entry, a);
+	else if (!strcmp(name, "qos_sw_queue"))
+		mvpp2_cls_c2_qos_queue_set(&qos_entry, a);
+	else if (!strcmp(name, "act_sw_clear"))
+		memset(&c2_entry, 0, sizeof(struct mvpp2_c2_add_entry));
+	else if (!strcmp(name, "act_hw_write"))
+		mvpp2_cls_c2_hw_write(sysfs_cur_hw, a, &c2_entry);
+	else if (!strcmp(name, "act_hw_read"))
+		mvpp2_cls_c2_hw_read(sysfs_cur_hw, a, &c2_entry);
+	else if (!strcmp(name, "act_sw_byte"))
+		mvpp2_cls_c2_tcam_byte_set(&c2_entry, a, b, c);
+	else if (!strcmp(name, "act_sw_qos"))
+		mvpp2_cls_c2_qos_tbl_set(&c2_entry, a, b);
+	else if (!strcmp(name, "act_sw_color"))
+		mvpp2_cls_c2_color_set(&c2_entry, a, b);
+	else if (!strcmp(name, "act_sw_prio"))
+		mvpp2_cls_c2_prio_set(&c2_entry, a, b, c);
+	else if (!strcmp(name, "act_sw_dscp"))
+		mvpp2_cls_c2_dscp_set(&c2_entry, a, b, c);
+	else if (!strcmp(name, "act_sw_qh"))
+		mvpp2_cls_c2_queue_high_set(&c2_entry, a, b, c);
+	else if (!strcmp(name, "act_sw_ql"))
+		mvpp2_cls_c2_queue_low_set(&c2_entry, a, b, c);
+	else if (!strcmp(name, "act_sw_queue"))
+		mvpp2_cls_c2_queue_set(&c2_entry, a, b, c);
+	else if (!strcmp(name, "act_sw_hwf"))
+		mvpp2_cls_c2_forward_set(&c2_entry, a);
+	else if (!strcmp(name, "act_sw_rss"))
+		mvpp2_cls_c2_rss_set(&c2_entry, a, b);
+	else if (!strcmp(name, "act_sw_mtu"))
+		mvpp2_cls_c2_mtu_set(&c2_entry, a);
+	else if (!strcmp(name, "act_sw_flowid"))
+		mvpp2_cls_c2_flow_id_en(&c2_entry, a);
 	else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
@@ -109,16 +198,39 @@ static ssize_t mv_cls2_store(struct device *dev,
 }
 
 
-static DEVICE_ATTR(prio_hw_dump,		S_IRUSR, mv_cls2_show, NULL);
-static DEVICE_ATTR(dscp_hw_dump,		S_IRUSR, mv_cls2_show, NULL);
+static DEVICE_ATTR(prio_hw_dump,	S_IRUSR, mv_cls2_show, NULL);
+static DEVICE_ATTR(dscp_hw_dump,	S_IRUSR, mv_cls2_show, NULL);
 static DEVICE_ATTR(act_hw_dump,		S_IRUSR, mv_cls2_show, NULL);
 static DEVICE_ATTR(cnt_dump,		S_IRUSR, mv_cls2_show, NULL);
 static DEVICE_ATTR(hw_regs,		S_IRUSR, mv_cls2_show, NULL);
-static DEVICE_ATTR(help,			S_IRUSR, mv_cls2_show, NULL);
+static DEVICE_ATTR(help,		S_IRUSR, mv_cls2_show, NULL);
 
+static DEVICE_ATTR(qos_sw_clear,	S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(qos_hw_write,	S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(qos_hw_read,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(qos_sw_prio,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(qos_sw_dscp,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(qos_sw_color,	S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(qos_sw_queue,	S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_hw_inv,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_hw_inv_all,	S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_clear,	S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_hw_write,	S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_hw_read,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_byte,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_color,	S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_prio,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_dscp,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_qh,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_ql,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_queue,	S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_hwf,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_rss,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_mtu,		S_IWUSR, mv_cls2_show, mv_cls2_store);
 static DEVICE_ATTR(cnt_clr_all,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_qos,		S_IWUSR, mv_cls2_show, mv_cls2_store);
 static DEVICE_ATTR(cnt_read,		S_IWUSR, mv_cls2_show, mv_cls2_store);
-
+static DEVICE_ATTR(act_sw_flowid,	S_IWUSR, mv_cls2_show, mv_cls2_store);
 
 static struct attribute *cls2_attrs[] = {
 	&dev_attr_prio_hw_dump.attr,
@@ -127,8 +239,32 @@ static struct attribute *cls2_attrs[] = {
 	&dev_attr_cnt_dump.attr,
 	&dev_attr_hw_regs.attr,
 	&dev_attr_help.attr,
+	&dev_attr_qos_sw_clear.attr,
+	&dev_attr_qos_hw_write.attr,
+	&dev_attr_qos_hw_read.attr,
+	&dev_attr_qos_sw_prio.attr,
+	&dev_attr_qos_sw_dscp.attr,
+	&dev_attr_qos_sw_color.attr,
+	&dev_attr_qos_sw_queue.attr,
+	&dev_attr_act_hw_inv.attr,
+	&dev_attr_act_hw_inv_all.attr,
+	&dev_attr_act_sw_clear.attr,
+	&dev_attr_act_hw_write.attr,
+	&dev_attr_act_hw_read.attr,
+	&dev_attr_act_sw_byte.attr,
+	&dev_attr_act_sw_color.attr,
+	&dev_attr_act_sw_prio.attr,
+	&dev_attr_act_sw_dscp.attr,
+	&dev_attr_act_sw_qh.attr,
+	&dev_attr_act_sw_ql.attr,
+	&dev_attr_act_sw_queue.attr,
+	&dev_attr_act_sw_hwf.attr,
+	&dev_attr_act_sw_rss.attr,
+	&dev_attr_act_sw_mtu.attr,
 	&dev_attr_cnt_clr_all.attr,
+	&dev_attr_act_sw_qos.attr,
 	&dev_attr_cnt_read.attr,
+	&dev_attr_act_sw_flowid.attr,
 	NULL
 };
 

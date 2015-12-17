@@ -1377,3 +1377,66 @@ int mvpp2_port_bind_cpu_set(struct mvpp2_port *port, u8 bind_cpu)
 	return ret;
 }
 EXPORT_SYMBOL(mvpp2_port_bind_cpu_set);
+
+int mvpp2_cls_c2_qos_prio_set(struct mvpp2_cls_c2_qos_entry *qos, u8 pri)
+{
+	if (!qos)
+		return -EINVAL;
+
+	qos->data &= ~MVPP2_CLS2_QOS_TBL_PRI_MASK;
+	qos->data |= (((u32)pri) << MVPP2_CLS2_QOS_TBL_PRI_OFF);
+	return 0;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_qos_prio_set);
+
+int mvpp2_cls_c2_qos_dscp_set(struct mvpp2_cls_c2_qos_entry *qos, u8 dscp)
+{
+	if (!qos)
+		return -EINVAL;
+
+	qos->data &= ~MVPP2_CLS2_QOS_TBL_DSCP_MASK;
+	qos->data |= (((u32)dscp) << MVPP2_CLS2_QOS_TBL_DSCP_OFF);
+	return 0;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_qos_dscp_set);
+
+int mvpp2_cls_c2_qos_color_set(struct mvpp2_cls_c2_qos_entry *qos, u8 color)
+{
+	if (!qos)
+		return -EINVAL;
+
+	qos->data &= ~MVPP2_CLS2_QOS_TBL_COLOR_MASK;
+	qos->data |= (((u32)color) << MVPP2_CLS2_QOS_TBL_COLOR_OFF);
+	return 0;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_qos_color_set);
+
+int mvpp2_cls_c2_queue_set(struct mvpp2_cls_c2_entry *c2, int cmd, int queue, int from)
+{
+	int status = 0;
+	int qHigh, qLow;
+
+	/* cmd validation in set functions */
+
+	qHigh = (queue & MVPP2_CLS2_ACT_QOS_ATTR_QH_MASK) >> MVPP2_CLS2_ACT_QOS_ATTR_QH_OFF;
+	qLow = (queue & MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK) >> MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF;
+
+	status |= mvpp2_cls_c2_queue_low_set(c2, cmd, qLow, from);
+	status |= mvpp2_cls_c2_queue_high_set(c2, cmd, qHigh, from);
+
+	return status;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_queue_set);
+
+int mvpp2_cls_c2_mtu_set(struct mvpp2_cls_c2_entry *c2, int mtu_inx)
+{
+	PTR_VALIDATE(c2);
+	POS_RANGE_VALIDATE(mtu_inx, (1 << MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_BITS) - 1);
+
+	c2->sram.regs.hwf_attr &= ~MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_MASK;
+	c2->sram.regs.hwf_attr |= (mtu_inx << MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_OFF);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_mtu_set);
+
