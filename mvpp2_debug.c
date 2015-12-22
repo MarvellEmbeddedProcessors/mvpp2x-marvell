@@ -1191,7 +1191,7 @@ static char *mvpp2_prs_vlan_info_str(unsigned int vlan_info)
 	return NULL;
 }
 
-void mvpp2_rx_desc_print(struct mvpp2_rx_desc *desc)
+void mvpp2_rx_desc_print(struct mvpp2 *priv, struct mvpp2_rx_desc *desc)
 {
 	int i;
 	u32 *words = (u32 *) desc;
@@ -1243,6 +1243,11 @@ void mvpp2_rx_desc_print(struct mvpp2_rx_desc *desc)
 	printk("Lookup_ID=0x%x, cpu_code=0x%x\n",
 		(desc->rsrvd_parser & MVPP2_RXD_LKP_ID_MASK) >> MVPP2_RXD_LKP_ID_OFFS,
 		(desc->rsrvd_parser & MVPP2_RXD_CPU_CODE_MASK) >> MVPP2_RXD_CPU_CODE_OFFS);
+
+	if (priv->pp2_version == PPV22) {
+		printk("buf_phys_addr = 0x%llx\n", desc->u.pp22.buf_phys_addr_key_hash & DMA_BIT_MASK(40));
+		printk("buf_virt_addr = 0x%llx\n", desc->u.pp22.buf_cookie_bm_qset_cls_info & DMA_BIT_MASK(40));
+	}
 }
 
 /* Dump memory in specific format:
