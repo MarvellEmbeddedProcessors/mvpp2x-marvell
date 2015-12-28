@@ -215,6 +215,12 @@ static void mvpp2_txq_inc_put(enum mvppv2_version pp2_ver,
 	txq_pcpu->txq_put_index++;
 	if (txq_pcpu->txq_put_index == txq_pcpu->size)
 		txq_pcpu->txq_put_index = 0;
+#if defined(__BIG_ENDIAN)
+	if (pp2_ver == PPV21)
+		mvpp21_tx_desc_swap(tx_desc);
+	else
+		mvpp22_tx_desc_swap(tx_desc);
+#endif /* __BIG_ENDIAN */
 }
 
 static inline u8 mvpp2_first_pool_get(struct mvpp2 *priv) {
@@ -1932,6 +1938,13 @@ static int mvpp2_rx(struct mvpp2_port *port, struct napi_struct *napi,
 		int rx_bytes, err;
 		dma_addr_t buf_phys_addr;
 
+#if defined(__BIG_ENDIAN)
+		if (port->priv->pp2_version == PPV21)
+			mvpp21_rx_desc_swap(rx_desc);
+		else
+			mvpp22_rx_desc_swap(rx_desc);
+#endif /* __BIG_ENDIAN */
+
 		rx_filled++;
 		rx_status = rx_desc->status;
 		rx_bytes = rx_desc->data_size - MVPP2_MH_SIZE;
@@ -2062,6 +2075,7 @@ static int mvpp2_tx_frag_process(struct mvpp2_port *port, struct sk_buff *skb,
 			mvpp2_txq_inc_put(port->priv->pp2_version,
 				txq_pcpu, NULL, tx_desc);
 		}
+
 	}
 
 	return 0;

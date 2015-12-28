@@ -603,8 +603,8 @@ void mvpp2_prs_tcam_data_byte_set(struct mvpp2_prs_entry *pe,
 					 unsigned int offs, unsigned char byte,
 					 unsigned char enable)
 {
-	pe->tcam.byte[MVPP2_PRS_TCAM_DATA_BYTE(offs)] = byte;
-	pe->tcam.byte[MVPP2_PRS_TCAM_DATA_BYTE_EN(offs)] = enable;
+	pe->tcam.byte[TCAM_DATA_BYTE(offs)] = byte;
+	pe->tcam.byte[TCAM_DATA_MASK(offs)] = enable;
 }
 EXPORT_SYMBOL(mvpp2_prs_tcam_data_byte_set);
 
@@ -613,8 +613,8 @@ static void mvpp2_prs_tcam_data_byte_get(struct mvpp2_prs_entry *pe,
 					 unsigned int offs, unsigned char *byte,
 					 unsigned char *enable)
 {
-	*byte = pe->tcam.byte[MVPP2_PRS_TCAM_DATA_BYTE(offs)];
-	*enable = pe->tcam.byte[MVPP2_PRS_TCAM_DATA_BYTE_EN(offs)];
+	*byte = pe->tcam.byte[TCAM_DATA_BYTE(offs)];
+	*enable = pe->tcam.byte[TCAM_DATA_MASK(offs)];
 }
 
 /* Set dword of data and its enable bits in tcam sw entry */
@@ -653,7 +653,7 @@ static void mvpp2_prs_tcam_data_dword_get(struct mvpp2_prs_entry *pe,
 static bool mvpp2_prs_tcam_data_cmp(struct mvpp2_prs_entry *pe, int offs,
 				    u16 data)
 {
-	int off = MVPP2_PRS_TCAM_DATA_BYTE(offs);
+	int off = TCAM_DATA_BYTE(offs);
 	u16 tcam_data;
 
 	tcam_data = (8 << pe->tcam.byte[off + 1]) | pe->tcam.byte[off];
@@ -1690,7 +1690,7 @@ static void mvpp2_prs_def_flow_init(struct mvpp2_hw *hw)
 
 		/* Update shadow table and hw entry */
 		mvpp2_prs_shadow_set(hw, pe.index, MVPP2_PRS_LU_FLOWS);
-		
+
 		//pr_crit("mvpp2_prs_def_flow_init: port(%d), index(%d) \n", port, pe.index);
 		mvpp2_prs_hw_write(hw, &pe);
 	}
@@ -1952,8 +1952,8 @@ static int mvpp2_prs_etype_init(struct mvpp2_hw *hw)
 	pe.index = tid;
 
 	/* Clear tcam data before updating */
-	pe.tcam.byte[MVPP2_PRS_TCAM_DATA_BYTE(MVPP2_ETH_TYPE_LEN)] = 0x0;
-	pe.tcam.byte[MVPP2_PRS_TCAM_DATA_BYTE_EN(MVPP2_ETH_TYPE_LEN)] = 0x0;
+	pe.tcam.byte[TCAM_DATA_BYTE(MVPP2_ETH_TYPE_LEN)] = 0x0;
+	pe.tcam.byte[TCAM_DATA_MASK(MVPP2_ETH_TYPE_LEN)] = 0x0;
 
 	mvpp2_prs_tcam_data_byte_set(&pe, MVPP2_ETH_TYPE_LEN,
 				     MVPP2_PRS_IPV4_HEAD,
@@ -6110,8 +6110,8 @@ int mvpp2_cls_c2_tcam_byte_set(struct mvpp2_cls_c2_entry *c2, unsigned int offs,
 	if (!c2 || offs >= MVPP2_CLS_C2_TCAM_DATA_BYTES)
 		return -EINVAL;
 
-	c2->tcam.bytes[MVPP2_CLS_C2_TCAM_DATA_BYTE(offs)] = byte;
-	c2->tcam.bytes[MVPP2_CLS_C2_TCAM_DATA_BYTE_EN(offs)] = enable;
+	c2->tcam.bytes[TCAM_DATA_BYTE(offs)] = byte;
+	c2->tcam.bytes[TCAM_DATA_MASK(offs)] = enable;
 
 	return 0;
 }

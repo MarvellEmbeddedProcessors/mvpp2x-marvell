@@ -165,12 +165,11 @@
 */
 #define SRAM_BIT_TO_BYTE(_bit_)			HW_BYTE_OFFS((_bit_) / 8)
 
-#if 1 //defined(MV_CPU_LE)
+#if defined(__LITTLE_ENDIAN)
 	#define HW_BYTE_OFFS(_offs_)		(_offs_)
 #else
 	#define HW_BYTE_OFFS(_offs_)		((3 - ((_offs_) % 4)) + (((_offs_) / 4) * 4))
 #endif
-
 
 #define TCAM_DATA_BYTE_OFFS_LE(_offs_)		(((_offs_) - ((_offs_) % 2)) * 2 + ((_offs_) % 2))
 #define TCAM_DATA_MASK_OFFS_LE(_offs_)		(((_offs_) * 2) - ((_offs_) % 2)  + 2)
@@ -253,7 +252,6 @@
 #define RX_TOTAL_SIZE(buf_size)		((buf_size) + MV_ETH_SKB_SHINFO_SIZE)
 #define RX_TRUE_SIZE(total_size)	roundup_pow_of_two(total_size)
 extern  u32 debug_param;
-
 
 enum mvppv2_version {
 	PPV21 = 21,
@@ -630,6 +628,55 @@ static inline u8 mvpp2_bound_cpu_first_rxq_calc(struct mvpp2_port *port) {
 	bind_cpu = (port->priv->pp2_cfg.rx_cpu_map >> (4 * port->id)) & 0xF;
 
 	return(port->first_rxq + (bind_cpu << cos_width));
+}
+
+/* Swap RX descriptor to be BE */
+static inline void mvpp21_rx_desc_swap(struct mvpp2_rx_desc *rx_desc)
+{
+	cpu_to_le32s(&rx_desc->status);
+	cpu_to_le16s(&rx_desc->rsrvd_parser);
+	cpu_to_le16s(&rx_desc->data_size);
+	cpu_to_le32s(&rx_desc->u.pp21.buf_phys_addr);
+	cpu_to_le32s(&rx_desc->u.pp21.buf_cookie);
+	cpu_to_le16s(&rx_desc->u.pp21.rsrvd_gem);
+	cpu_to_le16s(&rx_desc->u.pp21.rsrvd_l4csum);
+	cpu_to_le16s(&rx_desc->u.pp21.rsrvd_cls_info);
+	cpu_to_le32s(&rx_desc->u.pp21.rsrvd_flow_id);
+	cpu_to_le32s(&rx_desc->u.pp21.rsrvd_abs);
+}
+
+static inline void mvpp22_rx_desc_swap(struct mvpp2_rx_desc *rx_desc)
+{
+	cpu_to_le32s(&rx_desc->status);
+	cpu_to_le16s(&rx_desc->rsrvd_parser);
+	cpu_to_le16s(&rx_desc->data_size);
+	cpu_to_le16s(&rx_desc->u.pp22.rsrvd_gem);
+	cpu_to_le16s(&rx_desc->u.pp22.rsrvd_l4csum);
+	cpu_to_le32s(&rx_desc->u.pp22.rsrvd_timestamp);
+	cpu_to_le64s(&rx_desc->u.pp22.buf_phys_addr_key_hash);
+	cpu_to_le64s(&rx_desc->u.pp22.buf_cookie_bm_qset_cls_info);
+}
+
+/* Swap TX descriptor to be BE */
+static inline void mvpp21_tx_desc_swap(struct mvpp2_tx_desc *tx_desc)
+{
+	cpu_to_le32s(&tx_desc->command);
+	cpu_to_le16s(&tx_desc->data_size);
+	cpu_to_le32s(&tx_desc->u.pp21.buf_phys_addr);
+	cpu_to_le32s(&tx_desc->u.pp21.buf_cookie);
+	cpu_to_le32s(&tx_desc->u.pp21.rsrvd_hw_cmd[0]);
+	cpu_to_le32s(&tx_desc->u.pp21.rsrvd_hw_cmd[1]);
+	cpu_to_le32s(&tx_desc->u.pp21.rsrvd_hw_cmd[2]);
+	cpu_to_le32s(&tx_desc->u.pp21.rsrvd1);
+}
+
+static inline void mvpp22_tx_desc_swap(struct mvpp2_tx_desc *tx_desc)
+{
+	cpu_to_le32s(&tx_desc->command);
+	cpu_to_le16s(&tx_desc->data_size);
+	cpu_to_le64s(&tx_desc->u.pp22.rsrvd_hw_cmd1);
+	cpu_to_le64s(&tx_desc->u.pp22.buf_phys_addr_hw_cmd2);
+	cpu_to_le64s(&tx_desc->u.pp22.buf_cookie_bm_qset_hw_cmd3);
 }
 
 

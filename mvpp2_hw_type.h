@@ -1185,10 +1185,6 @@ enum mvpp2_tag_type {
 #define MVPP2_PRS_AI_BITS			8
 #define MVPP2_PRS_PORT_MASK			0xff
 #define MVPP2_PRS_LU_MASK			0xf
-#define MVPP2_PRS_TCAM_DATA_BYTE(offs)		\
-				    (((offs) - ((offs) % 2)) * 2 + ((offs) % 2))
-#define MVPP2_PRS_TCAM_DATA_BYTE_EN(offs)	\
-					      (((offs) * 2) - ((offs) % 2)  + 2)
 #define MVPP2_PRS_TCAM_AI_BYTE			16
 #define MVPP2_PRS_TCAM_PORT_BYTE		17
 #define MVPP2_PRS_TCAM_LU_BYTE			20
@@ -1896,8 +1892,6 @@ struct mvpp2_cls_shadow {
 #define MVPP2_CLS_C2_HEK_PORT_TYPE_OFFS		6
 #define MVPP2_CLS_C2_HEK_PORT_TYPE_BITS		2
 #define MVPP2_CLS_C2_HEK_PORT_TYPE_MASK		(0x3 << MVPP2_CLS_C2_HEK_PORT_TYPE_OFFS)
-#define MVPP2_CLS_C2_TCAM_DATA_BYTE(offs)		(MVPP2_PRS_TCAM_DATA_BYTE(offs))
-#define MVPP2_CLS_C2_TCAM_DATA_BYTE_EN(offs)	(MVPP2_PRS_TCAM_DATA_BYTE_EN(offs))
 #define MVPP2_CLS_C2_QOS_DSCP_TBL_SIZE		64
 #define MVPP2_CLS_C2_QOS_PRIO_TBL_SIZE		8
 #define MVPP2_CLS_C2_QOS_DSCP_TBL_NUM		8
