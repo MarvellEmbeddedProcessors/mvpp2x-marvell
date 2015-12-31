@@ -377,6 +377,7 @@ static struct sk_buff *mvpp2_skb_alloc(struct mvpp2_port *port,
 	struct sk_buff *skb;
 	dma_addr_t phys_addr;
 
+	gfp_mask |= GFP_DMA;
 	skb = __dev_alloc_skb(bm_pool->pkt_size, gfp_mask);
 	if (!skb) {
 		pr_crit_once("%s skb alloc failed\n",__func__);
