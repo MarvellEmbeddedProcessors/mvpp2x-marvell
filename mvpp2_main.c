@@ -2283,6 +2283,9 @@ void mvpp2_start_dev(struct mvpp2_port *port)
 	mvpp2_port_enable(port);
 #ifndef CONFIG_MV_PP2_FPGA
 	phy_start(port->phy_dev);
+#else
+if(!netif_carrier_ok(port->dev))
+		netif_carrier_on(port->dev);
 #endif
 	netif_tx_start_all_queues(port->dev);
 }
