@@ -531,6 +531,37 @@ void mvPp2V1TxqDbgCntrs(struct mvpp2 *priv, int port, int txq)
 }
 EXPORT_SYMBOL(mvPp2V1TxqDbgCntrs);
 
+void mvPp2V1DropCntrs(struct mvpp2 *priv, int port)
+{
+	int q;
+	struct mvpp2_hw *hw = &priv->hw;
+	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+
+	printk("\n[global drop counters]\n");
+	mvpp2_print_reg(hw, MVPP2_V1_OVERFLOW_MC_DROP_REG, "MV_PP2_OVERRUN_DROP_REG");
+
+	printk("\n[Port #%d Drop counters]\n", port);
+	mvpp2_print_reg(hw, MV_PP2_OVERRUN_DROP_REG(port), "MV_PP2_OVERRUN_DROP_REG");
+	mvpp2_print_reg(hw, MV_PP2_CLS_DROP_REG(port), "MV_PP2_CLS_DROP_REG");
+
+	for (q = 0; q < pp2_port->num_tx_queues; q++) {
+		printk("\n------ [Port #%d txp #%d txq #%d counters] -----\n", port, port, q);
+		mvpp2_write(hw, MVPP2_CNT_IDX_REG, MVPP2_CNT_IDX_TX(port, q));
+		mvpp2_print_reg(hw, MVPP2_TX_PKT_FULLQ_DROP_REG, "MV_PP2_TX_PKT_FULLQ_DROP_REG");
+		mvpp2_print_reg(hw, MVPP2_TX_PKT_EARLY_DROP_REG, "MV_PP2_TX_PKT_EARLY_DROP_REG");
+		mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_DROP_REG, "MV_PP2_TX_PKT_BM_DROP_REG");
+		mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_MC_DROP_REG, "MV_PP2_TX_PKT_BM_MC_DROP_REG");
+	}
+
+	for (q = pp2_port->first_rxq; q < (pp2_port->first_rxq + pp2_port->num_rx_queues); q++) {
+		printk("\n------ [Port #%d, rxq #%d counters] -----\n", port, q);
+		mvpp2_write(hw, MVPP2_CNT_IDX_REG, q);
+		mvpp2_print_reg(hw, MVPP2_RX_PKT_FULLQ_DROP_REG, "MV_PP2_RX_PKT_FULLQ_DROP_REG");
+		mvpp2_print_reg(hw, MVPP2_RX_PKT_EARLY_DROP_REG, "MV_PP2_RX_PKT_EARLY_DROP_REG");
+		mvpp2_print_reg(hw, MVPP2_RX_PKT_BM_DROP_REG, "MV_PP2_RX_PKT_BM_DROP_REG");
+	}
+}
+EXPORT_SYMBOL(mvPp2V1DropCntrs);
 
 void mvPp2TxRegs(struct mvpp2 *priv)
 {

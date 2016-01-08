@@ -92,6 +92,7 @@ void mvPp2PhysTxqRegs(struct mvpp2 *priv, int txq);
 void mvPp2PortTxqRegs(struct mvpp2 *priv, int port, int txq);
 void mvPp2AggrTxqRegs(struct mvpp2 *priv, int cpu);
 void mvPp2V1TxqDbgCntrs(struct mvpp2 *priv, int port, int txq);
+void mvPp2V1DropCntrs(struct mvpp2 *priv, int port);
 void mvPp2TxRegs(struct mvpp2 *priv);
 void mvPp2TxSchedRegs(struct mvpp2 *priv, int port);
 int mvPp2TxpRateSet(struct mvpp2 *priv, int port, int rate);

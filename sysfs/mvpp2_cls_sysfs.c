@@ -86,14 +86,9 @@ static ssize_t mv_cls_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo n          >flow_sw_num_of_heks - set number of HEK fields <n> to flow table SW entry.\n");
 
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
-	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset val >mvpp2_reg_write    - Write mvpp2 register.\n");
-	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset     >mvpp2_reg_read     - Read mvpp2 register.\n");
-
-	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
 
 	return off;
 }
-
 
 static ssize_t mv_cls_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
@@ -145,15 +140,7 @@ static ssize_t mv_cls_store_unsigned(struct device *dev,
 		mvpp2_cls_hw_lkp_read(sysfs_cur_hw, a, b, &lkp_entry);
 	else if (!strcmp(name, "flow_hw_read"))
 		mvpp2_cls_hw_flow_read(sysfs_cur_hw, a, &flow_entry);
-	else if (!strcmp(name, "mvpp2_reg_read")) {
-		val = mvpp2_read(sysfs_cur_hw, a);
-		printk("mvpp2_read(0x%x)=0x%x\n", a, val);
-	}
-	else if (!strcmp(name, "mvpp2_reg_write")) {
-		mvpp2_write(sysfs_cur_hw, a, b);
-		val = mvpp2_read(sysfs_cur_hw, a);
-		printk("mvpp2_write_read(0x%x)=0x%x\n", a, val);
-	} else if (!strcmp(name, "lkp_sw_clear"))
+	else if (!strcmp(name, "lkp_sw_clear"))
 		memset(&lkp_entry, 0, sizeof(struct mvpp2_cls_lookup_entry));
 	else if (!strcmp(name, "lkp_hw_write"))
 		mvpp2_cls_hw_lkp_write(sysfs_cur_hw, a, b, &lkp_entry);
@@ -248,8 +235,6 @@ static DEVICE_ATTR(hw_port_way,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
 static DEVICE_ATTR(hw_udf,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
 static DEVICE_ATTR(hw_mtu,			S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
 static DEVICE_ATTR(hw_over_rxq_low,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
-static DEVICE_ATTR(mvpp2_reg_read,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
-static DEVICE_ATTR(mvpp2_reg_write,		S_IWUSR, mv_cls_show, mv_cls_store_unsigned);
 
 static struct attribute *cls_attrs[] = {
 	&dev_attr_lkp_sw_dump.attr,
@@ -285,8 +270,6 @@ static struct attribute *cls_attrs[] = {
 	&dev_attr_hw_udf.attr,
 	&dev_attr_hw_mtu.attr,
 	&dev_attr_hw_over_rxq_low.attr,
-	&dev_attr_mvpp2_reg_read.attr,
-	&dev_attr_mvpp2_reg_write.attr,
 	&dev_attr_help.attr,
 	NULL
 };

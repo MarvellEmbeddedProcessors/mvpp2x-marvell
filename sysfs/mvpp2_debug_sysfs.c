@@ -40,6 +40,8 @@ static ssize_t mv_debug_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name] [cpu]     >  bind_cpu - Bind the interface to dedicated CPU\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "     NOTE: bind_cpu only valid when rss is disabled\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset val >mvpp2_reg_write    - Write mvpp2 register.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset     >mvpp2_reg_read     - Read mvpp2 register.\n");
 
 	return off;
 }
@@ -101,14 +103,52 @@ static ssize_t mv_debug_store(struct device *dev,
 	return err ? -EINVAL : len;
 }
 
+static ssize_t mv_debug_store_unsigned(struct device *dev,
+				struct device_attribute *attr, const char *buf, size_t len)
+{
+	const char    *name = attr->attr.name;
+	unsigned int  err = 0, a = 0, b = 0, c = 0, d = 0;
+	unsigned long flags;
+	u32 val;
+
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
+
+	sscanf(buf, "%x %x %x %x", &a, &b, &c, &d);
+
+	local_irq_save(flags);
+
+	if (!strcmp(name, "mvpp2_reg_read")) {
+		val = mvpp2_read(sysfs_cur_hw, a);
+		printk("mvpp2_read(0x%x)=0x%x\n", a, val);
+	} else if (!strcmp(name, "mvpp2_reg_write")) {
+		mvpp2_write(sysfs_cur_hw, a, b);
+		val = mvpp2_read(sysfs_cur_hw, a);
+		printk("mvpp2_write_read(0x%x)=0x%x\n", a, val);
+	} else {
+		err = 1;
+		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
+	}
+	local_irq_restore(flags);
+
+	if (err)
+		printk(KERN_ERR "%s: <%s>, error %d\n", __func__, attr->attr.name, err);
+
+	return err ? -EINVAL : len;
+}
+
 static DEVICE_ATTR(help,	S_IRUSR, mv_debug_show, NULL);
 static DEVICE_ATTR(bind_cpu,	S_IWUSR, NULL, mv_debug_store);
 static DEVICE_ATTR(debug_param,	S_IWUSR, NULL, mv_debug_store);
+static DEVICE_ATTR(mvpp2_reg_read,	S_IWUSR, NULL, mv_debug_store_unsigned);
+static DEVICE_ATTR(mvpp2_reg_write,	S_IWUSR, NULL, mv_debug_store_unsigned);
 
 static struct attribute *debug_attrs[] = {
 	&dev_attr_help.attr,
 	&dev_attr_bind_cpu.attr,
 	&dev_attr_debug_param.attr,
+	&dev_attr_mvpp2_reg_read.attr,
+	&dev_attr_mvpp2_reg_write.attr,
 	NULL
 };
 
