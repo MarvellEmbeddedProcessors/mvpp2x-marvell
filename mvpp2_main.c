@@ -2022,7 +2022,6 @@ static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 
 	MVPP2_PRINT_LINE();
 	txq_id = skb_get_queue_mapping(skb);
-	txq_id = 0;
 	txq = port->txqs[txq_id];
 	txq_pcpu = this_cpu_ptr(txq->pcpu);
 	aggr_txq = &port->priv->aggr_txqs[smp_processor_id()];
