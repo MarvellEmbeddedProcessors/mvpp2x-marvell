@@ -214,6 +214,9 @@
 #define MVPP2_QUEUE_NEXT_DESC(q, index) \
 	(((index) < (q)->last_desc) ? ((index) + 1) : 0)
 
+#define MVPP2_QUEUE_DESC_PTR(q, index)                 \
+	((q)->first_desc + index)
+
 /* Various constants */
 #define MVPP2_MAX_SW_THREADS	9
 #define MVPP2_MAX_CPUS		4
@@ -638,7 +641,9 @@ struct mvpp2_pool_attributes {
 
 
 extern struct mvpp2_pool_attributes mvpp2_pools[];
-
+void mvpp2_bm_bufs_free(struct mvpp2 *priv, struct mvpp2_bm_pool *bm_pool, int buf_num);
+int mvpp2_bm_bufs_add(struct mvpp2_port *port, struct mvpp2_bm_pool *bm_pool, int buf_num);
+int mvpp2_open(struct net_device *dev);
 int mvpp2_check_ringparam_valid(struct net_device *dev,
 				       struct ethtool_ringparam *ring);
 void mvpp2_start_dev(struct mvpp2_port *port);

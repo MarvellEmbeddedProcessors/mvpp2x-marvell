@@ -64,6 +64,10 @@
 #include "mvpp2_hw.h"
 #include "mvpp2_debug.h"
 
+#if defined(CONFIG_NETMAP) || defined(CONFIG_NETMAP_MODULE)
+#include <if_mvpp2_netmap.h>
+#endif
+
 #define MVPP2_SKB_TEST_SIZE 64
 #define MVPP2_ADDRESS 0xf2000000
 #define CPN110_ADDRESS_SPACE_SIZE (16*1024*1024)
@@ -430,7 +434,7 @@ static struct sk_buff *mvpp2_skb_alloc(struct mvpp2_port *port,
 
 
 /* Allocate buffers for the pool */
-static int mvpp2_bm_bufs_add(struct mvpp2_port *port,
+int mvpp2_bm_bufs_add(struct mvpp2_port *port,
 			     struct mvpp2_bm_pool *bm_pool, int buf_num)
 {
 	struct sk_buff *skb;
@@ -793,6 +797,14 @@ static void mvpp2_txq_done(struct mvpp2_port *port, struct mvpp2_tx_queue *txq,
 	struct netdev_queue *nq = netdev_get_tx_queue(port->dev, txq->log_id);
 	int tx_done;
 	MVPP2_PRINT_LINE();
+
+#ifdef DEV_NETMAP
+	if (port->flags & MVPP2_F_IFCAP_NETMAP) {
+		if (netmap_tx_irq(port->dev, 0)) {
+			return; /* cleaned ok */
+		}
+	}
+#endif /* DEV_NETMAP */
 
 	if (txq_pcpu->cpu != smp_processor_id())
 		netdev_err(port->dev, "wrong cpu on the end of Tx processing\n");
@@ -1894,6 +1906,15 @@ static int mvpp2_rx(struct mvpp2_port *port, struct napi_struct *napi,
 	u32 rcvd_pkts = 0;
 	u32 rcvd_bytes = 0;
 
+#ifdef DEV_NETMAP
+		if (port->flags & MVPP2_F_IFCAP_NETMAP) {
+			int netmap_done = 0;
+			if (netmap_rx_irq(port->dev, 0, &netmap_done)) {
+				return netmap_done;
+			}
+		}
+#endif /* DEV_NETMAP */
+
 	/* Get number of received packets and clamp the to-do */
 	rx_received = mvpp2_rxq_received(port, rxq->id);
 
@@ -2336,6 +2357,16 @@ static inline void mvpp2_port_irqs_dispose_mapping(struct mvpp2_port *port)
 /* Set hw internals when starting port */
 void mvpp2_start_dev(struct mvpp2_port *port)
 {
+#ifdef DEV_NETMAP
+	if (port->flags & MVPP2_F_IFCAP_NETMAP) {
+		if (mvpp2_netmap_rxq_init_buffers(port)) {
+			pr_debug("%s: Netmap rxq_init_buffers done\n", __func__);
+		}
+		if (mvpp2_netmap_txq_init_buffers(port)) {
+			pr_debug("%s: Netmap txq_init_buffers done\n", __func__);
+		}
+	}
+#endif // DEV_NETMAP
 	mvpp2_gmac_max_rx_size_set(port);
 	mvpp2_txp_max_tx_size_set(port);
 
@@ -2473,7 +2504,7 @@ static void mvpp2_phy_disconnect(struct mvpp2_port *port)
 }
 #endif
 
-static int mvpp2_open(struct net_device *dev)
+int mvpp2_open(struct net_device *dev)
 {
 	struct mvpp2_port *port = netdev_priv(dev);
 	unsigned char mac_bcast[ETH_ALEN] = {
@@ -3387,6 +3418,9 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	priv->num_ports++;
 	return 0;
 	dev_err(&pdev->dev, "%s failed for port_id(%d)\n", __func__, id);
+#ifdef DEV_NETMAP
+	mvpp2_netmap_attach(port);
+#endif /* DEV_NETMAP */
 
 err_free_port_pcpu:
 	free_percpu(port->pcpu);
@@ -3543,6 +3577,9 @@ static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 		goto err_free_port_pcpu;
 	}
 
+#ifdef DEV_NETMAP
+	mvpp2_netmap_attach(port);
+#endif /* DEV_NETMAP */
 	netdev_info(dev, "Using %s mac address %pM\n", mac_from, dev->dev_addr);
 	priv->port_list[priv->num_ports] = port;
 	priv->num_ports++;
@@ -3572,6 +3609,9 @@ err_free_netdev:
 static void mvpp2_port_remove(struct mvpp2_port *port)
 {
 	int i;
+#ifdef DEV_NETMAP
+	netmap_detach(port->dev);
+#endif /* DEV_NETMAP */
 
 	unregister_netdev(port->dev);
 	free_percpu(port->pcpu);

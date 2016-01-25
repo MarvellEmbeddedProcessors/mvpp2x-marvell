@@ -1133,6 +1133,8 @@ SCAN STATUS
 
 /* Port flags */
 #define MVPP2_F_LOOPBACK		BIT(0)
+#define MVPP2_F_IFCAP_NETMAP    BIT(1)
+
 
 /* Marvell tag types */
 enum mvpp2_tag_type {
