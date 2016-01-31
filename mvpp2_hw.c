@@ -53,10 +53,7 @@ void mvpp2_write(struct mvpp2_hw *hw, u32 offset, u32 data)
 	static int next_write = 0;
 	int i;
 	void * reg_ptr = hw->cpu_base[smp_processor_id()] + offset;
-#if DEBUG
-	if (smp_processor_id() != 0)
-		pr_emerg("mvpp2_write(0x%x) from CPU%d, caller is %pS !!\n", offset, smp_processor_id(), __builtin_return_address(0));
-#endif
+
 #if DEBUG && !defined(CONFIG_MV_PP2_PALLADIUM)
 	for (i=0;i<MVPP2_REG_BUF_SIZE;i++) {
 		if (last_used[i] == reg_ptr)
@@ -84,10 +81,7 @@ u32 mvpp2_read(struct mvpp2_hw *hw, u32 offset)
 	int i;
 	u32 val;
 	void * reg_ptr = hw->cpu_base[smp_processor_id()] + offset;
-#if DEBUG
-	if (smp_processor_id() != 0)
-		pr_emerg("mvpp2_read(0x%x) from CPU%d, caller is %pS !!\n", offset, smp_processor_id(), __builtin_return_address(0));
-#endif
+
 	val = readl(reg_ptr);
 #if DEBUG && !defined(CONFIG_MV_PP2_PALLADIUM)
 	for (i=0;i<MVPP2_REG_BUF_SIZE;i++) {
