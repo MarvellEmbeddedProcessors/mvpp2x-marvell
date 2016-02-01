@@ -43,21 +43,6 @@
 
 
 
-#if 0
-
-#include <linux/mbus.h>
-#include <linux/module.h>
-#include <linux/interrupt.h>
-#include <linux/cpumask.h>
-#include <linux/of.h>
-#include <linux/of_irq.h>
-#include <linux/of_mdio.h>
-#include <linux/of_net.h>
-#include <linux/of_address.h>
-#include <linux/phy.h>
-#include <linux/clk.h>
-#endif
-
 /* Utility/helper methods */
 
 #define MVPP2_REG_BUF_SIZE (sizeof(last_used)/sizeof(last_used[0]))
@@ -3348,7 +3333,6 @@ void mvpp2_cls_port_config(struct mvpp2_port *port)
 /* Set CPU queue number for oversize packets */
 void mvpp2_cls_oversize_rxq_set(struct mvpp2_port *port)
 {
-	u32 val;
 	struct mvpp2_hw *hw = &(port->priv->hw);
 
 	mvpp2_write(hw, MVPP2_CLS_OVERSIZE_RXQ_LOW_REG(port->id),
@@ -3364,7 +3348,7 @@ void mvpp2_cls_oversize_rxq_set(struct mvpp2_port *port)
 #endif
 }
 
-void mvpp2_get_mac_address(struct mvpp2_port *port, unsigned char *addr)
+void mvpp21_get_mac_address(struct mvpp2_port *port, unsigned char *addr)
 {
 	u32 mac_addr_l, mac_addr_m, mac_addr_h;
 
@@ -3483,7 +3467,7 @@ void mvpp2_tx_done_time_coal_set(struct mvpp2_port *port, u32 usec)
 
 
 /* Change maximum receive size of the port */
-void mvpp2_gmac_max_rx_size_set(struct mvpp2_port *port)
+void mvpp21_gmac_max_rx_size_set(struct mvpp2_port *port)
 {
 #ifndef CONFIG_MV_PP2_PALLADIUM
 	u32 val;
@@ -3693,14 +3677,14 @@ void mvpp2_rxq_offset_set(struct mvpp2_port *port,
 
 /* Port configuration routines */
 
-void mvpp2_port_mii_set(struct mvpp2_port *port)
+void mvpp21_port_mii_set(struct mvpp2_port *port)
 {
 	u32 val;
 #ifndef CONFIG_MV_PP2_PALLADIUM
 
 	val = readl(port->base + MVPP2_GMAC_CTRL_2_REG);
 
-	switch (port->phy_interface) {
+	switch (port->mac_data.phy_mode) {
 	case PHY_INTERFACE_MODE_SGMII:
 		val |= MVPP2_GMAC_INBAND_AN_MASK;
 		break;
@@ -3715,7 +3699,7 @@ void mvpp2_port_mii_set(struct mvpp2_port *port)
 
 }
 
-void mvpp2_port_fc_adv_enable(struct mvpp2_port *port)
+void mvpp21_port_fc_adv_enable(struct mvpp2_port *port)
 {
 	u32 val;
 #ifndef CONFIG_MV_PP2_PALLADIUM
@@ -3726,7 +3710,7 @@ void mvpp2_port_fc_adv_enable(struct mvpp2_port *port)
 #endif
 }
 
-void mvpp2_port_enable(struct mvpp2_port *port)
+void mvpp21_port_enable(struct mvpp2_port *port)
 {
 #ifndef CONFIG_MV_PP2_PALLADIUM
 
@@ -3739,7 +3723,7 @@ void mvpp2_port_enable(struct mvpp2_port *port)
 #endif
 }
 
-void mvpp2_port_disable(struct mvpp2_port *port)
+void mvpp21_port_disable(struct mvpp2_port *port)
 {
 #ifndef CONFIG_MV_PP2_PALLADIUM
 
@@ -3752,7 +3736,7 @@ void mvpp2_port_disable(struct mvpp2_port *port)
 }
 
 /* Set IEEE 802.3x Flow Control Xon Packet Transmission Mode */
-void mvpp2_port_periodic_xon_disable(struct mvpp2_port *port)
+void mvpp21_port_periodic_xon_disable(struct mvpp2_port *port)
 {
 #ifndef CONFIG_MV_PP2_PALLADIUM
 
@@ -3765,7 +3749,7 @@ void mvpp2_port_periodic_xon_disable(struct mvpp2_port *port)
 }
 
 /* Configure loopback port */
-void mvpp2_port_loopback_set(struct mvpp2_port *port)
+void mvpp21_port_loopback_set(struct mvpp2_port *port)
 {
 #ifndef CONFIG_MV_PP2_PALLADIUM
 
@@ -3773,12 +3757,12 @@ void mvpp2_port_loopback_set(struct mvpp2_port *port)
 
 	val = readl(port->base + MVPP2_GMAC_CTRL_1_REG);
 
-	if (port->speed == 1000)
+	if (port->mac_data.speed == 1000)
 		val |= MVPP2_GMAC_GMII_LB_EN_MASK;
 	else
 		val &= ~MVPP2_GMAC_GMII_LB_EN_MASK;
 
-	if (port->phy_interface == PHY_INTERFACE_MODE_SGMII)
+	if (port->mac_data.phy_mode == PHY_INTERFACE_MODE_SGMII)
 		val |= MVPP2_GMAC_PCS_LB_EN_MASK;
 	else
 		val &= ~MVPP2_GMAC_PCS_LB_EN_MASK;
@@ -3787,7 +3771,7 @@ void mvpp2_port_loopback_set(struct mvpp2_port *port)
 #endif
 }
 
-void mvpp2_port_reset(struct mvpp2_port *port)
+void mvpp21_port_reset(struct mvpp2_port *port)
 {
 #ifndef CONFIG_MV_PP2_PALLADIUM
 

@@ -50,6 +50,8 @@
 
 #include "mvpp2.h"
 #include "mvpp2_hw.h"
+#include "mv_gop110_hw.h"
+
 
 
 /* Ethtool methods */
@@ -98,7 +100,8 @@ static int mvpp2_ethtool_get_settings(struct net_device *dev,
 				      struct ethtool_cmd *cmd)
 {
 	struct mvpp2_port *port = netdev_priv(dev);
-
+	struct mv_port_link_status	status;
+	phy_interface_t 		phy_mode;
 #ifdef CONFIG_MV_PP2_FPGA
 	int val;
 	void * addr;
@@ -203,16 +206,72 @@ static int mvpp2_ethtool_get_settings(struct net_device *dev,
 
 	val = readl(port->base + 0x10);
 	pr_emerg("print_reg(%d):port_id=%d: [0x%p] = 0x%x\n", __LINE__, port_id, port->base + 0x10, val);
-#endif
-
-	if (!port->phy_dev)
-		return -ENODEV;
-#if !defined(CONFIG_MV_PP2_PALLADIUM)
-	return phy_ethtool_gset(port->phy_dev, cmd);
+	return(0);
 #else
-	return 0;
-#endif
+
+	/* No Phy device mngmt */
+	if (!port->mac_data.phy_dev) {
+
+		/*for force link port, RXAUI port and link-down ports, follow old strategy*/
+
+		mv_gop110_port_link_status(&port->priv->hw.gop, &port->mac_data,
+			&status);
+
+		if (status.linkup == true) {
+			switch (status.speed) {
+			case MV_PORT_SPEED_10000:
+				cmd->speed = SPEED_10000;
+				break;
+			case MV_PORT_SPEED_1000:
+				cmd->speed = SPEED_1000;
+				break;
+			case MV_PORT_SPEED_100:
+				cmd->speed = SPEED_100;
+				break;
+			case MV_PORT_SPEED_10:
+				cmd->speed = SPEED_10;
+				break;
+			default:
+				return -EINVAL;
+			}
+			if (status.duplex == MV_PORT_DUPLEX_FULL)
+				cmd->duplex = 1;
+			else
+				cmd->duplex = 0;
+		} else {
+			cmd->speed  = SPEED_UNKNOWN;
+			cmd->duplex = SPEED_UNKNOWN;
+		}
+
+		phy_mode = port->mac_data.phy_mode;
+		if ((phy_mode == PHY_INTERFACE_MODE_XAUI) || (phy_mode == PHY_INTERFACE_MODE_RXAUI)) {
+			cmd->autoneg = AUTONEG_DISABLE;
+			cmd->supported = (SUPPORTED_10000baseT_Full | SUPPORTED_FIBRE);
+			cmd->advertising = (ADVERTISED_10000baseT_Full | ADVERTISED_FIBRE);
+			cmd->port = PORT_FIBRE;
+			cmd->transceiver = XCVR_EXTERNAL;
+		} else {
+			cmd->supported = (SUPPORTED_10baseT_Half | SUPPORTED_10baseT_Full | SUPPORTED_100baseT_Half
+			| SUPPORTED_100baseT_Full | SUPPORTED_Autoneg | SUPPORTED_TP | SUPPORTED_MII
+			| SUPPORTED_1000baseT_Full);
+			cmd->transceiver = XCVR_INTERNAL;
+			cmd->port = PORT_MII;
+
+			/* check if speed and duplex are AN */
+			if (status.speed == MV_PORT_SPEED_AN && status.duplex == MV_PORT_DUPLEX_AN) {
+				cmd->lp_advertising = cmd->advertising = 0;
+				cmd->autoneg = AUTONEG_ENABLE;
+			} else
+				cmd->autoneg = AUTONEG_DISABLE;
+		}
+
+		return 0;
+	}
+
+	return phy_ethtool_gset(port->mac_data.phy_dev, cmd);
+#endif	
 }
+
 
 /* Set settings (phy address, speed) for ethtools */
 static int mvpp2_ethtool_set_settings(struct net_device *dev,
@@ -220,10 +279,10 @@ static int mvpp2_ethtool_set_settings(struct net_device *dev,
 {
 	struct mvpp2_port *port = netdev_priv(dev);
 
-	if (!port->phy_dev)
+	if (!port->mac_data.phy_dev)
 		return -ENODEV;
 #if !defined(CONFIG_MV_PP2_PALLADIUM)
-	return phy_ethtool_sset(port->phy_dev, cmd);
+	return phy_ethtool_sset(port->mac_data.phy_dev, cmd);
 #else
 	return 0;
 #endif
@@ -342,8 +401,6 @@ static int mvpp2_ethtool_set_ringparam(struct net_device *dev,
 	}
 
 	mvpp2_start_dev(port);
-	mvpp2_egress_enable(port);
-	mvpp2_ingress_enable(port);
 
 	return 0;
 
@@ -423,11 +480,9 @@ static const struct ethtool_ops mvpp2_eth_tool_ops = {
 	.set_ringparam		= mvpp2_ethtool_set_ringparam,
 	/* For rxfh relevant command, only support LK-3.18 */
 	.get_rxfh_indir_size	= mvpp2_ethtool_get_rxfh_indir_size,
-#ifdef CONFIG_MV_PP2_FPGA
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(3,16,0)
 	.get_rxfh_indir		= mvpp2_ethtool_get_rxfh_indir,
 	.set_rxfh_indir		= mvpp2_ethtool_set_rxfh_indir,
-#endif
 #endif
 	.get_rxnfc		= mvpp2_ethtool_get_rxnfc,
 };

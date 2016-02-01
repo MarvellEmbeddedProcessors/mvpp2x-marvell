@@ -37,6 +37,8 @@
 
 
 #include "mvpp2_hw_type.h"
+#include "mv_gop110_hw_type.h"
+
 
 
 
@@ -51,6 +53,13 @@
 #else
 #define PALAD(x)
 #endif
+
+#ifdef CONFIG_MV_PP2_FPGA
+#define FPGA	1
+#else
+#define FPGA	0
+#endif
+
 
 #if defined(CONFIG_MV_PP2_PALLADIUM)
 /*These are the indexes of MVPP2_PRS_FL_IP4_UNTAG_NO_OPV4_OPTIONS/MVPP2_PRS_FL_NON_IP_UNTAG
@@ -92,6 +101,11 @@
 #define STAT_DBG(c)
 #endif
 
+#ifdef MV_PP22_GOP_DEBUG
+#define GOP_DEBUG(x)	x
+#else
+#define GOP_DEBUG(x)
+#endif
 
 #define MV_ETH_SKB_SHINFO_SIZE	SKB_DATA_ALIGN(sizeof(struct skb_shared_info))
 
@@ -289,6 +303,39 @@ enum mvpp2_rss_nf_udp_mode {
 	MVPP2_RSS_NF_UDP_5T /* non-frag UDP packet hash value is calculated based on 5T */
 };
 
+
+
+struct mv_mac_data {
+	u8			gop_index;
+	unsigned long		flags;
+	/* Whether a PHY is present, and if yes, at which address. */
+	int			phy_addr;
+	phy_interface_t		phy_mode; /* RXAUI, SGMII, etc. */
+	struct phy_device	*phy_dev;
+	struct device_node	*phy_node;
+	int			link_irq;
+	bool			force_link;
+	unsigned int		autoneg;
+	unsigned int		link;
+	unsigned int		duplex;
+	unsigned int		speed;
+};
+
+/* Masks used for pp3_emac flags */
+#define MV_EMAC_F_LINK_UP_BIT	0
+#define MV_EMAC_F_INIT_BIT	1
+#define MV_EMAC_F_SGMII2_5_BIT	2
+
+
+#define MV_EMAC_F_LINK_UP	(1 << MV_EMAC_F_LINK_UP_BIT)
+#define MV_EMAC_F_INIT		(1 << MV_EMAC_F_INIT_BIT)
+#define MV_EMAC_F_SGMII2_5	(1 << MV_EMAC_F_SGMII2_5_BIT)
+
+
+#define MVPP2_NO_LINK_IRQ	0
+
+
+
 /* Per-CPU Tx queue control */
 struct mvpp2_txq_pcpu {
 	int cpu;
@@ -411,12 +458,44 @@ struct mvpp2_rx_queue {
 };
 
 
+struct avanta_lp_gop_hw {
+	void __iomem *lms_base;
+};
+
+struct mv_mac_unit_desc {
+	void __iomem *base;
+	u32  obj_size;
+};
+
+struct cpn110_gop_hw {
+	struct mv_mac_unit_desc gmac;
+	struct mv_mac_unit_desc xlg_mac;
+	struct mv_mac_unit_desc serdes;
+	struct mv_mac_unit_desc xmib;
+	void __iomem *smi_base;
+	void __iomem *xsmi_base;
+	void __iomem *mspg_base;
+	void __iomem *xpcs_base;
+#ifdef MV_PP22_GOP_DEBUG
+	static struct gop_port_ctrl gop_port_debug[MVCPN110_GOP_MAC_NUM];
+#endif
+};
+
+struct gop_hw {
+	union {
+		struct avanta_lp_gop_hw gop_alp;
+		struct cpn110_gop_hw gop_110;
+	};
+};
+
 struct mvpp2_hw {
 
 	/* Shared registers' base addresses */
 	void __iomem *base;/* PPV22 base_address as received in devm_ioremap_resource().*/
 	void __iomem *lms_base;
 	void __iomem *cpu_base[MVPP2_MAX_CPUS];
+
+	struct gop_hw gop;
 /* ppv22_base_address for each CPU.
     PPv2.2 - cpu_base[x] = base + cpu_index[smp_processor_id]*MV_PP2_SPACE_64K, for non-participating CPU it is NULL.
     PPv2.1 cpu_base[x] = base */
@@ -465,7 +544,7 @@ struct mvpp2_param_config {
 struct mvpp2 {
 	enum mvppv2_version pp2_version; /* Redundant, consider to delete. (prevents extra pointer lookup from mvpp2x_platform_data) */
 
-	struct	mvpp2_hw hw;
+	struct mvpp2_hw hw;
 	struct mvpp2x_platform_data *pp2xdata;
 
 	u16 cpu_map; /* Bitmap of the participating cpu's */
@@ -528,6 +607,11 @@ struct mvpp2_port {
 
 	struct mvpp2 *priv;
 
+	struct mv_mac_data mac_data;
+	phy_interface_t phy_interface;
+	struct tasklet_struct	link_change_tasklet;
+
+
 	/* Per-port registers' base address */
 	void __iomem *base;
 
@@ -557,12 +641,6 @@ struct mvpp2_port {
 	u32 tx_time_coal;
 	struct mvpp2_pcpu_stats __percpu *stats;
 
-	struct phy_device *phy_dev;
-	phy_interface_t phy_interface;
-	struct device_node *phy_node;
-	unsigned int link;
-	unsigned int duplex;
-	unsigned int speed;
 
 	struct mvpp2_bm_pool *pool_long; /* Pointer to the pool_id (long or jumbo) */
 	struct mvpp2_bm_pool *pool_short; /* Pointer to the short pool_id */

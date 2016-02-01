@@ -481,7 +481,7 @@ void mvpp2_cls_flow_port_del(struct mvpp2_hw *hw, int index, int port_id);
 
 void mvpp2_txp_max_tx_size_set(struct mvpp2_port *port);
 void mvpp2_tx_done_time_coal_set(struct mvpp2_port *port, u32 usec);
-void mvpp2_gmac_max_rx_size_set(struct mvpp2_port *port);
+void mvpp21_gmac_max_rx_size_set(struct mvpp2_port *port);
 
 int mvpp2_txq_pend_desc_num_get(struct mvpp2_port *port,
 				       struct mvpp2_tx_queue *txq);
@@ -513,10 +513,10 @@ void mvpp22_rxq_short_pool_set(struct mvpp2_hw *hw,
 				     int prxq, int short_pool);
 
 
-void mvpp2_port_mii_set(struct mvpp2_port *port);
-void mvpp2_port_fc_adv_enable(struct mvpp2_port *port);
-void mvpp2_port_enable(struct mvpp2_port *port);
-void mvpp2_port_disable(struct mvpp2_port *port);
+void mvpp21_port_mii_set(struct mvpp2_port *port);
+void mvpp21_port_fc_adv_enable(struct mvpp2_port *port);
+void mvpp21_port_enable(struct mvpp2_port *port);
+void mvpp21_port_disable(struct mvpp2_port *port);
 
 void mvpp2_ingress_enable(struct mvpp2_port *port);
 void mvpp2_ingress_disable(struct mvpp2_port *port);
@@ -524,9 +524,9 @@ void mvpp2_egress_enable(struct mvpp2_port *port);
 void mvpp2_egress_disable(struct mvpp2_port *port);
 
 
-void mvpp2_port_periodic_xon_disable(struct mvpp2_port *port);
-void mvpp2_port_loopback_set(struct mvpp2_port *port);
-void mvpp2_port_reset(struct mvpp2_port *port);
+void mvpp21_port_periodic_xon_disable(struct mvpp2_port *port);
+void mvpp21_port_loopback_set(struct mvpp2_port *port);
+void mvpp21_port_reset(struct mvpp2_port *port);
 
 void mvpp2_rx_pkts_coal_set(struct mvpp2_port *port,
 				   struct mvpp2_rx_queue *rxq, u32 pkts);
@@ -538,7 +538,7 @@ void mvpp2_rx_error(struct mvpp2_port *port,
 			   struct mvpp2_rx_desc *rx_desc);
 void mvpp2_rx_csum(struct mvpp2_port *port, u32 status,
 			  struct sk_buff *skb);
-void mvpp2_get_mac_address(struct mvpp2_port *port, unsigned char *addr);
+void mvpp21_get_mac_address(struct mvpp2_port *port, unsigned char *addr);
 
 int mvpp2_c2_init(struct platform_device *pdev, struct mvpp2_hw *hw);
 
