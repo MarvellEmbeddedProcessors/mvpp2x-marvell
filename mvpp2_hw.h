@@ -343,10 +343,17 @@ static inline int mvpp2_txq_sent_desc_proc(struct mvpp2_port *port,
 	u32 val;
 
 	/* Reading status reg resets transmitted descriptor counter */
-	val = mvpp2_read(&(port->priv->hw), MVPP21_TXQ_SENT_REG(txq->id));
+	if (port->priv->pp2_version == PPV21) {
+		val = mvpp2_read(&(port->priv->hw), MVPP21_TXQ_SENT_REG(txq->id));
+		return (val & MVPP21_TRANSMITTED_COUNT_MASK) >>
+			MVPP21_TRANSMITTED_COUNT_OFFSET;
+		}
+	else {
+		val = mvpp2_read(&(port->priv->hw), MVPP22_TXQ_SENT_REG(txq->id));
+		return (val & MVPP22_TRANSMITTED_COUNT_MASK) >>
+			MVPP22_TRANSMITTED_COUNT_OFFSET;
+		}
 
-	return (val & MVPP21_TRANSMITTED_COUNT_MASK) >>
-		MVPP21_TRANSMITTED_COUNT_OFFSET;
 }
 
 static inline void mvpp2_txq_desc_put(struct mvpp2_tx_queue *txq)

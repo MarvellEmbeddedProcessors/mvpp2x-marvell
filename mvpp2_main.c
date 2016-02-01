@@ -2362,10 +2362,10 @@ out:
 		dev_kfree_skb_any(skb);
 	}
 	/* PPV21 TX Post-Processing */
-#if 0
-	if (port->priv->pp2xdata->interrupt_tx_done == false)
+
+	if (port->priv->pp2xdata->interrupt_tx_done == false && frags > 0)
 		mvpp2_tx_done_post_proc(txq, txq_pcpu, port, frags);
-#endif
+
 	MVPP2_PRINT_2LINE();
 	return NETDEV_TX_OK;
 }
