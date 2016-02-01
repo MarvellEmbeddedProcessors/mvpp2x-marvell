@@ -289,7 +289,7 @@ static inline void mvpp2_bm_pool_mc_put(struct mvpp2_port *port, int pool,
 	/*TODO : YuvalC, this is just workaround to compile. Need to handle mvpp2_buff_hdr_rx().*/
 	mvpp2_bm_pool_put(&(port->priv->hw), pool,
 			  (dma_addr_t)(buf_phys_addr | MVPP2_BM_PHY_RLS_MC_BUFF_MASK),
-			  (struct sk_buff *)(buf_virt_addr));
+			  (struct sk_buff *)(u64)(buf_virt_addr));
 }
 
 static inline void mvpp2_port_interrupts_enable(struct mvpp2_port *port)

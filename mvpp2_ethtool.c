@@ -100,12 +100,11 @@ static int mvpp2_ethtool_get_settings(struct net_device *dev,
 				      struct ethtool_cmd *cmd)
 {
 	struct mvpp2_port *port = netdev_priv(dev);
-	struct mv_port_link_status	status;
-	phy_interface_t 		phy_mode;
 #ifdef CONFIG_MV_PP2_FPGA
 	int val;
 	void * addr;
 	int port_id = port->id;
+
 	pr_emerg(KERN_EMERG "\n\n\n\nmvpp2_ethtool_get_drvinfo(%d):dev->name=%s port->id=%d\n", __LINE__, dev->name, port->id);
 
 	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_GOOD_FRAMES_SENT;
@@ -208,6 +207,8 @@ static int mvpp2_ethtool_get_settings(struct net_device *dev,
 	pr_emerg("print_reg(%d):port_id=%d: [0x%p] = 0x%x\n", __LINE__, port_id, port->base + 0x10, val);
 	return(0);
 #else
+	struct mv_port_link_status	status;
+	phy_interface_t 		phy_mode;
 
 	/* No Phy device mngmt */
 	if (!port->mac_data.phy_dev) {
@@ -418,6 +419,7 @@ static u32 mvpp2_ethtool_get_rxfh_indir_size(struct net_device *dev)
 	return ARRAY_SIZE(port->priv->rx_indir_table);
 }
 
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,16,0)
 static int mvpp2_ethtool_get_rxfh_indir(struct net_device *dev, u32 *indir)
 {
 	size_t copy_size;
@@ -454,6 +456,7 @@ static int mvpp2_ethtool_set_rxfh_indir(struct net_device *dev, const u32 *indir
 
 	return 0;
 }
+#endif
 
 static int mvpp2_ethtool_get_rxnfc(struct net_device *dev, struct ethtool_rxnfc *info, u32 *rules)
 {
