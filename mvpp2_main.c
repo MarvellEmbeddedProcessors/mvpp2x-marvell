@@ -1344,7 +1344,7 @@ int mvpp2_setup_irqs(struct net_device *dev, struct mvpp2_port *port)
 	/* Link irq */
 	if (port->mac_data.link_irq != MVPP2_NO_LINK_IRQ) {
 		sprintf(temp_buf, "%s link_change", dev->name);
-		err = request_irq(port->mac_data.link_irq, 
+		err = request_irq(port->mac_data.link_irq,
 		       mv_pp2_link_change_isr, 0, temp_buf, dev);
 		if (err) {
 			netdev_err(dev, "cannot request IRQ %d\n",
@@ -2594,6 +2594,9 @@ if (!netif_carrier_ok(port->dev))
 		netif_carrier_on(port->dev);
 		netif_tx_start_all_queues(port->dev);
 #endif
+
+	tasklet_init(&port->link_change_tasklet, mv_pp2_link_change_tasklet,
+		(unsigned long)(&port->dev));
 	/* Unmask link_event */
 	if (!FPGA && port->priv->pp2_version == PPV22) {
 		mv_gop110_port_events_unmask(gop, mac);
@@ -3383,12 +3386,16 @@ static void mvpp22_port_isr_rx_group_cfg(struct mvpp2_port *port)
 }
 
 
-#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 static int mv_pp2_init_emac_data(struct mvpp2_port *port, struct device_node *emac_node)
 {
 	struct device_node *fixed_link_node, *phy_node;
 	int phy_mode;
-	u32 speed;
+	u32 speed, id;
+
+	if (of_property_read_u32(emac_node, "port-id", &id))
+		return -EINVAL;
+
+	port->mac_data.gop_index = id;
 
 	port->mac_data.link_irq = irq_of_parse_and_map(emac_node, 0);
 
@@ -3443,7 +3450,7 @@ static int mv_pp2_init_emac_data(struct mvpp2_port *port, struct device_node *em
 	}
 return 0;
 }
-#endif
+
 
 /* Initialize port HW */
 static int mvpp2_port_init(struct mvpp2_port *port)
@@ -3531,7 +3538,6 @@ err_free_percpu:
 
 
 /* Ports initialization */
-#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 static int mvpp2_port_probe(struct platform_device *pdev,
 			    struct device_node *port_node,
 			    struct mvpp2 *priv)
@@ -3724,7 +3730,6 @@ err_free_netdev:
 	return err;
 }
 
-#else
 
 static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 				int port_i,
@@ -3889,8 +3894,6 @@ err_free_irq:
 	return err;
 }
 
-
-#endif
 
 /* Ports removal routine */
 static void mvpp2_port_remove(struct mvpp2_port *port)
@@ -4161,7 +4164,7 @@ static const struct of_device_id mvpp2_match_tbl[] = {
 			.data = &pp21_pdata,
 		},
 		{
-			.compatible = "marvell,pp22",
+			.compatible = "marvell,mv-pp22",
 			.data = &pp22_pdata,
 		},
 	{ }
@@ -4231,6 +4234,19 @@ void mvpp2_pp2_basic_print(struct platform_device *pdev, struct mvpp2 *priv)
 	DBG_MSG("skb_base_addr(%p)\n", (void *)priv->pp2xdata->skb_base_addr);
 #endif
 	DBG_MSG("hw->base(%p)\n", priv->hw.base);
+	if (priv->pp2_version == PPV22) {
+	DBG_MSG("gop_addr: gmac(%p) xlg(%p) serdes(%p)\n",
+		priv->hw.gop.gop_110.gmac.base,
+		priv->hw.gop.gop_110.xlg_mac.base,
+		priv->hw.gop.gop_110.serdes.base);
+	DBG_MSG("gop_addr: xmib(%p) smi(%p) xsmi(%p)\n",
+		priv->hw.gop.gop_110.xmib.base,
+		priv->hw.gop.gop_110.smi_base,
+		priv->hw.gop.gop_110.xsmi_base);
+	DBG_MSG("gop_addr: mspg(%p) xpcs(%p)\n",
+		priv->hw.gop.gop_110.mspg_base,
+		priv->hw.gop.gop_110.xpcs_base);
+	}
 
 }
 EXPORT_SYMBOL(mvpp2_pp2_basic_print);
@@ -4273,6 +4289,16 @@ void mvpp2_pp2_port_print(struct mvpp2_port *port)
 			port->q_vector[i].pending_cause_rx);
 
 	}
+	DBG_MSG("\t GOP ind(%d) phy_mode(%d) phy_addr(%d) \n",
+		port->mac_data.gop_index, port->mac_data.phy_mode,
+		port->mac_data.phy_addr);
+	DBG_MSG("\t GOP force_link(%d) autoneg(%d) duplex(%d) speed(%d)\n",
+		port->mac_data.force_link, port->mac_data.autoneg,
+		port->mac_data.duplex, port->mac_data.speed);
+	DBG_MSG("\t GOP link_irq(%d) phy_mode(%d) \n", port->mac_data.link_irq,
+		port->mac_data.phy_mode);
+	DBG_MSG("\t GOP phy_dev(%p) phy_node(%p) \n", port->mac_data.phy_dev,
+		port->mac_data.phy_node);
 
 }
 EXPORT_SYMBOL(mvpp2_pp2_port_print);
@@ -4319,14 +4345,17 @@ static int mvpp2_platform_data_get(struct platform_device *pdev, struct mvpp2 *p
 
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	if (of_property_read_u32(dn, "cell-index", cell_index)) {
-			*cell_index = 0;
+			*cell_index= 0;
 	}
+
+	MVPP2_PRINT_VAR(*cell_index);
 
 	/* PPV2 Address Space */
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "pp");
 	hw->base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(hw->base))
 		return PTR_ERR(hw->base);
+	MVPP2_PRINT_2LINE();
 
 	if (priv->pp2xdata->pp2x_ver == PPV21) {
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "lms");
@@ -4341,12 +4370,17 @@ static int mvpp2_platform_data_get(struct platform_device *pdev, struct mvpp2 *p
 			return PTR_ERR(hw->gop.gop_110.serdes.base);
 		hw->gop.gop_110.serdes.obj_size = 0x1000;
 
+		MVPP2_PRINT_2LINE();
+
 		/* xmib */
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "xmib");
 		hw->gop.gop_110.xmib.base = devm_ioremap_resource(&pdev->dev, res);
 		if (IS_ERR(hw->gop.gop_110.xmib.base))
 			return PTR_ERR(hw->gop.gop_110.xmib.base);
 		hw->gop.gop_110.xmib.obj_size = 0x0100;
+
+
+		MVPP2_PRINT_2LINE();
 
 		/* skipped led */
 
@@ -4356,6 +4390,9 @@ static int mvpp2_platform_data_get(struct platform_device *pdev, struct mvpp2 *p
 		if (IS_ERR(hw->gop.gop_110.smi_base))
 			return PTR_ERR(hw->gop.gop_110.smi_base);
 
+
+		MVPP2_PRINT_2LINE();
+
 		/* skipped tai */
 
 		/* xsmi  */
@@ -4363,6 +4400,9 @@ static int mvpp2_platform_data_get(struct platform_device *pdev, struct mvpp2 *p
 		hw->gop.gop_110.xsmi_base = devm_ioremap_resource(&pdev->dev, res);
 		if (IS_ERR(hw->gop.gop_110.xsmi_base))
 			return PTR_ERR(hw->gop.gop_110.xsmi_base);
+
+
+		MVPP2_PRINT_2LINE();
 
 		/* MSPG - base register */
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "mspg");
@@ -4373,11 +4413,17 @@ static int mvpp2_platform_data_get(struct platform_device *pdev, struct mvpp2 *p
 		mspg_end  = res->end;
 
 
+		MVPP2_PRINT_2LINE();
+
+
 		/* xpcs */
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "xpcs");
 		if ( (res->start <= mspg_base) || (res->end >= mspg_end))
 			return -ENXIO;
 		hw->gop.gop_110.xpcs_base = (void *)(mspg_base + (res->start-mspg_base));
+
+
+		MVPP2_PRINT_2LINE();
 
 		/* MSPG - gmac */
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "gmac");
@@ -4387,6 +4433,9 @@ static int mvpp2_platform_data_get(struct platform_device *pdev, struct mvpp2 *p
 		hw->gop.gop_110.gmac.obj_size = 0x1000;
 
 
+		MVPP2_PRINT_2LINE();
+
+
 		/* MSPG - xlg */
 		res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "xlg");
 		if ( (res->start <= mspg_base) || (res->end >= mspg_end))
@@ -4394,38 +4443,46 @@ static int mvpp2_platform_data_get(struct platform_device *pdev, struct mvpp2 *p
 		hw->gop.gop_110.xlg_mac.base = (void *)(mspg_base + (res->start-mspg_base));
 		hw->gop.gop_110.xlg_mac.obj_size = 0x1000;
 
+
+		MVPP2_PRINT_2LINE();
+
 	}
 #else /*CONFIG_MV_PP2_FPGA*/
+	MVPP2_PRINT_VAR(hw->base);
 	hw->base = mv_pp2_vfpga_address;
 	pr_debug("mvpp2(%d): mvpp2_probe:mv_pp2_vfpga_address=0x%p\n", __LINE__, mv_pp2_vfpga_address);
 #endif
 
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
-	MVPP2_PRINT_LINE();
+	MVPP2_PRINT_2LINE();
 	hw->pp_clk = devm_clk_get(&pdev->dev, "pp_clk");
 	if (IS_ERR(hw->pp_clk))
 		return PTR_ERR(hw->pp_clk);
+	MVPP2_PRINT_2LINE();
 	err = clk_prepare_enable(hw->pp_clk);
 	if (err < 0)
 		return err;
-
+	MVPP2_PRINT_2LINE();
 	hw->gop_clk = devm_clk_get(&pdev->dev, "gop_clk");
-	if (IS_ERR(hw->gop_clk)) {
-		err = PTR_ERR(hw->gop_clk);
-		goto err_pp_clk;
-	}
+	if (IS_ERR(hw->gop_clk))
+		return PTR_ERR(hw->gop_clk);
+	MVPP2_PRINT_2LINE();
 	err = clk_prepare_enable(hw->gop_clk);
 	if (err < 0)
-		goto err_pp_clk;
+		return err;
+	MVPP2_PRINT_2LINE();
 
 	/* Get system's tclk rate */
 	hw->tclk = clk_get_rate(hw->pp_clk);
+	MVPP2_PRINT_VAR(hw->tclk);
+
 #else
 	hw->tclk = 25000000;
 #endif
 
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	*port_count = of_get_available_child_count(dn);
+	MVPP2_PRINT_VAR(*port_count);
 	if (*port_count == 0) {
 		dev_err(&pdev->dev, "no ports enabled\n");
 		err = -ENODEV;
@@ -4461,7 +4518,8 @@ static int mvpp2_probe(struct platform_device *pdev)
 	int start_port=1;
 #endif
 
-	PALAD(MVPP2_PRINT_LINE());
+	MVPP2_PRINT_2LINE();
+
 	priv = devm_kzalloc(&pdev->dev, sizeof(struct mvpp2), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
@@ -4471,6 +4529,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 		pr_crit("mvpp2: platform_data get failed \n");
 		return(err);
 	}
+	MVPP2_PRINT_2LINE();
 
 	hw = &priv->hw;
 	priv->pp2_version = priv->pp2xdata->pp2x_ver;
@@ -4760,8 +4819,6 @@ static int __init mpp2_module_init(void)
 			__LINE__);
 		return -1;
 	}
-	pr_crit("mvpp2_device list_empty=%d line=%d\n",
-		list_empty(&mvpp2_device.dev.devres_head), __LINE__);
 
 #ifdef CONFIG_MV_PP2_FPGA
 	MVPP2_PRINT_LINE();

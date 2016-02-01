@@ -219,13 +219,13 @@
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #define MVPP2_PRINT_LINE()
-#define MVPP2_PRINT_2LINE()
-//#define MVPP2_PRINT_2LINE()	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
+//#define MVPP2_PRINT_2LINE()
+#define MVPP2_PRINT_2LINE()	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
 //#define MVPP2_PRINT_LINE()	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
 
 
-#define MVPP2_PRINT_VAR(var) pr_crit("%s(%d): "#var"=0x%lx\n", __FILENAME__, __LINE__, var);
-#define MVPP2_PRINT_VAR_NAME(var,name) pr_crit("%s(%d): %s=0x%lx\n", __FILENAME__, __LINE__, name, var);
+#define MVPP2_PRINT_VAR(var) pr_crit("%s(%d): "#var"=0x%lx\n", __FILENAME__, __LINE__, (unsigned long)var);
+#define MVPP2_PRINT_VAR_NAME(var,name) pr_crit("%s(%d): %s=0x%lx\n", __FILENAME__, __LINE__, name, (unsigned long)var);
 
 
 
@@ -608,7 +608,6 @@ struct mvpp2_port {
 	struct mvpp2 *priv;
 
 	struct mv_mac_data mac_data;
-	phy_interface_t phy_interface;
 	struct tasklet_struct	link_change_tasklet;
 
 
