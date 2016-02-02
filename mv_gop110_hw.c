@@ -2203,4 +2203,71 @@ int mv_gop110_xpcs_mode(struct gop_hw *gop, int num_of_lanes)
 }
 
 
+u64 mv_gop110_mib_read64(struct gop_hw *gop, int port, unsigned int offset)
+{
+	u64 val, val2;
+
+	val = mv_gop110_xmib_mac_read(gop, port, offset);
+	if (offset == MV_MIB_GOOD_OCTETS_RECEIVED_LOW || offset == MV_MIB_GOOD_OCTETS_SENT_LOW) {
+		val2 = mv_gop110_xmib_mac_read(gop, port, offset+4);
+		val += (val2 << 32);
+	}
+
+	return val;
+}
+
+
+static void mv_gop110_mib_print(struct gop_hw *gop, int port, u32 offset, char *mib_name)
+{
+	u64 val;
+
+	val = mv_gop110_mib_read64(gop, port, offset);
+
+	pr_info("  %-32s: 0x%02x = 0x%08llx\n", mib_name, offset, val);
+
+}
+
+
+void mv_gop110_mib_counters_show(struct gop_hw *gop, int port)
+{
+
+	pr_info("\n[Rx]\n");
+	mv_gop110_mib_print(gop, port, MV_MIB_GOOD_OCTETS_RECEIVED_LOW, "GOOD_OCTETS_RECEIVED");
+	mv_gop110_mib_print(gop, port, MV_MIB_BAD_OCTETS_RECEIVED, "BAD_OCTETS_RECEIVED");
+
+	mv_gop110_mib_print(gop, port, MV_MIB_UNICAST_FRAMES_RECEIVED, "UNCAST_FRAMES_RECEIVED");
+	mv_gop110_mib_print(gop, port, MV_MIB_BROADCAST_FRAMES_RECEIVED, "BROADCAST_FRAMES_RECEIVED");
+	mv_gop110_mib_print(gop, port, MV_MIB_MULTICAST_FRAMES_RECEIVED, "MULTICAST_FRAMES_RECEIVED");
+
+	pr_info("\n[RMON]\n");
+	mv_gop110_mib_print(gop, port, MV_MIB_FRAMES_64_OCTETS, "FRAMES_64_OCTETS");
+	mv_gop110_mib_print(gop, port, MV_MIB_FRAMES_65_TO_127_OCTETS, "FRAMES_65_TO_127_OCTETS");
+	mv_gop110_mib_print(gop, port, MV_MIB_FRAMES_128_TO_255_OCTETS, "FRAMES_128_TO_255_OCTETS");
+	mv_gop110_mib_print(gop, port, MV_MIB_FRAMES_256_TO_511_OCTETS, "FRAMES_256_TO_511_OCTETS");
+	mv_gop110_mib_print(gop, port, MV_MIB_FRAMES_512_TO_1023_OCTETS, "FRAMES_512_TO_1023_OCTETS");
+	mv_gop110_mib_print(gop, port, MV_MIB_FRAMES_1024_TO_MAX_OCTETS, "FRAMES_1024_TO_MAX_OCTETS");
+
+	pr_info("\n[Tx]\n");
+	mv_gop110_mib_print(gop, port, MV_MIB_GOOD_OCTETS_SENT_LOW, "GOOD_OCTETS_SENT");
+	mv_gop110_mib_print(gop, port, MV_MIB_UNICAST_FRAMES_SENT, "UNICAST_FRAMES_SENT");
+	mv_gop110_mib_print(gop, port, MV_MIB_MULTICAST_FRAMES_SENT, "MULTICAST_FRAMES_SENT");
+	mv_gop110_mib_print(gop, port, MV_MIB_BROADCAST_FRAMES_SENT, "BROADCAST_FRAMES_SENT");
+	mv_gop110_mib_print(gop, port, MV_MIB_CRC_ERRORS_SENT, "CRC_ERRORS_SENT");
+
+	pr_info("\n[FC control]\n");
+	mv_gop110_mib_print(gop, port, MV_MIB_FC_RECEIVED, "FC_RECEIVED");
+	mv_gop110_mib_print(gop, port, MV_MIB_FC_SENT, "FC_SENT");
+
+	pr_info("\n[Errors]\n");
+	mv_gop110_mib_print(gop, port, MV_MIB_RX_FIFO_OVERRUN, "RX_FIFO_OVERRUN");
+	mv_gop110_mib_print(gop, port, MV_MIB_UNDERSIZE_RECEIVED, "UNDERSIZE_RECEIVED");
+	mv_gop110_mib_print(gop, port, MV_MIB_FRAGMENTS_RECEIVED, "FRAGMENTS_RECEIVED");
+	mv_gop110_mib_print(gop, port, MV_MIB_OVERSIZE_RECEIVED, "OVERSIZE_RECEIVED");
+	mv_gop110_mib_print(gop, port, MV_MIB_JABBER_RECEIVED, "JABBER_RECEIVED");
+	mv_gop110_mib_print(gop, port, MV_MIB_MAC_RECEIVE_ERROR, "MAC_RECEIVE_ERROR");
+	mv_gop110_mib_print(gop, port, MV_MIB_BAD_CRC_EVENT, "BAD_CRC_EVENT");
+	mv_gop110_mib_print(gop, port, MV_MIB_COLLISION, "COLLISION");
+	/* This counter must be read last. Read it clear all the counters */
+	mv_gop110_mib_print(gop, port, MV_MIB_LATE_COLLISION, "LATE_COLLISION");
+}
 

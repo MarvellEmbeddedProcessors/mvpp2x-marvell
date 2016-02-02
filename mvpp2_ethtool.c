@@ -210,6 +210,9 @@ static int mvpp2_ethtool_get_settings(struct net_device *dev,
 	struct mv_port_link_status	status;
 	phy_interface_t 		phy_mode;
 
+
+	mv_gop110_mib_counters_show(&port->priv->hw.gop, port->mac_data.gop_index);
+
 	/* No Phy device mngmt */
 	if (!port->mac_data.phy_dev) {
 
@@ -270,7 +273,7 @@ static int mvpp2_ethtool_get_settings(struct net_device *dev,
 	}
 
 	return phy_ethtool_gset(port->mac_data.phy_dev, cmd);
-#endif	
+#endif
 }
 
 

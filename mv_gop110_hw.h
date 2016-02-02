@@ -366,6 +366,21 @@ static inline void mv_gop110_xlg_mac_print(struct gop_hw *gop, char *reg_name, i
 	pr_info("  %-32s: 0x%x = 0x%08x\n", reg_name, reg, mv_gop110_xlg_mac_read(gop, mac_num, reg));
 }
 
+/* MIB MAC Functions */
+static inline u32 mv_gop110_xmib_mac_read(struct gop_hw *gop, int mac_num, u32 offset)
+{
+	return(mv_gop_gen_read(gop->gop_110.xmib.base, mac_num*gop->gop_110.xmib.obj_size+ offset));
+}
+static inline void mv_gop110_xmib_mac_write(struct gop_hw *gop, int mac_num, u32 offset, u32 data)
+{
+	mv_gop_gen_write(gop->gop_110.xmib.base, mac_num*gop->gop_110.xmib.obj_size + offset, data);
+}
+static inline void mv_gop110_xmib_mac_print(struct gop_hw *gop, char *reg_name, int mac_num, u32 reg)
+{
+	pr_info("  %-32s: 0x%x = 0x%08x\n", reg_name, reg, mv_gop110_xmib_mac_read(gop, mac_num, reg));
+}
+
+
 
 void mv_gop110_xlg_mac_regs_dump(struct gop_hw *gop, int port);
 int mv_gop110_xlg_mac_reset(struct gop_hw *gop, int mac_num, enum mv_reset reset);
@@ -449,10 +464,9 @@ int mv_gop110_smi_phy_addr_cfg(struct gop_hw *gop, int port, int addr);
 
 
 /* MIB Functions  */
-#if 0
-u32 mv_pp3_gop_mib_counter_get(int port, u32 offset, u32 *p_high_32);
-void mv_pp3_gop_mib_counters_clear(int port);
-void mv_pp3_gop_mib_counters_show(int port);
-#endif
+u64 mv_gop110_mib_read64(struct gop_hw *gop, int port, unsigned int offset);
+void mv_gop110_mib_counters_show(struct gop_hw *gop, int port);
+
+
 
 #endif /* _MV_GOP_HW_H_ */

@@ -1832,10 +1832,6 @@
 /*   MIB  REGS    */
 /*************/
 
-
-#define MV_MIB_PORT_OFFSET(port)		((port) * 0x400)
-#define MV_MIB_COUNTERS_BASE(port)		(MV_MIB_PORT_OFFSET(port))
-
 /* GMAC_MIB Counters register definitions */
 #define MV_MIB_GOOD_OCTETS_RECEIVED_LOW		0x0
 #define MV_MIB_GOOD_OCTETS_RECEIVED_HIGH	0x4

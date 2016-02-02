@@ -3386,6 +3386,7 @@ static void mvpp22_port_isr_rx_group_cfg(struct mvpp2_port *port)
 }
 
 
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 static int mv_pp2_init_emac_data(struct mvpp2_port *port, struct device_node *emac_node)
 {
 	struct device_node *fixed_link_node, *phy_node;
@@ -3450,7 +3451,7 @@ static int mv_pp2_init_emac_data(struct mvpp2_port *port, struct device_node *em
 	}
 return 0;
 }
-
+#endif
 
 /* Initialize port HW */
 static int mvpp2_port_init(struct mvpp2_port *port)
@@ -3538,6 +3539,7 @@ err_free_percpu:
 
 
 /* Ports initialization */
+#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 static int mvpp2_port_probe(struct platform_device *pdev,
 			    struct device_node *port_node,
 			    struct mvpp2 *priv)
@@ -3730,6 +3732,7 @@ err_free_netdev:
 	return err;
 }
 
+#else
 
 static int mvpp2_port_probe_fpga(struct platform_device *pdev,
 				int port_i,
@@ -3895,6 +3898,7 @@ err_free_irq:
 }
 
 
+#endif
 /* Ports removal routine */
 static void mvpp2_port_remove(struct mvpp2_port *port)
 {
