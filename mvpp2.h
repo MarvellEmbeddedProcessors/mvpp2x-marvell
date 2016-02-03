@@ -62,8 +62,9 @@
 
 
 #if defined(CONFIG_MV_PP2_PALLADIUM)
-/*These are the indexes of MVPP2_PRS_FL_IP4_UNTAG_NO_OPV4_OPTIONS/MVPP2_PRS_FL_NON_IP_UNTAG
-  in mvpp2_prs_flow_id_array[] */
+/*These are the indexes of
+ * MVPP2_PRS_FL_IP4_UNTAG_NO_OPV4_OPTIONS/MVPP2_PRS_FL_NON_IP_UNTAG
+ * in mvpp2_prs_flow_id_array[] */
 #define MVPP2_PRS_FL_IP4_UNTAG_NO_OPV4_OPTIONS	40
 #define MVPP2_PRS_FL_NON_IP_UNTAG_INDEX		50
 #endif
@@ -91,7 +92,7 @@
 #if DEBUG
 #define DBG_MSG(fmt, args...)	printk(KERN_DEBUG PFX fmt, ## args)
 #else
-#define DBG_MSG(fmt, args...)	while (0) printk(fmt, ## args)
+#define DBG_MSG(fmt, args...)	(while (0) printk(fmt, ## args))
 #endif /*DEBUG*/
 #endif /*VERBOSE*/
 
@@ -122,43 +123,36 @@
 
 
 
-#define DECIMAL_RANGE_VALIDATE(_VALUE_ , _MIN_, _MAX_) {\
+
+
+#define RANGE_VALIDATE(_VALUE_, _MIN_, _MAX_) {\
 	if (((_VALUE_) > (_MAX_)) || ((_VALUE_) < (_MIN_))) {\
-		printk("%s: value %d (0x%x) is out of range [%d , %d].\n",\
-				__func__, (_VALUE_), (_VALUE_), (_MIN_), (_MAX_));\
+		DBG_MSG("%s: value 0x%X (%d) is out of range [0x%X , 0x%X].\n",\
+			__func__, (_VALUE_), (_VALUE_), (_MIN_), (_MAX_));\
 		return MV_ERROR;\
 	} \
 }
 
-#define RANGE_VALIDATE(_VALUE_ , _MIN_, _MAX_) {\
-	if (((_VALUE_) > (_MAX_)) || ((_VALUE_) < (_MIN_))) {\
-		printk("%s: value 0x%X (%d) is out of range [0x%X , 0x%X].\n",\
-				__func__, (_VALUE_), (_VALUE_), (_MIN_), (_MAX_));\
-		return MV_ERROR;\
-	} \
-}
 
-#define BIT_RANGE_VALIDATE(_VALUE_)			RANGE_VALIDATE(_VALUE_ , 0, 1)
+#define BIT_RANGE_VALIDATE(_VALUE_) RANGE_VALIDATE(_VALUE_, 0, 1)
 
-#define POS_RANGE_VALIDATE(_VALUE_, _MAX_)		RANGE_VALIDATE(_VALUE_ , 0, _MAX_)
+#define POS_RANGE_VALIDATE(_VALUE_, _MAX_) \
+	RANGE_VALIDATE(_VALUE_, 0, _MAX_)
+
 
 #define PTR_VALIDATE(_ptr_) {\
 	if (_ptr_ == NULL) {\
-		printk("%s: null pointer.\n", __func__);\
+		DBG_MSG("%s: null pointer.\n", __func__);\
 		return MV_ERROR;\
 	} \
 }
 
 #define RET_VALIDATE(_ret_) {\
 	if (_ret_ != MV_OK) {\
-		printk("%s: function call fail.\n", __func__);\
+		DBG_MSG("%s: function call fail.\n", __func__);\
 		return MV_ERROR;\
 	} \
 }
-
-
-#define WARN_OOM(cond) if (cond) { printk("%s: out of memory\n", __func__); return NULL; }
-
 
 /*--------------------------------------------------------------------*/
 /*			PP2 COMMON DEFINETIONS			      */
@@ -183,16 +177,17 @@
  LE example: HW_BYTE_OFFS(1) = 1
  BE example: HW_BYTE_OFFS(1) = 2
 */
-#define SRAM_BIT_TO_BYTE(_bit_)			HW_BYTE_OFFS((_bit_) / 8)
+#define SRAM_BIT_TO_BYTE(_bit_) HW_BYTE_OFFS((_bit_) / 8)
 
 #if defined(__LITTLE_ENDIAN)
-	#define HW_BYTE_OFFS(_offs_)		(_offs_)
+#define HW_BYTE_OFFS(_offs_) (_offs_)
 #else
-	#define HW_BYTE_OFFS(_offs_)		((3 - ((_offs_) % 4)) + (((_offs_) / 4) * 4))
+#define HW_BYTE_OFFS(_offs_) ((3 - ((_offs_) % 4)) + (((_offs_) / 4) * 4))
 #endif
 
-#define TCAM_DATA_BYTE_OFFS_LE(_offs_)		(((_offs_) - ((_offs_) % 2)) * 2 + ((_offs_) % 2))
-#define TCAM_DATA_MASK_OFFS_LE(_offs_)		(((_offs_) * 2) - ((_offs_) % 2)  + 2)
+#define TCAM_DATA_BYTE_OFFS_LE(_offs_)		(((_offs_) - \
+	((_offs_) % 2)) * 2 + ((_offs_) % 2))
+#define TCAM_DATA_MASK_OFFS_LE(_offs_) (((_offs_) * 2) - ((_offs_) % 2)  + 2)
 
 /*
  TCAM_DATA_BYTE/MASK
@@ -203,29 +198,27 @@
  relevant only for TCAM data bytes
  used by PRS and CLS2
 */
-#define TCAM_DATA_BYTE(_offs_)			(HW_BYTE_OFFS(TCAM_DATA_BYTE_OFFS_LE(_offs_)))
-#define TCAM_DATA_MASK(_offs_)			(HW_BYTE_OFFS(TCAM_DATA_MASK_OFFS_LE(_offs_)))
-
-#define C2_SRAM_FMT					"%8.8x %8.8x %8.8x %8.8x %8.8x"
-#define C2_SRAM_VAL(p)					p[4], p[3], p[2], p[1], p[0]
-
-
-#define PRS_SRAM_FMT					"%4.4x %8.8x %8.8x %8.8x"
-#define PRS_SRAM_VAL(p)					p[3] & 0xFFFF, p[2], p[1], p[0]
-
+#define TCAM_DATA_BYTE(_offs_) (HW_BYTE_OFFS(TCAM_DATA_BYTE_OFFS_LE(_offs_)))
+#define TCAM_DATA_MASK(_offs_) (HW_BYTE_OFFS(TCAM_DATA_MASK_OFFS_LE(_offs_)))
 
 /*END - Taken from mvPp2Commn.h, need to order TODO */
 /*--------------------------------------------------------------------*/
 
-#define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#define __FILENAME__ (strrchr(__FILE__, '/') ? \
+	strrchr(__FILE__, '/') + 1 : __FILE__)
 #define MVPP2_PRINT_LINE()
-//#define MVPP2_PRINT_2LINE()
-#define MVPP2_PRINT_2LINE()	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
-//#define MVPP2_PRINT_LINE()	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
+#define MVPP2_PRINT_2LINE()
+/*#define MVPP2_PRINT_2LINE() \
+	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)*/
+/*#define MVPP2_PRINT_LINE() \
+	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)*/
 
 
-#define MVPP2_PRINT_VAR(var) pr_crit("%s(%d): "#var"=0x%lx\n", __FILENAME__, __LINE__, (unsigned long)var);
-#define MVPP2_PRINT_VAR_NAME(var,name) pr_crit("%s(%d): %s=0x%lx\n", __FILENAME__, __LINE__, name, (unsigned long)var);
+#define MVPP2_PRINT_VAR(var) \
+	pr_crit("%s(%d): "#var"=0x%lx\n", __FILENAME__, __LINE__,\
+		(unsigned long)var)
+#define MVPP2_PRINT_VAR_NAME(var, name) \
+	pr_crit("%s(%d): %s=0x%lx\n", __FILENAME__, __LINE__, name, var)
 
 
 
@@ -283,24 +276,29 @@ enum mvpp2_queue_vector_type {
 	MVPP2_PRIVATE
 };
 
-enum mvpp2_queue_distribution_mode{
+enum mvpp2_queue_distribution_mode {
 	/* All queues are shared.
-   	PPv2.1 – this is the only supported mode.
-  	PPv2.2 – Requires (N+1) interrupts. All rx_queues are configured on the additional interrupt. */
+	PPv2.1 – this is the only supported mode.
+	PPv2.2 – Requires (N+1) interrupts. All rx_queues are
+	configured on the additional interrupt. */
 	MVPP2_QDIST_SINGLE_MODE,
-	MVPP2_QDIST_MULTI_MODE  /* PPv2.2 only requires N interrupts. */
+	MVPP2_QDIST_MULTI_MODE	/* PPv2.2 only requires N interrupts */
 };
 
 enum mvpp2_cos_classifier {
 	MVPP2_COS_CLS_VLAN, /* CoS based on VLAN pri */
 	MVPP2_COS_CLS_DSCP,
-	MVPP2_COS_CLS_VLAN_DSCP, /* CoS based on VLAN pri, if untagged and IP, then based on DSCP */
+	MVPP2_COS_CLS_VLAN_DSCP, /* CoS based on VLAN pri, */
+				/*if untagged and IP, then based on DSCP */
 	MVPP2_COS_CLS_DSCP_VLAN
 };
 
 enum mvpp2_rss_nf_udp_mode {
-	MVPP2_RSS_NF_UDP_2T, /* non-frag UDP packet hash value is calculated based on 2T */
-	MVPP2_RSS_NF_UDP_5T /* non-frag UDP packet hash value is calculated based on 5T */
+	MVPP2_RSS_NF_UDP_2T, /* non-frag UDP packet hash value
+				*is calculated based on 2T */
+	MVPP2_RSS_NF_UDP_5T /* non-frag UDP packet hash value
+				*is calculated based on 5T */
+
 };
 
 
@@ -380,8 +378,9 @@ struct mvpp2_tx_queue {
 
 	u32 pkts_coal;
 
-	/* Virtual pointer to address of the Tx DMA descriptors memory_allocation */
-	void * desc_mem;
+	/* Virtual pointer to address of the Tx DMA descriptors
+	* memory_allocation */
+	void *desc_mem;
 
 	/* Virtual address of thex Tx DMA descriptors array */
 	struct mvpp2_tx_desc *first_desc;
@@ -407,8 +406,9 @@ struct mvpp2_aggr_tx_queue {
 	/* Number of currently used Tx DMA descriptor in the descriptor ring */
 	int count;
 
-	/* Virtual pointer to address of the Aggr_Tx DMA descriptors memory_allocation */
-	void * desc_mem;
+	/* Virtual pointer to address of the Aggr_Tx DMA descriptors
+	* memory_allocation */
+	void *desc_mem;
 
 	/* Virtual pointer to address of the Aggr_Tx DMA descriptors array */
 	struct mvpp2_tx_desc *first_desc;
@@ -437,8 +437,9 @@ struct mvpp2_rx_queue {
 	u32 pkts_coal;
 	u32 time_coal;
 
-	/* Virtual pointer to address of the Rx DMA descriptors memory_allocation */
-	void * desc_mem;
+	/* Virtual pointer to address of the Rx DMA descriptors
+	* memory_allocation */
+	void *desc_mem;
 
 	/* Virtual address of the RX DMA descriptors array */
 	struct mvpp2_rx_desc *first_desc;
@@ -491,14 +492,17 @@ struct gop_hw {
 struct mvpp2_hw {
 
 	/* Shared registers' base addresses */
-	void __iomem *base;/* PPV22 base_address as received in devm_ioremap_resource().*/
+	void __iomem *base;/* PPV22 base_address as received in */
+				/*devm_ioremap_resource().*/
 	void __iomem *lms_base;
 	void __iomem *cpu_base[MVPP2_MAX_CPUS];
 
 	struct gop_hw gop;
-/* ppv22_base_address for each CPU.
-    PPv2.2 - cpu_base[x] = base + cpu_index[smp_processor_id]*MV_PP2_SPACE_64K, for non-participating CPU it is NULL.
-    PPv2.1 cpu_base[x] = base */
+	/* ppv22_base_address for each CPU.
+	 * PPv2.2 - cpu_base[x] = base +
+	 * cpu_index[smp_processor_id]*MV_PP2_SPACE_64K,
+	 * for non-participating CPU it is NULL.
+	 * PPv2.1 cpu_base[x] = base */
 	/* Common clocks */
 	struct clk *pp_clk;
 	struct clk *gop_clk;
@@ -519,7 +523,8 @@ struct mvpp2_cos {
 	u8 num_cos_queues;     /* number of queue to do CoS */
 	u8 default_cos;       /* Default CoS value for non-IP or non-VLAN */
 	u8 reserved;
-	u32 pri_map;          /* 32 bits, each nibble maps a cos_value(0~7) to a queue.*/
+	u32 pri_map;          /* 32 bits, each nibble maps a cos_value(0~7)
+				* to a queue.*/
 };
 
 struct mvpp2_rss {
@@ -532,19 +537,26 @@ struct mvpp2_param_config {
 	struct mvpp2_cos cos_cfg;
 	struct mvpp2_rss rss_cfg;
 	u8 first_bm_pool;
-	bool jumbo_pool; /* pp2 always supports 2 pools : short=MV_DEF_256, long=MV_DEF_2K. Param defines option to have additional pool, jumbo=MV_DEF_10K.*/
-	u8 first_sw_thread; /* The index of the first PPv2.2 sub-address space for this NET_INSTANCE.*/
+	bool jumbo_pool; /* pp2 always supports 2 pools :
+			 * short=MV_DEF_256, long=MV_DEF_2K.
+			 * Param defines option to have additional pool,
+			 * jumbo=MV_DEF_10K.*/
+	u8 first_sw_thread; /* The index of the first PPv2.2
+			* sub-address space for this NET_INSTANCE.*/
 	u8 first_log_rxq; /* The first cos rx queue used in the port */
-	u8 cell_index; /* The cell_index of the PPv22 (could be 0,1, set according to dtsi) */
+	u8 cell_index; /* The cell_index of the PPv22
+			* (could be 0,1, set according to dtsi) */
 	enum mvpp2_queue_distribution_mode queue_mode;
-	u32 rx_cpu_map; /* The CPU that port bind, each port has a nibble indexed by port_id, nibble value is CPU id*/
+	u32 rx_cpu_map; /* The CPU that port bind, each port has a nibble
+			* indexed by port_id, nibble value is CPU id*/
 };
 
 /* Shared Packet Processor resources */
 struct mvpp2 {
-	enum mvppv2_version pp2_version; /* Redundant, consider to delete. (prevents extra pointer lookup from mvpp2x_platform_data) */
-
-	struct mvpp2_hw hw;
+	enum mvppv2_version pp2_version; /* Redundant, consider to delete.
+					* (prevents extra pointer lookup from
+					* mvpp2x_platform_data) */
+	struct	mvpp2_hw hw;
 	struct mvpp2x_platform_data *pp2xdata;
 
 	u16 cpu_map; /* Bitmap of the participating cpu's */
@@ -564,7 +576,8 @@ struct mvpp2 {
 	u16 num_pools;
 	struct mvpp2_bm_pool *bm_pools;
 
-	/* RX flow hash indir'n table, in pp22, the table contains the CPU idx according to weight */
+	/* RX flow hash indir'n table, in pp22, the table contains the
+	* CPU idx according to weight */
 	u32 rx_indir_table[MVPP22_RSS_TBL_LINE_NUM];
 };
 
@@ -590,12 +603,14 @@ struct queue_vector {
 	unsigned int irq;
 	struct napi_struct napi;
 	enum mvpp2_queue_vector_type qv_type;
-	u16 sw_thread_id; /* address_space index used to retrieve interrupt_cause */
+	u16 sw_thread_id; /* address_space index used to
+			* retrieve interrupt_cause */
 	u16 sw_thread_mask; /* Mask for Interrupt PORT_ENABLE Register */
 	u8 first_rx_queue; /* Relative to port */
 	u8 num_rx_queues;
-	u32 pending_cause_rx; /* mask in absolute port_queues, not relative as in Ethernet Occupied Interrupt Cause (EthOccIC)) */
-	struct mvpp2_port * parent;
+	u32 pending_cause_rx; /* mask in absolute port_queues, not relative as
+			* in Ethernet Occupied Interrupt Cause (EthOccIC)) */
+	struct mvpp2_port *parent;
 };
 
 
@@ -626,7 +641,8 @@ struct mvpp2_port {
 	struct mvpp2_tx_queue **txqs;
 	struct net_device *dev;
 
-	int pkt_size; /* pkt_size determines which is pool_long: jumbo_pool or regular long_pool. */
+	int pkt_size; /* pkt_size determines which is pool_long:
+			* jumbo_pool or regular long_pool. */
 
 
 	/* Per-CPU port control */
@@ -641,12 +657,14 @@ struct mvpp2_port {
 	struct mvpp2_pcpu_stats __percpu *stats;
 
 
-	struct mvpp2_bm_pool *pool_long; /* Pointer to the pool_id (long or jumbo) */
+	struct mvpp2_bm_pool *pool_long; /* Pointer to the pool_id
+					* (long or jumbo) */
 	struct mvpp2_bm_pool *pool_short; /* Pointer to the short pool_id */
 
 
 	u32 num_qvector;
-	/* q_vector is the parameter that will be passed to mv_pp2_isr(int irq, void *dev_id=q_vector)  */
+	/* q_vector is the parameter that will be passed to
+	 * mv_pp2_isr(int irq, void *dev_id=q_vector)  */
 	struct queue_vector q_vector[MVPP2_MAX_CPUS+MVPP2_MAX_SHARED];
 };
 
@@ -673,41 +691,48 @@ struct mvpp2x_platform_data {
 #endif
 };
 
-
 static inline int mvpp2_max_check(int value, int limit, char *name)
 {
 	if ((value < 0) || (value >= limit)) {
-		printk("%s %d is out of range [0..%d]\n",
+		DBG_MSG("%s %d is out of range [0..%d]\n",
 			name ? name : "value", value, (limit - 1));
 		return 1;
 	}
 	return 0;
 }
 
-static inline struct mvpp2_port * mvpp2_port_struct_get(struct mvpp2 *priv, int port) {
+static inline struct mvpp2_port *mvpp2_port_struct_get(struct mvpp2 *priv,
+		int port)
+{
 	int i;
 
 	for (i = 0; i < priv->num_ports; i++) {
 		if (priv->port_list[i]->id == port)
-			return(priv->port_list[i]);
+			return priv->port_list[i];
 	}
-	return(NULL);
+	return NULL;
 }
 
-static inline u8 mvpp2_cosval_queue_map(struct mvpp2_port *port, u8 cos_value) {
+static inline u8 mvpp2_cosval_queue_map(struct mvpp2_port *port,
+		u8 cos_value)
+{
 	int cos_width, cos_mask;
 
-	cos_width = ilog2(roundup_pow_of_two(port->priv->pp2_cfg.cos_cfg.num_cos_queues));
+	cos_width = ilog2(roundup_pow_of_two(
+		port->priv->pp2_cfg.cos_cfg.num_cos_queues));
 	cos_mask  = (1 << cos_width) - 1;
 
-	return((port->priv->pp2_cfg.cos_cfg.pri_map >> (cos_value * 4)) & cos_mask);
+	return((port->priv->pp2_cfg.cos_cfg.pri_map >>
+		(cos_value * 4)) & cos_mask);
 }
 
-static inline u8 mvpp2_bound_cpu_first_rxq_calc(struct mvpp2_port *port) {
+static inline u8 mvpp2_bound_cpu_first_rxq_calc(struct mvpp2_port *port)
+{
 
 	u8 cos_width, bind_cpu;
 
-	cos_width = ilog2(roundup_pow_of_two(port->priv->pp2_cfg.cos_cfg.num_cos_queues));
+	cos_width = ilog2(roundup_pow_of_two(
+		port->priv->pp2_cfg.cos_cfg.num_cos_queues));
 	bind_cpu = (port->priv->pp2_cfg.rx_cpu_map >> (4 * port->id)) & 0xF;
 
 	return(port->first_rxq + (bind_cpu << cos_width));
@@ -771,11 +796,13 @@ struct mvpp2_pool_attributes {
 
 
 extern struct mvpp2_pool_attributes mvpp2_pools[];
-void mvpp2_bm_bufs_free(struct mvpp2 *priv, struct mvpp2_bm_pool *bm_pool, int buf_num);
-int mvpp2_bm_bufs_add(struct mvpp2_port *port, struct mvpp2_bm_pool *bm_pool, int buf_num);
+void mvpp2_bm_bufs_free(struct mvpp2 *priv,
+		struct mvpp2_bm_pool *bm_pool, int buf_num);
+int mvpp2_bm_bufs_add(struct mvpp2_port *port,
+		struct mvpp2_bm_pool *bm_pool, int buf_num);
 int mvpp2_open(struct net_device *dev);
 int mvpp2_check_ringparam_valid(struct net_device *dev,
-				       struct ethtool_ringparam *ring);
+		struct ethtool_ringparam *ring);
 void mvpp2_start_dev(struct mvpp2_port *port);
 void mvpp2_stop_dev(struct mvpp2_port *port);
 void mvpp2_cleanup_rxqs(struct mvpp2_port *port);
@@ -788,7 +815,8 @@ void mvpp2_set_ethtool_ops(struct net_device *netdev);
 
 int mvpp22_rss_rxfh_indir_set(struct mvpp2_port *port);
 
-int mvpp2_cos_classifier_set(struct mvpp2_port *port, enum mvpp2_cos_classifier cos_mode);
+int mvpp2_cos_classifier_set(struct mvpp2_port *port,
+		enum mvpp2_cos_classifier cos_mode);
 int mvpp2_cos_classifier_get(struct mvpp2_port *port);
 int mvpp2_cos_pri_map_set(struct mvpp2_port *port, int cos_pri_map);
 int mvpp2_cos_pri_map_get(struct mvpp2_port *port);

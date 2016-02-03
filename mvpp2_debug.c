@@ -10,11 +10,11 @@
  *
  *.This program is distributed in the hope it will be useful, but WITHOUT
  *.ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- *.FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
- *.more details.
+ *.FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ *.for more details.
  *
- *.You should have received a copy of the GNU General Public License along with
- *.this program; if not, write to the Free Software Foundation, Inc.,
+ *.You should have received a copy of the GNU General Public License along
+ *.with this program; if not, write to the Free Software Foundation, Inc.,
  *.51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  *
  *.The full GNU General Public License is included in this distribution in
@@ -50,7 +50,6 @@
 #include <net/ip.h>
 #include <net/ipv6.h>
 
-
 #include "mvpp2.h"
 #include "mvpp2_hw.h"
 #include "mvpp2_debug.h"
@@ -60,7 +59,7 @@
 void mvpp2_print_reg(struct mvpp2_hw *hw, unsigned int reg_addr,
 	char *reg_name)
 {
-	printk("  %-32s: 0x%x = 0x%08x\n", reg_name, reg_addr,
+	DBG_MSG("  %-32s: 0x%x = 0x%08x\n", reg_name, reg_addr,
 		mvpp2_read(hw, reg_addr));
 }
 
@@ -70,7 +69,7 @@ void mvpp2_print_reg2(struct mvpp2_hw *hw, unsigned int reg_addr,
 	char buf[64];
 
 	sprintf(buf, "%s[%d]", reg_name, index);
-	printk("  %-32s: 0x%x = 0x%08x\n", reg_name, reg_addr,
+	DBG_MSG("  %-32s: 0x%x = 0x%08x\n", reg_name, reg_addr,
 		mvpp2_read(hw, reg_addr));
 }
 
@@ -81,16 +80,25 @@ void mvpp2_bm_pool_regs(struct mvpp2_hw *hw, int pool)
 	if (mvpp2_max_check(pool, MVPP2_BM_POOLS_NUM, "bm_pool"))
 		return;
 
-	printk("\n[BM pool registers: pool=%d]\n", pool);
-	mvpp2_print_reg(hw, MVPP2_BM_POOL_BASE_ADDR_REG(pool), "MV_BM_POOL_BASE_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_POOL_SIZE_REG(pool), "MVPP2_BM_POOL_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_POOL_READ_PTR_REG(pool), "MVPP2_BM_POOL_READ_PTR_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_POOL_PTRS_NUM_REG(pool), "MVPP2_BM_POOL_PTRS_NUM_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_BPPI_READ_PTR_REG(pool), "MVPP2_BM_BPPI_READ_PTR_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_BPPI_PTRS_NUM_REG(pool), "MVPP2_BM_BPPI_PTRS_NUM_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_POOL_CTRL_REG(pool), "MVPP2_BM_POOL_CTRL_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_INTR_CAUSE_REG(pool), "MVPP2_BM_INTR_CAUSE_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_INTR_MASK_REG(pool), "MVPP2_BM_INTR_MASK_REG");
+	DBG_MSG("\n[BM pool registers: pool=%d]\n", pool);
+	mvpp2_print_reg(hw, MVPP2_BM_POOL_BASE_ADDR_REG(pool),
+		"MV_BM_POOL_BASE_REG");
+	mvpp2_print_reg(hw, MVPP2_BM_POOL_SIZE_REG(pool),
+		"MVPP2_BM_POOL_SIZE_REG");
+	mvpp2_print_reg(hw, MVPP2_BM_POOL_READ_PTR_REG(pool),
+		"MVPP2_BM_POOL_READ_PTR_REG");
+	mvpp2_print_reg(hw, MVPP2_BM_POOL_PTRS_NUM_REG(pool),
+		"MVPP2_BM_POOL_PTRS_NUM_REG");
+	mvpp2_print_reg(hw, MVPP2_BM_BPPI_READ_PTR_REG(pool),
+		"MVPP2_BM_BPPI_READ_PTR_REG");
+	mvpp2_print_reg(hw, MVPP2_BM_BPPI_PTRS_NUM_REG(pool),
+		"MVPP2_BM_BPPI_PTRS_NUM_REG");
+	mvpp2_print_reg(hw, MVPP2_BM_POOL_CTRL_REG(pool),
+		"MVPP2_BM_POOL_CTRL_REG");
+	mvpp2_print_reg(hw, MVPP2_BM_INTR_CAUSE_REG(pool),
+		"MVPP2_BM_INTR_CAUSE_REG");
+	mvpp2_print_reg(hw, MVPP2_BM_INTR_MASK_REG(pool),
+		"MVPP2_BM_INTR_MASK_REG");
 }
 EXPORT_SYMBOL(mvpp2_bm_pool_regs);
 
@@ -100,8 +108,10 @@ void mvpp2_bm_pool_drop_count(struct mvpp2_hw *hw, int pool)
 	if (mvpp2_max_check(pool, MVPP2_BM_POOLS_NUM, "bm_pool"))
 		return;
 
-	mvpp2_print_reg2(hw, MVPP2_BM_DROP_CNTR_REG(pool), "MVPP2_BM_DROP_CNTR_REG", pool);
-	mvpp2_print_reg2(hw, MVPP2_BM_MC_DROP_CNTR_REG(pool), "MVPP2_BM_MC_DROP_CNTR_REG", pool);
+	mvpp2_print_reg2(hw, MVPP2_BM_DROP_CNTR_REG(pool),
+		"MVPP2_BM_DROP_CNTR_REG", pool);
+	mvpp2_print_reg2(hw, MVPP2_BM_MC_DROP_CNTR_REG(pool),
+		"MVPP2_BM_MC_DROP_CNTR_REG", pool);
 }
 EXPORT_SYMBOL(mvpp2_bm_pool_drop_count);
 
@@ -111,27 +121,30 @@ void mvpp2_pool_status(struct mvpp2 *priv, int log_pool_num)
 	struct mvpp2_bm_pool *bm_pool = NULL;
 	int /*buf_size,*/ total_size, i, pool;
 
-	if (mvpp2_max_check(log_pool_num, MVPP2_BM_SWF_POOL_OUT_OF_RANGE, "log_pool"))
+	if (mvpp2_max_check(log_pool_num, MVPP2_BM_SWF_POOL_OUT_OF_RANGE,
+		"log_pool"))
 		return;
 
-	for (i=0;i<priv->num_pools;i++) {
+	for (i = 0; i < priv->num_pools; i++) {
 		if (priv->bm_pools[i].log_id == log_pool_num) {
 			bm_pool = &priv->bm_pools[i];
 			pool = bm_pool->id;
 		}
 	}
 	if (bm_pool == NULL) {
-		pr_err("%s: Logical BM pool %d is not initialized\n", __func__, log_pool_num);
+		pr_err("%s: Logical BM pool %d is not initialized\n",
+			__func__, log_pool_num);
 		return;
 	}
 
 	total_size = RX_TOTAL_SIZE(bm_pool->buf_size);
 
 
-	printk("\n%12s log_pool=%d, phy_pool=%d: pkt_size=%d, buf_size=%d total_size=%d\n",
+	DBG_MSG(
+		"\n%12s log_pool=%d, phy_pool=%d: pkt_size=%d, buf_size=%d total_size=%d\n",
 		mvpp2_pools[log_pool_num].description, log_pool_num, pool,
 		bm_pool->pkt_size, bm_pool->buf_size, total_size);
-	printk("\tcapacity=%d, buf_num=%d, in_use=%u, in_use_thresh=%u\n",
+	DBG_MSG("\tcapacity=%d, buf_num=%d, in_use=%u, in_use_thresh=%u\n",
 		bm_pool->size, bm_pool->buf_num, atomic_read(&bm_pool->in_use),
 		bm_pool->in_use_thresh);
 }
@@ -142,30 +155,33 @@ void mv_pp2_pool_stats_print(struct mvpp2 *priv, int log_pool_num)
 	int i, pool;
 	struct mvpp2_bm_pool *bm_pool = NULL;
 
-	if (mvpp2_max_check(log_pool_num, MVPP2_BM_SWF_POOL_OUT_OF_RANGE, "log_pool"))
+	if (mvpp2_max_check(log_pool_num, MVPP2_BM_SWF_POOL_OUT_OF_RANGE,
+			"log_pool"))
 		return;
 
-	for (i=0;i<priv->num_pools;i++) {
+	for (i = 0; i < priv->num_pools; i++) {
 		if (priv->bm_pools[i].log_id == log_pool_num) {
 			bm_pool = &priv->bm_pools[i];
 			pool = bm_pool->id;
 		}
 	}
 	if (bm_pool == NULL) {
-		pr_err("%s: Logical BM pool %d is not initialized\n", __func__, log_pool_num);
+		pr_err("%s: Logical BM pool %d is not initialized\n",
+			__func__, log_pool_num);
 		return;
 	}
 
 #if DEBUG
-	printk("skb_alloc_oom    = %u\n", bm_pool->stats.skb_alloc_oom);
-	printk("skb_alloc_ok     = %u\n", bm_pool->stats.skb_alloc_ok);
-	printk("bm_put           = %u\n", bm_pool->stats.bm_put);
+	DBG_MSG("skb_alloc_oom    = %u\n", bm_pool->stats.skb_alloc_oom);
+	DBG_MSG("skb_alloc_ok     = %u\n", bm_pool->stats.skb_alloc_ok);
+	DBG_MSG("bm_put           = %u\n", bm_pool->stats.bm_put);
 	memset(&bm_pool->stats, 0, sizeof(bm_pool->stats));
 #endif /* DEBUG */
 }
 EXPORT_SYMBOL(mv_pp2_pool_stats_print);
 
-void mvPp2RxDmaRegsPrint(struct mvpp2 *priv, bool print_all, int start, int stop)
+void mvPp2RxDmaRegsPrint(struct mvpp2 *priv, bool print_all,
+		int start, int stop)
 {
 	int i, num_rx_queues, result;
 	bool enabled;
@@ -173,13 +189,13 @@ void mvPp2RxDmaRegsPrint(struct mvpp2 *priv, bool print_all, int start, int stop
 	struct mvpp2_hw *hw = &priv->hw;
 
 	num_rx_queues = (MVPP2_MAX_PORTS*priv->pp2xdata->pp2x_max_port_rxqs);
-	if(stop >= num_rx_queues || start > stop || start < 0) {
-		printk("\nERROR: wrong inputs\n");
+	if (stop >= num_rx_queues || start > stop || start < 0) {
+		DBG_MSG("\nERROR: wrong inputs\n");
 		return;
 	}
 
-	printk("\n[RX DMA regs]\n");
-	printk("\nRXQs [0..%d], registers\n", num_rx_queues-1);
+	DBG_MSG("\n[RX DMA regs]\n");
+	DBG_MSG("\nRXQs [0..%d], registers\n", num_rx_queues-1);
 
 	for (i = start; i <= stop; i++) {
 		if (!print_all) {
@@ -187,49 +203,55 @@ void mvPp2RxDmaRegsPrint(struct mvpp2 *priv, bool print_all, int start, int stop
 			enabled = !(result & MVPP2_RXQ_DISABLE_MASK);
 		}
 		if (print_all || enabled) {
-			printk("RXQ[%d]:\n", i);
-			mvpp2_print_reg(hw, MVPP2_RXQ_STATUS_REG(i), "MVPP2_RX_STATUS");
-			mvpp2_print_reg2(hw, MVPP2_RXQ_CONFIG_REG(i), "MVPP2_RXQ_CONFIG_REG", i);
+			DBG_MSG("RXQ[%d]:\n", i);
+			mvpp2_print_reg(hw, MVPP2_RXQ_STATUS_REG(i),
+				"MVPP2_RX_STATUS");
+			mvpp2_print_reg2(hw, MVPP2_RXQ_CONFIG_REG(i),
+				"MVPP2_RXQ_CONFIG_REG", i);
 		}
 	}
-	printk("\nBM pools [0..%d] registers\n", MVPP2_BM_POOLS_NUM-1);
+	DBG_MSG("\nBM pools [0..%d] registers\n", MVPP2_BM_POOLS_NUM-1);
 	for (i = 0; i < MVPP2_BM_POOLS_NUM; i++) {
 		if (!print_all) {
-			enabled = mvpp2_read(hw, MVPP2_BM_POOL_CTRL_REG(i)) & MVPP2_BM_STATE_MASK;
+			enabled = mvpp2_read(hw, MVPP2_BM_POOL_CTRL_REG(i)) &
+				MVPP2_BM_STATE_MASK;
 		}
 		if (print_all || enabled) {
-			printk("POOL[%d]:\n", i);
-			mvpp2_print_reg2(hw, MVPP2_POOL_BUF_SIZE_REG(i), "MVPP2_POOL_BUF_SIZE_REG", i);
+			DBG_MSG("POOL[%d]:\n", i);
+			mvpp2_print_reg2(hw, MVPP2_POOL_BUF_SIZE_REG(i),
+				"MVPP2_POOL_BUF_SIZE_REG", i);
 		}
 	}
-	printk("\nIngress ports [0..%d] registers\n", MVPP2_MAX_PORTS-1);
+	DBG_MSG("\nIngress ports [0..%d] registers\n", MVPP2_MAX_PORTS-1);
 	for (i = 0; i < MVPP2_MAX_PORTS; i++) {
-		mvpp2_print_reg2(hw, MVPP2_RX_CTRL_REG(i), "MVPP2_RX_CTRL_REG", i);
+		mvpp2_print_reg2(hw, MVPP2_RX_CTRL_REG(i),
+				"MVPP2_RX_CTRL_REG", i);
 	}
-	printk("\n");
+	DBG_MSG("\n");
 }
 EXPORT_SYMBOL(mvPp2RxDmaRegsPrint);
 
-static void mvPp2RxQueueDetailedShow(struct mvpp2 *priv, struct mvpp2_rx_queue *pp_rxq)
+static void mvPp2RxQueueDetailedShow(struct mvpp2 *priv,
+		struct mvpp2_rx_queue *pp_rxq)
 {
 	int i;
 	struct mvpp2_rx_desc *rx_desc = pp_rxq->first_desc;
 
 	for (i = 0; i < pp_rxq->size; i++) {
-		printk("%3d. desc=%p, status=%08x, data_size=%4d",
-			   i, rx_desc+i, rx_desc[i].status, rx_desc[i].data_size);
+		DBG_MSG("%3d. desc=%p, status=%08x, data_size=%4d",
+			   i, rx_desc+i, rx_desc[i].status,
+			   rx_desc[i].data_size);
 		if (priv->pp2_version == PPV21) {
-			printk("buf_addr=%lx, buf_cookie=%p",
-				   (long unsigned int)mvpp21_rxdesc_phys_addr_get(rx_desc),
-				   mvpp21_rxdesc_cookie_get(rx_desc));
-		}
-		else {
-			printk("buf_addr=%lx, buf_cookie=%p",
-				   (long unsigned int)mvpp22_rxdesc_phys_addr_get(rx_desc),
-				   mvpp22_rxdesc_cookie_get(rx_desc));
+			DBG_MSG("buf_addr=%lx, buf_cookie=%p",
+			   (unsigned long)mvpp21_rxdesc_phys_addr_get(rx_desc),
+			   mvpp21_rxdesc_cookie_get(rx_desc));
+		} else {
+			DBG_MSG("buf_addr=%lx, buf_cookie=%p",
+			   (unsigned long)mvpp22_rxdesc_phys_addr_get(rx_desc),
+			   mvpp22_rxdesc_cookie_get(rx_desc));
 		}
 
-		printk("parser_info=%03x\n", rx_desc->rsrvd_parser);
+		DBG_MSG("parser_info=%03x\n", rx_desc->rsrvd_parser);
 	}
 }
 
@@ -242,7 +264,7 @@ void mvPp2RxqShow(struct mvpp2 *priv, int port, int rxq, int mode)
 	pp_port = mvpp2_port_struct_get(priv, port);
 
 	if (pp_port == NULL) {
-		printk("port #%d is not initialized\n", port);
+		DBG_MSG("port #%d is not initialized\n", port);
 		return;
 	}
 
@@ -252,19 +274,25 @@ void mvPp2RxqShow(struct mvpp2 *priv, int port, int rxq, int mode)
 	pp_rxq = pp_port->rxqs[rxq];
 
 	if (pp_rxq->first_desc == NULL) {
-		printk("rxq #%d of port #%d is not initialized\n", rxq, port);
+		DBG_MSG("rxq #%d of port #%d is not initialized\n", rxq, port);
 		return;
 	}
 
-	printk("\n[PPv2 RxQ show: port=%d, logical rxq=%d -> physical rxq=%d]\n",
-			port, pp_rxq->log_id, pp_rxq->id);
+	DBG_MSG("\n[PPv2 RxQ show: port=%d, logical rxq=%d -> phys rxq=%d]\n",
+		port, pp_rxq->log_id, pp_rxq->id);
 
-	printk("size=%d, pkts_coal=%d, time_coal=%d\n",pp_rxq->size, pp_rxq->pkts_coal, pp_rxq->time_coal);
+	DBG_MSG("size=%d, pkts_coal=%d, time_coal=%d\n",
+		pp_rxq->size, pp_rxq->pkts_coal, pp_rxq->time_coal);
 
-	printk("first_virt_addr=%p, first_dma_addr=%lx, next_rx_desc=%d, rxq_cccupied=%d, rxq_nonoccupied=%d\n",
-	pp_rxq->first_desc, (long unsigned int)MVPP2_DESCQ_MEM_ALIGN(pp_rxq->descs_phys), pp_rxq->next_desc_to_proc,
-	mvpp2_rxq_received(pp_port, pp_rxq->id), mvpp2_rxq_free(pp_port, pp_rxq->id));
-	printk("virt_mem_area_addr=%p, dma_mem_area_addr=%lx\n", pp_rxq->desc_mem, (long unsigned int)pp_rxq->descs_phys);
+	DBG_MSG(
+		"first_virt_addr=%p, first_dma_addr=%lx, next_rx_desc=%d, rxq_cccupied=%d, rxq_nonoccupied=%d\n",
+		pp_rxq->first_desc,
+		(unsigned long)MVPP2_DESCQ_MEM_ALIGN(pp_rxq->descs_phys),
+		pp_rxq->next_desc_to_proc,
+		mvpp2_rxq_received(pp_port, pp_rxq->id),
+		mvpp2_rxq_free(pp_port, pp_rxq->id));
+	DBG_MSG("virt_mem_area_addr=%p, dma_mem_area_addr=%lx\n",
+		pp_rxq->desc_mem, (unsigned long)pp_rxq->descs_phys);
 
 	if (mode)
 		mvPp2RxQueueDetailedShow(priv, pp_rxq);
@@ -275,25 +303,32 @@ void mvPp2PhysRxqRegs(struct mvpp2 *pp2, int rxq)
 {
 	struct mvpp2_hw *hw  = &pp2->hw;
 
-	printk("\n[PPv2 RxQ registers: global rxq=%d]\n", rxq);
+	DBG_MSG("\n[PPv2 RxQ registers: global rxq=%d]\n", rxq);
 
 	mvpp2_write(hw, MVPP2_RXQ_NUM_REG, rxq);
-	mvpp2_print_reg(hw, MVPP2_RXQ_NUM_REG, "MVPP2_RXQ_NUM_REG");
-	mvpp2_print_reg(hw, MVPP2_RXQ_DESC_ADDR_REG, "MVPP2_RXQ_DESC_ADDR_REG");
-	mvpp2_print_reg(hw, MVPP2_RXQ_DESC_SIZE_REG, "MVPP2_RXQ_DESC_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_RXQ_STATUS_REG(rxq), "MVPP2_RXQ_STATUS_REG");
-	mvpp2_print_reg(hw, MVPP2_RXQ_THRESH_REG, "MVPP2_RXQ_THRESH_REG");
-	mvpp2_print_reg(hw, MVPP2_RXQ_INDEX_REG, "MVPP2_RXQ_INDEX_REG");
-	mvpp2_print_reg(hw, MVPP2_RXQ_CONFIG_REG(rxq), "MVPP2_RXQ_CONFIG_REG");
+	mvpp2_print_reg(hw, MVPP2_RXQ_NUM_REG,
+			"MVPP2_RXQ_NUM_REG");
+	mvpp2_print_reg(hw, MVPP2_RXQ_DESC_ADDR_REG,
+			"MVPP2_RXQ_DESC_ADDR_REG");
+	mvpp2_print_reg(hw, MVPP2_RXQ_DESC_SIZE_REG,
+			"MVPP2_RXQ_DESC_SIZE_REG");
+	mvpp2_print_reg(hw, MVPP2_RXQ_STATUS_REG(rxq),
+			"MVPP2_RXQ_STATUS_REG");
+	mvpp2_print_reg(hw, MVPP2_RXQ_THRESH_REG,
+			"MVPP2_RXQ_THRESH_REG");
+	mvpp2_print_reg(hw, MVPP2_RXQ_INDEX_REG,
+			"MVPP2_RXQ_INDEX_REG");
+	mvpp2_print_reg(hw, MVPP2_RXQ_CONFIG_REG(rxq),
+			"MVPP2_RXQ_CONFIG_REG");
 }
 EXPORT_SYMBOL(mvPp2PhysRxqRegs);
 
 void mvPp2PortRxqRegs(struct mvpp2 *pp2, int port, int rxq)
 {
 	int phy_rxq;
-	struct mvpp2_port * pp2_port = mvpp2_port_struct_get(pp2, port);
+	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(pp2, port);
 
-	printk("\n[PPv2 RxQ registers: port=%d, local rxq=%d]\n", port, rxq);
+	DBG_MSG("\n[PPv2 RxQ registers: port=%d, local rxq=%d]\n", port, rxq);
 
 	if (rxq >= MVPP2_MAX_RXQ)
 		return;
@@ -316,48 +351,60 @@ void mvpp22_isr_rx_group_regs(struct mvpp2 *priv, int port, bool print_all)
 
 	pp_port = mvpp2_port_struct_get(priv, port);
 	if (!pp_port) {
-		pr_crit("Input Error\n %s",__func__);
+		pr_crit("Input Error\n %s", __func__);
 		return;
 	}
 
-	if(print_all)
+	if (print_all)
 		num_threads = MVPP2_MAX_SW_THREADS;
 	else
 		num_threads = pp_port->num_qvector;
 
-	for (i=0;i<num_threads;i++) {
-		printk("\n[PPv2 RxQ GroupConfig registers: port=%d cpu=%d]", port, i);
+	for (i = 0; i < num_threads; i++) {
+		DBG_MSG("\n[PPv2 RxQ GroupConfig registers: port=%d cpu=%d]",
+				port, i);
 
 		val = (port << MVPP22_ISR_RXQ_GROUP_INDEX_GROUP_OFFSET) | i;
 		mvpp2_write(hw, MVPP22_ISR_RXQ_GROUP_INDEX_REG, val);
 
-		mvpp2_print_reg(hw, MVPP22_ISR_RXQ_GROUP_INDEX_REG, "MVPP22_ISR_RXQ_GROUP_INDEX_REG");
-		mvpp2_print_reg(hw, MVPP22_ISR_RXQ_SUB_GROUP_CONFIG_REG, "MVPP22_ISR_RXQ_SUB_GROUP_CONFIG_REG");
-//		reg_val = mvpp2_read(hw, MVPP22_ISR_RXQ_SUB_GROUP_CONFIG_REG);
-//		start_queue  = reg_val & MVPP22_ISR_RXQ_SUB_GROUP_STARTQ_MASK;
-//		sub_group_size = reg_val & MVPP22_ISR_RXQ_SUB_GROUP_SIZE_MASK;
+		mvpp2_print_reg(hw, MVPP22_ISR_RXQ_GROUP_INDEX_REG,
+				"MVPP22_ISR_RXQ_GROUP_INDEX_REG");
+		mvpp2_print_reg(hw, MVPP22_ISR_RXQ_SUB_GROUP_CONFIG_REG,
+				"MVPP22_ISR_RXQ_SUB_GROUP_CONFIG_REG");
+		/*reg_val = mvpp2_read(hw,
+			MVPP22_ISR_RXQ_SUB_GROUP_CONFIG_REG);*/
+		/*start_queue  = reg_val &
+			MVPP22_ISR_RXQ_SUB_GROUP_STARTQ_MASK;*/
+		/*sub_group_size = reg_val &
+			MVPP22_ISR_RXQ_SUB_GROUP_SIZE_MASK;*/
 	}
-	printk("\n[PPv2 Port Interrupt Enable register : port=%d]\n", port);
-	mvpp2_print_reg(hw, MVPP2_ISR_ENABLE_REG(port), "MVPP2_ISR_ENABLE_REG");
+	DBG_MSG("\n[PPv2 Port Interrupt Enable register : port=%d]\n", port);
+	mvpp2_print_reg(hw, MVPP2_ISR_ENABLE_REG(port),
+			"MVPP2_ISR_ENABLE_REG");
 
 
-	printk("\n[PPv2 Eth Occupied Interrupt registers: port=%d]\n", port);
-	for (i=0;i<num_threads;i++) {
+	DBG_MSG("\n[PPv2 Eth Occupied Interrupt registers: port=%d]\n", port);
+	for (i = 0; i < num_threads; i++) {
 		if (print_all)
 			cpu = i;
 		else
 			cpu = pp_port->q_vector[i].sw_thread_id;
 		cpu_offset = cpu*MVPP2_ADDR_SPACE_SIZE;
-		printk("cpu=%d]\n", cpu);
-		mvpp2_print_reg(hw, cpu_offset + MVPP2_ISR_RX_TX_CAUSE_REG(port), "MVPP2_ISR_RX_TX_CAUSE_REG");
-		mvpp2_print_reg(hw, cpu_offset + MVPP2_ISR_RX_TX_MASK_REG(port), "MVPP2_ISR_RX_TX_MASK_REG");
+		DBG_MSG("cpu=%d]\n", cpu);
+		mvpp2_print_reg(hw, cpu_offset +
+				MVPP2_ISR_RX_TX_CAUSE_REG(port),
+				"MVPP2_ISR_RX_TX_CAUSE_REG");
+		mvpp2_print_reg(hw, cpu_offset +
+				MVPP2_ISR_RX_TX_MASK_REG(port),
+				"MVPP2_ISR_RX_TX_MASK_REG");
 	}
 
 }
 EXPORT_SYMBOL(mvpp22_isr_rx_group_regs);
 
 
-static void mvPp2TxQueueDetailedShow(struct mvpp2 *priv, void *pp_txq, bool aggr_queue)
+static void mvPp2TxQueueDetailedShow(struct mvpp2 *priv,
+		void *pp_txq, bool aggr_queue)
 {
 	int i, j, size;
 	struct mvpp2_tx_desc *tx_desc;
@@ -371,27 +418,29 @@ static void mvPp2TxQueueDetailedShow(struct mvpp2 *priv, void *pp_txq, bool aggr
 	}
 
 	for (i = 0; i < 16/*size*/; i++) {
-		printk("%3d. desc=%p, cmd=%x, data_size=%-4d pkt_offset=%-3d, phy_txq=%d\n",
-			   i, tx_desc+i, tx_desc[i].command, tx_desc[i].data_size,
-			   tx_desc[i].packet_offset, tx_desc[i].phys_txq);
+		DBG_MSG(
+			"%3d. desc=%p, cmd=%x, data_size=%-4d pkt_offset=%-3d, phy_txq=%d\n",
+		   i, tx_desc+i, tx_desc[i].command, tx_desc[i].data_size,
+		   tx_desc[i].packet_offset, tx_desc[i].phys_txq);
 		if (priv->pp2_version == PPV21) {
-			printk("buf_phys_addr=%08x, buf_cookie=%08x\n",
-				tx_desc[i].u.pp21.buf_phys_addr, tx_desc[i].u.pp21.buf_cookie);
-			printk( "hw_cmd[0]=%x, hw_cmd[1]=%x, hw_cmd[2]=%x, rsrvd1=%x\n",
+			DBG_MSG("buf_phys_addr=%08x, buf_cookie=%08x\n",
+				tx_desc[i].u.pp21.buf_phys_addr,
+				tx_desc[i].u.pp21.buf_cookie);
+			DBG_MSG(
+				"hw_cmd[0]=%x, hw_cmd[1]=%x, hw_cmd[2]=%x, rsrvd1=%x\n",
 				tx_desc[i].u.pp21.rsrvd_hw_cmd[0],
 				tx_desc[i].u.pp21.rsrvd_hw_cmd[1],
 				tx_desc[i].u.pp21.rsrvd_hw_cmd[2],
 				tx_desc[i].u.pp21.rsrvd1);
-		}
-		else {
-			printk("     rsrvd_hw_cmd1=%llx, buf_phys_addr_cmd2=%llx, buf_cookie_bm_cmd3=%llx \n",
+		} else {
+			DBG_MSG(
+				"     rsrvd_hw_cmd1=%llx, buf_phys_addr_cmd2=%llx, buf_cookie_bm_cmd3=%llx\n",
 				tx_desc[i].u.pp22.rsrvd_hw_cmd1,
 				tx_desc[i].u.pp22.buf_phys_addr_hw_cmd2,
 				tx_desc[i].u.pp22.buf_cookie_bm_qset_hw_cmd3);
 
-			for(j=0;j<8;j++) {
-				printk("%d:%x\n", j, *((u32 *)(tx_desc+i)+j));
-			}
+			for (j = 0; j < 8; j++)
+				DBG_MSG("%d:%x\n", j, *((u32 *)(tx_desc+i)+j));
 		}
 	}
 }
@@ -409,7 +458,7 @@ void mvPp2TxqShow(struct mvpp2 *priv, int port, int txq, int mode)
 	pp_port = mvpp2_port_struct_get(priv, port);
 
 	if (pp_port == NULL) {
-		printk("port #%d is not initialized\n", port);
+		DBG_MSG("port #%d is not initialized\n", port);
 		return;
 	}
 
@@ -419,27 +468,33 @@ void mvPp2TxqShow(struct mvpp2 *priv, int port, int txq, int mode)
 	pp_txq = pp_port->txqs[txq];
 
 	if (pp_txq->first_desc == NULL) {
-		printk("txq #%d of port #%d is not initialized\n", txq, port);
+		DBG_MSG("txq #%d of port #%d is not initialized\n", txq, port);
 		return;
 	}
 
-	printk("\n[PPv2 TxQ show: port=%d, logical_txq=%d]\n", port, pp_txq->log_id);
+	DBG_MSG("\n[PPv2 TxQ show: port=%d, logical_txq=%d]\n",
+			port, pp_txq->log_id);
 
-	printk("physical_txq=%d, size=%d, pkts_coal=%d \n",pp_txq->id, pp_txq->size, pp_txq->pkts_coal);
+	DBG_MSG("physical_txq=%d, size=%d, pkts_coal=%d\n",
+			pp_txq->id, pp_txq->size, pp_txq->pkts_coal);
 
-	printk("first_virt_addr=%p, first_dma_addr=%lx, next_tx_desc=%d\n",
-		   pp_txq->first_desc, (long unsigned int)MVPP2_DESCQ_MEM_ALIGN(pp_txq->descs_phys), pp_txq->next_desc_to_proc);
-	printk("virt_mem_area_addr=%p, dma_mem_area_addr=%lx\n", pp_txq->desc_mem, (long unsigned int)pp_txq->descs_phys);
+	DBG_MSG("first_virt_addr=%p, first_dma_addr=%lx, next_tx_desc=%d\n",
+		   pp_txq->first_desc,
+		   (unsigned long)MVPP2_DESCQ_MEM_ALIGN(pp_txq->descs_phys),
+		   pp_txq->next_desc_to_proc);
+	DBG_MSG("virt_mem_area_addr=%p, dma_mem_area_addr=%lx\n",
+		pp_txq->desc_mem, (unsigned long)pp_txq->descs_phys);
 
 	for_each_online_cpu(cpu) {
 		txq_pcpu = per_cpu_ptr(pp_txq->pcpu, cpu);
-		printk("\n[PPv2 TxQ %d cpu=%d show:\n", txq, cpu);
+		DBG_MSG("\n[PPv2 TxQ %d cpu=%d show:\n", txq, cpu);
 
-		printk("cpu=%d, size=%d, count=%d reserved_num=%d\n",
-			txq_pcpu->cpu, txq_pcpu->size, txq_pcpu->count, txq_pcpu->reserved_num);
-		printk("txq_put_index=%d, txq_get_index=%d\n",
+		DBG_MSG("cpu=%d, size=%d, count=%d reserved_num=%d\n",
+			txq_pcpu->cpu, txq_pcpu->size, txq_pcpu->count,
+			txq_pcpu->reserved_num);
+		DBG_MSG("txq_put_index=%d, txq_get_index=%d\n",
 			txq_pcpu->txq_put_index, txq_pcpu->txq_get_index);
-		printk("tx_skb=%p, tx_buffs=%p\n",
+		DBG_MSG("tx_skb=%p, tx_buffs=%p\n",
 			txq_pcpu->tx_skb, txq_pcpu->tx_buffs);
 	}
 
@@ -456,22 +511,24 @@ void mvPp2AggrTxqShow(struct mvpp2 *priv, int cpu, int mode)
 	struct mvpp2_aggr_tx_queue *aggr_queue = NULL;
 	int i;
 
-	printk("\n[PPv2 AggrTxQ: cpu=%d]\n", cpu);
+	DBG_MSG("\n[PPv2 AggrTxQ: cpu=%d]\n", cpu);
 
-	for (i=0;i<priv->num_aggr_qs;i++) {
+	for (i = 0; i < priv->num_aggr_qs; i++) {
 		if (priv->aggr_txqs[i].id == cpu) {
 			aggr_queue = &priv->aggr_txqs[i];
 			break;
 		}
 	}
 	if (!aggr_queue) {
-		printk("aggr_txq for cpu #%d is not initialized\n", cpu);
+		DBG_MSG("aggr_txq for cpu #%d is not initialized\n", cpu);
 		return;
 	}
 
-	printk("id=%d, size=%d, count=%d, next_desc=%d, pending_cntr=%d\n", aggr_queue->id,
-		aggr_queue->size, aggr_queue->count,aggr_queue->next_desc_to_proc,
-		mvpp2_aggr_desc_num_read(priv,cpu));
+	DBG_MSG("id=%d, size=%d, count=%d, next_desc=%d, pending_cntr=%d\n",
+		aggr_queue->id,
+		aggr_queue->size, aggr_queue->count,
+		aggr_queue->next_desc_to_proc,
+		mvpp2_aggr_desc_num_read(priv, cpu));
 
 	if (mode)
 		mvPp2TxQueueDetailedShow(priv, aggr_queue, 1);
@@ -483,27 +540,37 @@ void mvPp2PhysTxqRegs(struct mvpp2 *priv, int txq)
 {
 	struct mvpp2_hw *hw = &priv->hw;
 
-	printk("\n[PPv2 TxQ registers: global txq=%d]\n", txq);
+	DBG_MSG("\n[PPv2 TxQ registers: global txq=%d]\n", txq);
 
 	if (mvpp2_max_check(txq, MVPP2_TXQ_TOTAL_NUM, "global txq"))
 		return;
 
 	mvpp2_write(hw, MVPP2_TXQ_NUM_REG, txq);
-	mvpp2_print_reg(hw, MVPP2_TXQ_NUM_REG, "MVPP2_TXQ_NUM_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_DESC_ADDR_LOW_REG, "MVPP2_TXQ_DESC_ADDR_LOW_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_NUM_REG,
+			"MVPP2_TXQ_NUM_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_DESC_ADDR_LOW_REG,
+			"MVPP2_TXQ_DESC_ADDR_LOW_REG");
 	if (priv->pp2_version == PPV22)
-		mvpp2_print_reg(hw, MVPP22_TXQ_DESC_ADDR_HIGH_REG, "MVPP22_TXQ_DESC_ADDR_HIGH_REG");
-
-	mvpp2_print_reg(hw, MVPP2_TXQ_DESC_SIZE_REG, "MVPP2_TXQ_DESC_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_DESC_HWF_SIZE_REG, "MVPP2_TXQ_DESC_HWF_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_INDEX_REG, "MVPP2_TXQ_INDEX_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_PREF_BUF_REG, "MVPP2_TXQ_PREF_BUF_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_PENDING_REG, "MVPP2_TXQ_PENDING_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_INT_STATUS_REG, "MVPP2_TXQ_INT_STATUS_REG");
+		mvpp2_print_reg(hw, MVPP22_TXQ_DESC_ADDR_HIGH_REG,
+			"MVPP22_TXQ_DESC_ADDR_HIGH_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_DESC_SIZE_REG,
+			"MVPP2_TXQ_DESC_SIZE_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_DESC_HWF_SIZE_REG,
+			"MVPP2_TXQ_DESC_HWF_SIZE_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_INDEX_REG,
+			"MVPP2_TXQ_INDEX_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_PREF_BUF_REG,
+			"MVPP2_TXQ_PREF_BUF_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_PENDING_REG,
+			"MVPP2_TXQ_PENDING_REG");
+	mvpp2_print_reg(hw, MVPP2_TXQ_INT_STATUS_REG,
+			"MVPP2_TXQ_INT_STATUS_REG");
 	if (priv->pp2_version == PPV21)
-		mvpp2_print_reg(hw, MVPP21_TXQ_SENT_REG(txq), "MVPP21_TXQ_SENT_REG");
+		mvpp2_print_reg(hw, MVPP21_TXQ_SENT_REG(txq),
+			"MVPP21_TXQ_SENT_REG");
 	else
-		mvpp2_print_reg(hw, MVPP22_TXQ_SENT_REG(txq), "MVPP22_TXQ_SENT_REG");
+		mvpp2_print_reg(hw, MVPP22_TXQ_SENT_REG(txq),
+			"MVPP22_TXQ_SENT_REG");
 }
 EXPORT_SYMBOL(mvPp2PhysTxqRegs);
 
@@ -516,7 +583,7 @@ void mvPp2PortTxqRegs(struct mvpp2 *priv, int port, int txq)
 	if (mvpp2_max_check(txq, pp2_port->num_tx_queues, "port txq"))
 		return;
 
-	printk("\n[PPv2 TxQ registers: port=%d, local txq=%d]\n", port, txq);
+	DBG_MSG("\n[PPv2 TxQ registers: port=%d, local txq=%d]\n", port, txq);
 
 	mvPp2PhysTxqRegs(priv, pp2_port->txqs[txq]->id);
 }
@@ -526,12 +593,16 @@ void mvPp2AggrTxqRegs(struct mvpp2 *priv, int cpu)
 {
 	struct mvpp2_hw *hw = &priv->hw;
 
-	printk("\n[PP2 Aggr TXQ registers: cpu=%d]\n", cpu);
+	DBG_MSG("\n[PP2 Aggr TXQ registers: cpu=%d]\n", cpu);
 
-	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_DESC_ADDR_REG(cpu), "MVPP2_AGGR_TXQ_DESC_ADDR_REG");
-	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_DESC_SIZE_REG(cpu), "MVPP2_AGGR_TXQ_DESC_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_STATUS_REG(cpu), "MVPP2_AGGR_TXQ_STATUS_REG");
-	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_INDEX_REG(cpu), "MVPP2_AGGR_TXQ_INDEX_REG");
+	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_DESC_ADDR_REG(cpu),
+			"MVPP2_AGGR_TXQ_DESC_ADDR_REG");
+	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_DESC_SIZE_REG(cpu),
+			"MVPP2_AGGR_TXQ_DESC_SIZE_REG");
+	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_STATUS_REG(cpu),
+			"MVPP2_AGGR_TXQ_STATUS_REG");
+	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_INDEX_REG(cpu),
+			"MVPP2_AGGR_TXQ_INDEX_REG");
 }
 EXPORT_SYMBOL(mvPp2AggrTxqRegs);
 
@@ -540,18 +611,28 @@ void mvPp2V1TxqDbgCntrs(struct mvpp2 *priv, int port, int txq)
 
 	struct mvpp2_hw *hw = &priv->hw;
 
-	printk("\n------ [Port #%d txq #%d counters] -----\n", port, txq);
+	DBG_MSG("\n------ [Port #%d txq #%d counters] -----\n", port, txq);
 	mvpp2_write(hw, MVPP2_CNT_IDX_REG, MVPP2_CNT_IDX_TX(port, txq));
-	mvpp2_print_reg(hw, MVPP2_CNT_IDX_REG, "MVPP2_CNT_IDX_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_DESC_ENQ_REG, "MVPP2_TX_DESC_ENQ_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_DESC_ENQ_TO_DRAM_REG, "MVPP2_TX_DESC_ENQ_TO_DRAM_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_BUF_ENQ_TO_DRAM_REG, "MVPP2_TX_BUF_ENQ_TO_DRAM_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_DESC_HWF_ENQ_REG, "MVPP2_TX_DESC_HWF_ENQ_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_PKT_DQ_REG, "MVPP2_TX_PKT_DQ_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_PKT_FULLQ_DROP_REG, "MVPP2_TX_PKT_FULLQ_DROP_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_PKT_EARLY_DROP_REG, "MVPP2_TX_PKT_EARLY_DROP_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_DROP_REG, "MVPP2_TX_PKT_BM_DROP_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_MC_DROP_REG, "MVPP2_TX_PKT_BM_MC_DROP_REG");
+	mvpp2_print_reg(hw, MVPP2_CNT_IDX_REG,
+			"MVPP2_CNT_IDX_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_DESC_ENQ_REG,
+			"MVPP2_TX_DESC_ENQ_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_DESC_ENQ_TO_DRAM_REG,
+			"MVPP2_TX_DESC_ENQ_TO_DRAM_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_BUF_ENQ_TO_DRAM_REG,
+			"MVPP2_TX_BUF_ENQ_TO_DRAM_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_DESC_HWF_ENQ_REG,
+			"MVPP2_TX_DESC_HWF_ENQ_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_PKT_DQ_REG,
+			"MVPP2_TX_PKT_DQ_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_PKT_FULLQ_DROP_REG,
+			"MVPP2_TX_PKT_FULLQ_DROP_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_PKT_EARLY_DROP_REG,
+			"MVPP2_TX_PKT_EARLY_DROP_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_DROP_REG,
+			"MVPP2_TX_PKT_BM_DROP_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_MC_DROP_REG,
+			"MVPP2_TX_PKT_BM_MC_DROP_REG");
 }
 EXPORT_SYMBOL(mvPp2V1TxqDbgCntrs);
 
@@ -561,28 +642,41 @@ void mvPp2V1DropCntrs(struct mvpp2 *priv, int port)
 	struct mvpp2_hw *hw = &priv->hw;
 	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
 
-	printk("\n[global drop counters]\n");
-	mvpp2_print_reg(hw, MVPP2_V1_OVERFLOW_MC_DROP_REG, "MV_PP2_OVERRUN_DROP_REG");
+	DBG_MSG("\n[global drop counters]\n");
+	mvpp2_print_reg(hw, MVPP2_V1_OVERFLOW_MC_DROP_REG,
+			"MV_PP2_OVERRUN_DROP_REG");
 
-	printk("\n[Port #%d Drop counters]\n", port);
-	mvpp2_print_reg(hw, MV_PP2_OVERRUN_DROP_REG(port), "MV_PP2_OVERRUN_DROP_REG");
-	mvpp2_print_reg(hw, MV_PP2_CLS_DROP_REG(port), "MV_PP2_CLS_DROP_REG");
+	DBG_MSG("\n[Port #%d Drop counters]\n", port);
+	mvpp2_print_reg(hw, MV_PP2_OVERRUN_DROP_REG(port),
+			"MV_PP2_OVERRUN_DROP_REG");
+	mvpp2_print_reg(hw, MV_PP2_CLS_DROP_REG(port),
+			"MV_PP2_CLS_DROP_REG");
 
 	for (q = 0; q < pp2_port->num_tx_queues; q++) {
-		printk("\n------ [Port #%d txp #%d txq #%d counters] -----\n", port, port, q);
+		DBG_MSG("\n------ [Port #%d txp #%d txq #%d counters] -----\n",
+				port, port, q);
 		mvpp2_write(hw, MVPP2_CNT_IDX_REG, MVPP2_CNT_IDX_TX(port, q));
-		mvpp2_print_reg(hw, MVPP2_TX_PKT_FULLQ_DROP_REG, "MV_PP2_TX_PKT_FULLQ_DROP_REG");
-		mvpp2_print_reg(hw, MVPP2_TX_PKT_EARLY_DROP_REG, "MV_PP2_TX_PKT_EARLY_DROP_REG");
-		mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_DROP_REG, "MV_PP2_TX_PKT_BM_DROP_REG");
-		mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_MC_DROP_REG, "MV_PP2_TX_PKT_BM_MC_DROP_REG");
+		mvpp2_print_reg(hw, MVPP2_TX_PKT_FULLQ_DROP_REG,
+				"MV_PP2_TX_PKT_FULLQ_DROP_REG");
+		mvpp2_print_reg(hw, MVPP2_TX_PKT_EARLY_DROP_REG,
+				"MV_PP2_TX_PKT_EARLY_DROP_REG");
+		mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_DROP_REG,
+				"MV_PP2_TX_PKT_BM_DROP_REG");
+		mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_MC_DROP_REG,
+				"MV_PP2_TX_PKT_BM_MC_DROP_REG");
 	}
 
-	for (q = pp2_port->first_rxq; q < (pp2_port->first_rxq + pp2_port->num_rx_queues); q++) {
-		printk("\n------ [Port #%d, rxq #%d counters] -----\n", port, q);
+	for (q = pp2_port->first_rxq; q < (pp2_port->first_rxq +
+			pp2_port->num_rx_queues); q++) {
+		DBG_MSG("\n------ [Port #%d, rxq #%d counters] -----\n",
+			port, q);
 		mvpp2_write(hw, MVPP2_CNT_IDX_REG, q);
-		mvpp2_print_reg(hw, MVPP2_RX_PKT_FULLQ_DROP_REG, "MV_PP2_RX_PKT_FULLQ_DROP_REG");
-		mvpp2_print_reg(hw, MVPP2_RX_PKT_EARLY_DROP_REG, "MV_PP2_RX_PKT_EARLY_DROP_REG");
-		mvpp2_print_reg(hw, MVPP2_RX_PKT_BM_DROP_REG, "MV_PP2_RX_PKT_BM_DROP_REG");
+		mvpp2_print_reg(hw, MVPP2_RX_PKT_FULLQ_DROP_REG,
+				"MV_PP2_RX_PKT_FULLQ_DROP_REG");
+		mvpp2_print_reg(hw, MVPP2_RX_PKT_EARLY_DROP_REG,
+				"MV_PP2_RX_PKT_EARLY_DROP_REG");
+		mvpp2_print_reg(hw, MVPP2_RX_PKT_BM_DROP_REG,
+				"MV_PP2_RX_PKT_BM_DROP_REG");
 	}
 }
 EXPORT_SYMBOL(mvPp2V1DropCntrs);
@@ -591,17 +685,21 @@ void mvPp2TxRegs(struct mvpp2 *priv)
 {
 	struct mvpp2_hw *hw = &priv->hw;
 	int i;
-	printk("\n[TX general registers]\n");
+
+	DBG_MSG("\n[TX general registers]\n");
 
 	mvpp2_print_reg(hw, MVPP2_TX_SNOOP_REG, "MVPP2_TX_SNOOP_REG");
 	if (priv->pp2_version == PPV21) {
-		mvpp2_print_reg(hw, MVPP21_TX_FIFO_THRESH_REG, "MVPP21_TX_FIFO_THRESH_REG");
+		mvpp2_print_reg(hw, MVPP21_TX_FIFO_THRESH_REG,
+				"MVPP21_TX_FIFO_THRESH_REG");
 	} else {
-		for (i=0;i<MVPP2_MAX_PORTS;i++) {
-			mvpp2_print_reg(hw, MVPP22_TX_FIFO_THRESH_REG(i), "MVPP22_TX_FIFO_THRESH_REG");
+		for (i = 0 ; i < MVPP2_MAX_PORTS; i++) {
+			mvpp2_print_reg(hw, MVPP22_TX_FIFO_THRESH_REG(i),
+					"MVPP22_TX_FIFO_THRESH_REG");
 		}
 	}
-	mvpp2_print_reg(hw, MVPP2_TX_PORT_FLUSH_REG, "MVPP2_TX_PORT_FLUSH_REG");
+	mvpp2_print_reg(hw, MVPP2_TX_PORT_FLUSH_REG,
+			"MVPP2_TX_PORT_FLUSH_REG");
 }
 EXPORT_SYMBOL(mvPp2TxRegs);
 
@@ -613,32 +711,48 @@ void mvPp2TxSchedRegs(struct mvpp2 *priv, int port)
 
 	physTxp = mvpp2_egress_port(pp2_port);
 
-	printk("\n[TXP Scheduler registers: port=%d, physPort=%d]\n", port, physTxp);
+	DBG_MSG("\n[TXP Scheduler registers: port=%d, physPort=%d]\n",
+			port, physTxp);
 
 	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, physTxp);
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, "MV_PP2_TXP_SCHED_PORT_INDEX_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_Q_CMD_REG, "MV_PP2_TXP_SCHED_Q_CMD_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_CMD_1_REG, "MV_PP2_TXP_SCHED_CMD_1_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG, "MV_PP2_TXP_SCHED_FIXED_PRIO_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_PERIOD_REG, "MV_PP2_TXP_SCHED_PERIOD_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_MTU_REG, "MV_PP2_TXP_SCHED_MTU_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_REFILL_REG, "MV_PP2_TXP_SCHED_REFILL_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_TOKEN_SIZE_REG, "MV_PP2_TXP_SCHED_TOKEN_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_TOKEN_CNTR_REG, "MV_PP2_TXP_SCHED_TOKEN_CNTR_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG,
+			"MV_PP2_TXP_SCHED_PORT_INDEX_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_Q_CMD_REG,
+			"MV_PP2_TXP_SCHED_Q_CMD_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_CMD_1_REG,
+			"MV_PP2_TXP_SCHED_CMD_1_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG,
+			"MV_PP2_TXP_SCHED_FIXED_PRIO_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_PERIOD_REG,
+			"MV_PP2_TXP_SCHED_PERIOD_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_MTU_REG,
+			"MV_PP2_TXP_SCHED_MTU_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_REFILL_REG,
+			"MV_PP2_TXP_SCHED_REFILL_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_TOKEN_SIZE_REG,
+			"MV_PP2_TXP_SCHED_TOKEN_SIZE_REG");
+	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_TOKEN_CNTR_REG,
+			"MV_PP2_TXP_SCHED_TOKEN_CNTR_REG");
 
 	for (txq = 0; txq < MVPP2_MAX_TXQ; txq++) {
-		printk("\n[TxQ Scheduler registers: port=%d, txq=%d]\n", port, txq);
-		mvpp2_print_reg(hw, MVPP2_TXQ_SCHED_REFILL_REG(txq), "MV_PP2_TXQ_SCHED_REFILL_REG");
-		mvpp2_print_reg(hw, MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq), "MV_PP2_TXQ_SCHED_TOKEN_SIZE_REG");
-		mvpp2_print_reg(hw, MVPP2_TXQ_SCHED_TOKEN_CNTR_REG(txq), "MV_PP2_TXQ_SCHED_TOKEN_CNTR_REG");
+		DBG_MSG("\n[TxQ Scheduler registers: port=%d, txq=%d]\n",
+			port, txq);
+		mvpp2_print_reg(hw, MVPP2_TXQ_SCHED_REFILL_REG(txq),
+				"MV_PP2_TXQ_SCHED_REFILL_REG");
+		mvpp2_print_reg(hw, MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq),
+				"MV_PP2_TXQ_SCHED_TOKEN_SIZE_REG");
+		mvpp2_print_reg(hw, MVPP2_TXQ_SCHED_TOKEN_CNTR_REG(txq),
+				"MV_PP2_TXQ_SCHED_TOKEN_CNTR_REG");
 	}
 }
 EXPORT_SYMBOL(mvPp2TxSchedRegs);
 
 /* Calculate period and tokens accordingly with required rate and accuracy */
-int mvPp2RateCalc(int rate, unsigned int accuracy, unsigned int *pPeriod, unsigned int *pTokens)
+int mvPp2RateCalc(int rate, unsigned int accuracy,
+		unsigned int *pPeriod, unsigned int *pTokens)
 {
-	/* Calculate refill tokens and period - rate [Kbps] = tokens [bits] * 1000 / period [usec] */
+	/* Calculate refill tokens and period - rate [Kbps] =
+	 * tokens [bits] * 1000 / period [usec] */
 	/* Assume:  Tclock [MHz] / BasicRefillNoOfClocks = 1 */
 	unsigned int period, tokens, calc;
 
@@ -653,7 +767,8 @@ int mvPp2RateCalc(int rate, unsigned int accuracy, unsigned int *pPeriod, unsign
 		return 0;
 	}
 
-	/* Find values of "period" and "tokens" match "rate" and "accuracy" when period is minimal */
+	/* Find values of "period" and "tokens" match "rate" and
+	 * "accuracy" when period is minimal */
 	for (period = 1; period <= 1000; period++) {
 		tokens = 1;
 		while (1)	{
@@ -697,7 +812,8 @@ int mvPp2TxpRateSet(struct mvpp2 *priv, int port, int rate)
 
 	status = mvPp2RateCalc(rate, accuracy, &period, &tokens);
 	if (status != MV_OK) {
-		printk("%s: Can't provide rate of %d [Kbps] with accuracy of %d [%%]\n",
+		DBG_MSG(
+			"%s: Can't provide rate of %d [Kbps] with accuracy of %d [%%]\n",
 				__func__, rate, accuracy);
 		return status;
 	}
@@ -709,7 +825,7 @@ int mvPp2TxpRateSet(struct mvpp2 *priv, int port, int rate)
 
 	regVal = mvpp2_read(hw, MVPP2_TXP_SCHED_REFILL_REG);
 
-	regVal &= ~MVPP2_TXP_REFILL_TOKENS_ALL_MASK ;
+	regVal &= ~MVPP2_TXP_REFILL_TOKENS_ALL_MASK;
 	regVal |= MVPP2_TXP_REFILL_TOKENS_MASK(tokens);
 
 	regVal &= ~MVPP2_TXP_REFILL_PERIOD_ALL_MASK;
@@ -747,7 +863,7 @@ int mvPp2TxpBurstSet(struct mvpp2 *priv, int port, int burst)
 	/* Token bucket size must be larger then MTU */
 	mtu = mvpp2_read(hw, MVPP2_TXP_SCHED_MTU_REG);
 	if (mtu > size) {
-		printk("%s Error: Bucket size (%d bytes) < MTU (%d bytes)\n",
+		DBG_MSG("%s Error: Bucket size (%d bytes) < MTU (%d bytes)\n",
 					__func__, (size / 8), (mtu / 8));
 		return -1;
 	}
@@ -776,8 +892,9 @@ int mvPp2TxqRateSet(struct mvpp2 *priv, int port, int txq, int rate)
 
 	status = mvPp2RateCalc(rate, accuracy, &period, &tokens);
 	if (status != MV_OK) {
-		printk("%s: Can't provide rate of %d [Kbps] with accuracy of %d [%%]\n",
-				__func__, rate, accuracy);
+		DBG_MSG(
+			"%s: Can't provide rate of %d [Kbps] with accuracy of %d [%%]\n",
+			__func__, rate, accuracy);
 		return status;
 	}
 
@@ -833,8 +950,9 @@ int mvPp2TxqBurstSet(struct mvpp2 *priv, int port, int txq, int burst)
 	/* Tocken bucket size must be larger then MTU */
 	mtu = mvpp2_read(hw, MVPP2_TXP_SCHED_MTU_REG);
 	if (mtu > size) {
-		printk("%s Error: Bucket size (%d bytes) < MTU (%d bytes)\n",
-					__func__, (size / 8), (mtu / 8));
+		DBG_MSG(
+			"%s Error: Bucket size (%d bytes) < MTU (%d bytes)\n",
+			__func__, (size / 8), (mtu / 8));
 		return -1;
 	}
 
@@ -890,15 +1008,17 @@ int mvPp2TxqWrrPrioSet(struct mvpp2 *priv, int port, int txq, int weight)
 	/* Weight * 256 bytes * 8 bits must be larger then MTU [bits] */
 	mtu = mvpp2_read(hw, MVPP2_TXP_SCHED_MTU_REG);
 
-	/* WA for wrong Token bucket update: Set MTU value = 3*real MTU value, now get read MTU*/
+	/* WA for wrong Token bucket update: Set MTU value =
+	 * 3*real MTU value, now get read MTU*/
 	mtu /= MV_AMPLIFY_FACTOR_MTU;
 	mtu /= MV_BIT_NUM_OF_BYTE; /* move to bytes */
 	mtu_aligned = MV_ALIGN_UP(mtu, MV_WRR_WEIGHT_UNIT);
 	weight_min = mtu_aligned / MV_WRR_WEIGHT_UNIT;
 
 	if ((weight < weight_min) || (weight > MVPP2_TXQ_WRR_WEIGHT_MAX)) {
-		printk("%s Error: weight=%d is out of range %d...%d\n",
-				__func__, weight, weight_min, MVPP2_TXQ_WRR_WEIGHT_MAX);
+		DBG_MSG("%s Error: weight=%d is out of range %d...%d\n",
+			__func__, weight, weight_min,
+			MVPP2_TXQ_WRR_WEIGHT_MAX);
 		return -1;
 	}
 
@@ -926,21 +1046,32 @@ void mvPp2IsrRegs(struct mvpp2_hw *hw, int port)
 
 	physPort = MV_PPV2_PORT_PHYS(port);
 
-	printk("\n[PPv2 ISR registers: port=%d - %s]\n", port, MVPP2_IS_PON_PORT(port) ? "PON" : "GMAC");
-	mvpp2_print_reg(MVPP2_ISR_RXQ_GROUP_REG(port), "MVPP2_ISR_RXQ_GROUP_REG");
-	mvpp2_print_reg(MVPP2_ISR_ENABLE_REG(port), "MVPP2_ISR_ENABLE_REG");
-	mvpp2_print_reg(MVPP2_ISR_RX_TX_CAUSE_REG(physPort), "MVPP2_ISR_RX_TX_CAUSE_REG");
-	mvpp2_print_reg(MVPP2_ISR_RX_TX_MASK_REG(physPort), "MVPP2_ISR_RX_TX_MASK_REG");
+	DBG_MSG("\n[PPv2 ISR registers: port=%d - %s]\n",
+		port, MVPP2_IS_PON_PORT(port) ? "PON" : "GMAC");
+	mvpp2_print_reg(MVPP2_ISR_RXQ_GROUP_REG(port),
+		"MVPP2_ISR_RXQ_GROUP_REG");
+	mvpp2_print_reg(MVPP2_ISR_ENABLE_REG(port),
+		"MVPP2_ISR_ENABLE_REG");
+	mvpp2_print_reg(MVPP2_ISR_RX_TX_CAUSE_REG(physPort),
+		"MVPP2_ISR_RX_TX_CAUSE_REG");
+	mvpp2_print_reg(MVPP2_ISR_RX_TX_MASK_REG(physPort),
+		"MVPP2_ISR_RX_TX_MASK_REG");
 
-	mvpp2_print_reg(MVPP2_ISR_RX_ERR_CAUSE_REG(physPort), "MVPP2_ISR_RX_ERR_CAUSE_REG");
-	mvpp2_print_reg(MVPP2_ISR_RX_ERR_MASK_REG(physPort), "MVPP2_ISR_RX_ERR_MASK_REG");
+	mvpp2_print_reg(MVPP2_ISR_RX_ERR_CAUSE_REG(physPort),
+		"MVPP2_ISR_RX_ERR_CAUSE_REG");
+	mvpp2_print_reg(MVPP2_ISR_RX_ERR_MASK_REG(physPort),
+		"MVPP2_ISR_RX_ERR_MASK_REG");
 
 	if (MVPP2_IS_PON_PORT(port)) {
-		mvpp2_print_reg(MVPP2_ISR_PON_TX_UNDR_CAUSE_REG, "MVPP2_ISR_PON_TX_UNDR_CAUSE_REG");
-		mvpp2_print_reg(MVPP2_ISR_PON_TX_UNDR_MASK_REG, "MVPP2_ISR_PON_TX_UNDR_MASK_REG");
+		mvpp2_print_reg(MVPP2_ISR_PON_TX_UNDR_CAUSE_REG,
+			"MVPP2_ISR_PON_TX_UNDR_CAUSE_REG");
+		mvpp2_print_reg(MVPP2_ISR_PON_TX_UNDR_MASK_REG,
+			"MVPP2_ISR_PON_TX_UNDR_MASK_REG");
 	} else {
-		mvpp2_print_reg(MVPP2_ISR_TX_ERR_CAUSE_REG(physPort), "MVPP2_ISR_TX_ERR_CAUSE_REG");
-		mvpp2_print_reg(MVPP2_ISR_TX_ERR_MASK_REG(physPort), "MVPP2_ISR_TX_ERR_MASK_REG");
+		mvpp2_print_reg(MVPP2_ISR_TX_ERR_CAUSE_REG(physPort),
+			"MVPP2_ISR_TX_ERR_CAUSE_REG");
+		mvpp2_print_reg(MVPP2_ISR_TX_ERR_MASK_REG(physPort),
+			"MVPP2_ISR_TX_ERR_MASK_REG");
 	}
 	mvpp2_print_reg(MVPP2_ISR_MISC_CAUSE_REG, "MVPP2_ISR_MISC_CAUSE_REG");
 	mvpp2_print_reg(MVPP2_ISR_MISC_MASK_REG, "MVPP2_ISR_MISC_MASK_REG");
@@ -965,11 +1096,12 @@ void mvPp2AddrDecodeRegs(struct mvpp2_hw *hw)
 		if ((regValue & (1 << win)) == 0)
 			continue; /* window is disable */
 
-		printk("\t win[%d]\n", win);
+		DBG_MSG("\t win[%d]\n", win);
 		mvpp2_print_reg(ETH_WIN_BASE_REG(win), "\t ETH_WIN_BASE_REG");
 		mvpp2_print_reg(ETH_WIN_SIZE_REG(win), "\t ETH_WIN_SIZE_REG");
 		if (win < ETH_MAX_HIGH_ADDR_REMAP_WIN)
-			mvpp2_print_reg(ETH_WIN_REMAP_REG(win), "\t ETH_WIN_REMAP_REG");
+			mvpp2_print_reg(ETH_WIN_REMAP_REG(win),
+				"\t ETH_WIN_REMAP_REG");
 	}
 }
 
@@ -980,34 +1112,52 @@ void mvPp2TxSchedRegs(struct mvpp2_hw *hw, int port, int txp)
 
 	physTxp = MV_PPV2_TXP_PHYS(port, txp);
 
-	printk("\n[TXP Scheduler registers: port=%d, txp=%d, physPort=%d]\n", port, txp, physTxp);
+	DBG_MSG("\n[TXP Scheduler registers: port=%d, txp=%d, physPort=%d]\n",
+		port, txp, physTxp);
 
 	mvPp2WrReg(MVPP2_TXP_SCHED_PORT_INDEX_REG, physTxp);
-	mvpp2_print_reg(MVPP2_TXP_SCHED_PORT_INDEX_REG, "MVPP2_TXP_SCHED_PORT_INDEX_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_Q_CMD_REG, "MVPP2_TXP_SCHED_Q_CMD_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_CMD_1_REG, "MVPP2_TXP_SCHED_CMD_1_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_FIXED_PRIO_REG, "MVPP2_TXP_SCHED_FIXED_PRIO_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_PERIOD_REG, "MVPP2_TXP_SCHED_PERIOD_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_MTU_REG, "MVPP2_TXP_SCHED_MTU_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_REFILL_REG, "MVPP2_TXP_SCHED_REFILL_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_TOKEN_SIZE_REG, "MVPP2_TXP_SCHED_TOKEN_SIZE_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_TOKEN_CNTR_REG, "MVPP2_TXP_SCHED_TOKEN_CNTR_REG");
+	mvpp2_print_reg(MVPP2_TXP_SCHED_PORT_INDEX_REG,
+		"MVPP2_TXP_SCHED_PORT_INDEX_REG");
+	mvpp2_print_reg(MVPP2_TXP_SCHED_Q_CMD_REG,
+		"MVPP2_TXP_SCHED_Q_CMD_REG");
+	mvpp2_print_reg(MVPP2_TXP_SCHED_CMD_1_REG,
+		"MVPP2_TXP_SCHED_CMD_1_REG");
+	mvpp2_print_reg(MVPP2_TXP_SCHED_FIXED_PRIO_REG,
+		"MVPP2_TXP_SCHED_FIXED_PRIO_REG");
+	mvpp2_print_reg(MVPP2_TXP_SCHED_PERIOD_REG,
+		"MVPP2_TXP_SCHED_PERIOD_REG");
+	mvpp2_print_reg(MVPP2_TXP_SCHED_MTU_REG,
+		"MVPP2_TXP_SCHED_MTU_REG");
+	mvpp2_print_reg(MVPP2_TXP_SCHED_REFILL_REG,
+		"MVPP2_TXP_SCHED_REFILL_REG");
+	mvpp2_print_reg(MVPP2_TXP_SCHED_TOKEN_SIZE_REG,
+		"MVPP2_TXP_SCHED_TOKEN_SIZE_REG");
+	mvpp2_print_reg(MVPP2_TXP_SCHED_TOKEN_CNTR_REG,
+		"MVPP2_TXP_SCHED_TOKEN_CNTR_REG");
 
 	for (txq = 0; txq < MVPP2_MAX_TXQ; txq++) {
-		printk("\n[TxQ Scheduler registers: port=%d, txp=%d, txq=%d]\n", port, txp, txq);
-		mvpp2_print_reg(MVPP2_TXQ_SCHED_REFILL_REG(txq), "MVPP2_TXQ_SCHED_REFILL_REG");
-		mvpp2_print_reg(MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq), "MVPP2_TXQ_SCHED_TOKEN_SIZE_REG");
-		mvpp2_print_reg(MVPP2_TXQ_SCHED_TOKEN_CNTR_REG(txq), "MVPP2_TXQ_SCHED_TOKEN_CNTR_REG");
+		DBG_MSG(
+			"\n[TxQ Scheduler registers: port=%d, txp=%d, txq=%d]\n",
+			port, txp, txq);
+		mvpp2_print_reg(MVPP2_TXQ_SCHED_REFILL_REG(txq),
+			"MVPP2_TXQ_SCHED_REFILL_REG");
+		mvpp2_print_reg(MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq),
+			"MVPP2_TXQ_SCHED_TOKEN_SIZE_REG");
+		mvpp2_print_reg(MVPP2_TXQ_SCHED_TOKEN_CNTR_REG(txq),
+			"MVPP2_TXQ_SCHED_TOKEN_CNTR_REG");
 	}
 }
 
 void      mvPp2FwdSwitchRegs(struct mvpp2_hw *hw)
 {
-	printk("\n[FWD Switch registers]\n");
+	DBG_MSG("\n[FWD Switch registers]\n");
 
-	mvpp2_print_reg(MVPP2_FWD_SWITCH_FLOW_ID_REG, "MVPP2_FWD_SWITCH_FLOW_ID_REG");
-	mvpp2_print_reg(MVPP2_FWD_SWITCH_CTRL_REG, "MVPP2_FWD_SWITCH_CTRL_REG");
-	mvpp2_print_reg(MVPP2_FWD_SWITCH_STATUS_REG, "MVPP2_FWD_SWITCH_STATUS_REG");
+	mvpp2_print_reg(MVPP2_FWD_SWITCH_FLOW_ID_REG,
+		"MVPP2_FWD_SWITCH_FLOW_ID_REG");
+	mvpp2_print_reg(MVPP2_FWD_SWITCH_CTRL_REG,
+		"MVPP2_FWD_SWITCH_CTRL_REG");
+	mvpp2_print_reg(MVPP2_FWD_SWITCH_STATUS_REG,
+		"MVPP2_FWD_SWITCH_STATUS_REG");
 }
 
 
@@ -1016,39 +1166,57 @@ void mvPp2BmPoolRegs(struct mvpp2_hw *hw, int pool)
 	if (mvPp2MaxCheck(pool, MV_BM_POOLS, "bm_pool"))
 		return;
 
-	printk("\n[BM pool registers: pool=%d]\n", pool);
-	mvpp2_print_reg(MV_BM_POOL_BASE_REG(pool), "MV_BM_POOL_BASE_REG");
-	mvpp2_print_reg(MV_BM_POOL_SIZE_REG(pool), "MV_BM_POOL_SIZE_REG");
-	mvpp2_print_reg(MV_BM_POOL_READ_PTR_REG(pool), "MV_BM_POOL_READ_PTR_REG");
-	mvpp2_print_reg(MV_BM_POOL_PTRS_NUM_REG(pool), "MV_BM_POOL_PTRS_NUM_REG");
-	mvpp2_print_reg(MV_BM_BPPI_READ_PTR_REG(pool), "MV_BM_BPPI_READ_PTR_REG");
-	mvpp2_print_reg(MV_BM_BPPI_PTRS_NUM_REG(pool), "MV_BM_BPPI_PTRS_NUM_REG");
-	mvpp2_print_reg(MV_BM_POOL_CTRL_REG(pool), "MV_BM_POOL_CTRL_REG");
-	mvpp2_print_reg(MV_BM_INTR_CAUSE_REG(pool), "MV_BM_INTR_CAUSE_REG");
-	mvpp2_print_reg(MV_BM_INTR_MASK_REG(pool), "MV_BM_INTR_MASK_REG");
+	DBG_MSG("\n[BM pool registers: pool=%d]\n", pool);
+	mvpp2_print_reg(MV_BM_POOL_BASE_REG(pool),
+		"MV_BM_POOL_BASE_REG");
+	mvpp2_print_reg(MV_BM_POOL_SIZE_REG(pool),
+		"MV_BM_POOL_SIZE_REG");
+	mvpp2_print_reg(MV_BM_POOL_READ_PTR_REG(pool),
+		"MV_BM_POOL_READ_PTR_REG");
+	mvpp2_print_reg(MV_BM_POOL_PTRS_NUM_REG(pool),
+		"MV_BM_POOL_PTRS_NUM_REG");
+	mvpp2_print_reg(MV_BM_BPPI_READ_PTR_REG(pool),
+		"MV_BM_BPPI_READ_PTR_REG");
+	mvpp2_print_reg(MV_BM_BPPI_PTRS_NUM_REG(pool),
+		"MV_BM_BPPI_PTRS_NUM_REG");
+	mvpp2_print_reg(MV_BM_POOL_CTRL_REG(pool),
+		"MV_BM_POOL_CTRL_REG");
+	mvpp2_print_reg(MV_BM_INTR_CAUSE_REG(pool),
+		"MV_BM_INTR_CAUSE_REG");
+	mvpp2_print_reg(MV_BM_INTR_MASK_REG(pool),
+		"MV_BM_INTR_MASK_REG");
 }
 
 void mvPp2V0DropCntrs(struct mvpp2_hw *hw, int port)
 {
 	int i;
 
-	printk("\n[Port #%d Drop counters]\n", port);
-	mvpp2_print_reg(MVPP2_OVERRUN_DROP_REG(MV_PPV2_PORT_PHYS(port)), "MVPP2_OVERRUN_DROP_REG");
-	mvpp2_print_reg(MVPP2_CLS_DROP_REG(MV_PPV2_PORT_PHYS(port)), "MVPP2_CLS_DROP_REG");
+	DBG_MSG("\n[Port #%d Drop counters]\n", port);
+	mvpp2_print_reg(MVPP2_OVERRUN_DROP_REG(MV_PPV2_PORT_PHYS(port)),
+		"MVPP2_OVERRUN_DROP_REG");
+	mvpp2_print_reg(MVPP2_CLS_DROP_REG(MV_PPV2_PORT_PHYS(port)),
+		"MVPP2_CLS_DROP_REG");
 
 	if (MVPP2_IS_PON_PORT(port)) {
 		for (i = 0; i < mvPp2HalData.maxTcont; i++) {
-			mvpp2_print_reg2(MVPP2_V0_TX_EARLY_DROP_REG(i), "MVPP2_TX_EARLY_DROP_REG", i);
-			mvpp2_print_reg2(MVPP2_V0_TX_DESC_DROP_REG(i), "MVPP2_TX_DESC_DROP_REG", i);
+			mvpp2_print_reg2(MVPP2_V0_TX_EARLY_DROP_REG(i),
+				"MVPP2_TX_EARLY_DROP_REG", i);
+			mvpp2_print_reg2(MVPP2_V0_TX_DESC_DROP_REG(i),
+				"MVPP2_TX_DESC_DROP_REG", i);
 		}
 	} else {
 		i = MVPP2_MAX_TCONT + port;
-		mvpp2_print_reg2(MVPP2_V0_TX_EARLY_DROP_REG(i), "MVPP2_TX_EARLY_DROP_REG", i);
-		mvpp2_print_reg2(MVPP2_V0_TX_DESC_DROP_REG(i), "MVPP2_TX_DESC_DROP_REG", i);
+		mvpp2_print_reg2(MVPP2_V0_TX_EARLY_DROP_REG(i),
+			"MVPP2_TX_EARLY_DROP_REG", i);
+		mvpp2_print_reg2(MVPP2_V0_TX_DESC_DROP_REG(i),
+			"MVPP2_TX_DESC_DROP_REG", i);
 	}
-	for (i = port * CONFIG_MVPP2_RXQ; i < (port * CONFIG_MVPP2_RXQ + CONFIG_MVPP2_RXQ); i++) {
-		mvpp2_print_reg2(MVPP2_V0_RX_EARLY_DROP_REG(i), "MVPP2_RX_EARLY_DROP_REG", i);
-		mvpp2_print_reg2(MVPP2_V0_RX_DESC_DROP_REG(i), "MVPP2_RX_DESC_DROP_REG", i);
+	for (i = port * CONFIG_MVPP2_RXQ; i < (port * CONFIG_MVPP2_RXQ +
+			CONFIG_MVPP2_RXQ); i++) {
+		mvpp2_print_reg2(MVPP2_V0_RX_EARLY_DROP_REG(i),
+			"MVPP2_RX_EARLY_DROP_REG", i);
+		mvpp2_print_reg2(MVPP2_V0_RX_DESC_DROP_REG(i),
+			"MVPP2_RX_DESC_DROP_REG", i);
 	}
 }
 
@@ -1059,31 +1227,45 @@ void mvPp2V1DropCntrs(struct mvpp2_hw *hw, int port)
 	int physPort = MV_PPV2_PORT_PHYS(port);
 
 
-	printk("\n[global drop counters]\n");
-	mvPp2RegPrintNonZero(MVPP2_V1_OVERFLOW_MC_DROP_REG, "MVPP2_OVERRUN_DROP_REG");
+	DBG_MSG("\n[global drop counters]\n");
+	mvPp2RegPrintNonZero(MVPP2_V1_OVERFLOW_MC_DROP_REG,
+		"MVPP2_OVERRUN_DROP_REG");
 
-	printk("\n[Port #%d Drop counters]\n", port);
-	mvPp2RegPrintNonZero(MVPP2_OVERRUN_DROP_REG(physPort), "MVPP2_OVERRUN_DROP_REG");
-	mvPp2RegPrintNonZero(MVPP2_CLS_DROP_REG(physPort), "MVPP2_CLS_DROP_REG");
+	DBG_MSG("\n[Port #%d Drop counters]\n", port);
+	mvPp2RegPrintNonZero(MVPP2_OVERRUN_DROP_REG(physPort),
+		"MVPP2_OVERRUN_DROP_REG");
+	mvPp2RegPrintNonZero(MVPP2_CLS_DROP_REG(physPort),
+		"MVPP2_CLS_DROP_REG");
 
 	for (txp = 0; txp < pPortCtrl->txpNum; txp++) {
 		for (q = 0; q < MVPP2_MAX_TXQ; q++) {
-			printk("\n------ [Port #%d txp #%d txq #%d counters] -----\n", port, txp, q);
-			mvPp2WrReg(MVPP2_V1_CNT_IDX_REG, TX_CNT_IDX(port, txp, q));
-			mvPp2RegPrintNonZero(MVPP2_V1_TX_PKT_FULLQ_DROP_REG, "MVPP2_V1_TX_PKT_FULLQ_DROP_REG");
-			mvPp2RegPrintNonZero(MVPP2_V1_TX_PKT_EARLY_DROP_REG, "MVPP2_V1_TX_PKT_EARLY_DROP_REG");
-			mvPp2RegPrintNonZero(MVPP2_V1_TX_PKT_BM_DROP_REG, "MVPP2_V1_TX_PKT_BM_DROP_REG");
-			mvPp2RegPrintNonZero(MVPP2_V1_TX_PKT_BM_MC_DROP_REG, "MVPP2_V1_TX_PKT_BM_MC_DROP_REG");
+			DBG_MSG(
+				"\n------ [Port #%d txp #%d txq #%d counters] -----\n",
+				port, txp, q);
+			mvPp2WrReg(MVPP2_V1_CNT_IDX_REG, TX_CNT_IDX(port,
+				txp, q));
+			mvPp2RegPrintNonZero(MVPP2_V1_TX_PKT_FULLQ_DROP_REG,
+				"MVPP2_V1_TX_PKT_FULLQ_DROP_REG");
+			mvPp2RegPrintNonZero(MVPP2_V1_TX_PKT_EARLY_DROP_REG,
+				"MVPP2_V1_TX_PKT_EARLY_DROP_REG");
+			mvPp2RegPrintNonZero(MVPP2_V1_TX_PKT_BM_DROP_REG,
+				"MVPP2_V1_TX_PKT_BM_DROP_REG");
+			mvPp2RegPrintNonZero(MVPP2_V1_TX_PKT_BM_MC_DROP_REG,
+				"MVPP2_V1_TX_PKT_BM_MC_DROP_REG");
 		}
 	}
 
 	for (q = 0; q < CONFIG_MVPP2_RXQ; q++) {
-		printk("\n------ [Port #%d, rxq #%d counters] -----\n", port, q);
+		DBG_MSG("\n------ [Port #%d, rxq #%d counters] -----\n",
+			port, q);
 		phyRxq = mvPp2LogicRxqToPhysRxq(port, q);
 		mvPp2WrReg(MVPP2_V1_CNT_IDX_REG, phyRxq);
-		mvPp2RegPrintNonZero(MVPP2_V1_RX_PKT_FULLQ_DROP_REG, "MVPP2_V1_RX_PKT_FULLQ_DROP_REG");
-		mvPp2RegPrintNonZero(MVPP2_V1_RX_PKT_EARLY_DROP_REG, "MVPP2_V1_RX_PKT_EARLY_DROP_REG");
-		mvPp2RegPrintNonZero(MVPP2_V1_RX_PKT_BM_DROP_REG, "MVPP2_V1_RX_PKT_BM_DROP_REG");
+		mvPp2RegPrintNonZero(MVPP2_V1_RX_PKT_FULLQ_DROP_REG,
+			"MVPP2_V1_RX_PKT_FULLQ_DROP_REG");
+		mvPp2RegPrintNonZero(MVPP2_V1_RX_PKT_EARLY_DROP_REG,
+			"MVPP2_V1_RX_PKT_EARLY_DROP_REG");
+		mvPp2RegPrintNonZero(MVPP2_V1_RX_PKT_BM_DROP_REG,
+			"MVPP2_V1_RX_PKT_BM_DROP_REG");
 	}
 }
 
@@ -1101,12 +1283,16 @@ void mvPp2V1RxqDbgCntrs(struct mvpp2 *priv, int port, int rxq)
 	else
 		return;
 
-	printk("\n------ [Port #%d, rxq #%d counters] -----\n", port, rxq);
+	DBG_MSG("\n------ [Port #%d, rxq #%d counters] -----\n", port, rxq);
 	mvpp2_write(hw, MVPP2_CNT_IDX_REG, phy_rxq);
-	mvpp2_print_reg(hw, MVPP2_RX_PKT_FULLQ_DROP_REG, "MV_PP2_RX_PKT_FULLQ_DROP_REG");
-	mvpp2_print_reg(hw, MVPP2_RX_PKT_EARLY_DROP_REG, "MVPP2_V1_RX_PKT_EARLY_DROP_REG");
-	mvpp2_print_reg(hw, MVPP2_RX_PKT_BM_DROP_REG, "MVPP2_V1_RX_PKT_BM_DROP_REG");
-	mvpp2_print_reg(hw, MVPP2_RX_DESC_ENQ_REG, "MVPP2_V1_RX_DESC_ENQ_REG");
+	mvpp2_print_reg(hw, MVPP2_RX_PKT_FULLQ_DROP_REG,
+			"MV_PP2_RX_PKT_FULLQ_DROP_REG");
+	mvpp2_print_reg(hw, MVPP2_RX_PKT_EARLY_DROP_REG,
+			"MVPP2_V1_RX_PKT_EARLY_DROP_REG");
+	mvpp2_print_reg(hw, MVPP2_RX_PKT_BM_DROP_REG,
+			"MVPP2_V1_RX_PKT_BM_DROP_REG");
+	mvpp2_print_reg(hw, MVPP2_RX_DESC_ENQ_REG,
+			"MVPP2_V1_RX_DESC_ENQ_REG");
 }
 EXPORT_SYMBOL(mvPp2V1RxqDbgCntrs);
 
@@ -1114,11 +1300,14 @@ EXPORT_SYMBOL(mvPp2V1RxqDbgCntrs);
 
 void mvPp2RxFifoRegs(struct mvpp2_hw *hw, int port)
 {
-	printk("\n[Port #%d RX Fifo]\n", port);
-	mvpp2_print_reg(hw, MVPP2_RX_DATA_FIFO_SIZE_REG(port), "MVPP2_RX_DATA_FIFO_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_RX_ATTR_FIFO_SIZE_REG(port), "MVPP2_RX_ATTR_FIFO_SIZE_REG");
-	printk("\n[Global RX Fifo regs]\n");
-	mvpp2_print_reg(hw, MVPP2_RX_MIN_PKT_SIZE_REG, "MVPP2_RX_MIN_PKT_SIZE_REG");
+	DBG_MSG("\n[Port #%d RX Fifo]\n", port);
+	mvpp2_print_reg(hw, MVPP2_RX_DATA_FIFO_SIZE_REG(port),
+			"MVPP2_RX_DATA_FIFO_SIZE_REG");
+	mvpp2_print_reg(hw, MVPP2_RX_ATTR_FIFO_SIZE_REG(port),
+			"MVPP2_RX_ATTR_FIFO_SIZE_REG");
+	DBG_MSG("\n[Global RX Fifo regs]\n");
+	mvpp2_print_reg(hw, MVPP2_RX_MIN_PKT_SIZE_REG,
+			"MVPP2_RX_MIN_PKT_SIZE_REG");
 }
 EXPORT_SYMBOL(mvPp2RxFifoRegs);
 
@@ -1128,7 +1317,7 @@ void mvPp2PortStatus(struct mvpp2_hw *hw, int port)
 {
 	int i, txp, txq;
 	MV_ETH_PORT_STATUS	link;
-	MVPP2_PORT_CTRL 	*pPortCtrl;
+	MVPP2_PORT_CTRL		*pPortCtrl;
 
 	if (mvPp2PortCheck(port))
 		return;
@@ -1137,79 +1326,91 @@ void mvPp2PortStatus(struct mvpp2_hw *hw, int port)
 	if (!pPortCtrl)
 		return;
 
-	printk("\n[RXQ mapping: port=%d, ctrl=%p]\n", port, pPortCtrl);
+	DBG_MSG("\n[RXQ mapping: port=%d, ctrl=%p]\n", port, pPortCtrl);
 	if (pPortCtrl->pRxQueue) {
-		printk("         RXQ: ");
+		DBG_MSG("         RXQ: ");
 		for (i = 0; i < pPortCtrl->rxqNum; i++)
-			printk(" %4d", i);
+			DBG_MSG(" %4d", i);
 
-		printk("\nphysical RXQ: ");
+		DBG_MSG("\nphysical RXQ: ");
 		for (i = 0; i < pPortCtrl->rxqNum; i++) {
 			if (pPortCtrl->pRxQueue[i])
-				printk(" %4d", pPortCtrl->pRxQueue[i]->rxq);
+				DBG_MSG(" %4d", pPortCtrl->pRxQueue[i]->rxq);
 			else
-				printk(" NULL");
+				DBG_MSG(" NULL");
 		}
-		printk("\n");
+		DBG_MSG("\n");
 	}
 
-	printk("\n[BM queue to Qset mapping]\n");
+	DBG_MSG("\n[BM queue to Qset mapping]\n");
 	if (pPortCtrl->pRxQueue) {
-		printk("       RXQ: ");
+		DBG_MSG("       RXQ: ");
 		for (i = 0; i < pPortCtrl->rxqNum; i++)
-			printk(" %4d", i);
+			DBG_MSG(" %4d", i);
 
-		printk("\n long Qset: ");
+		DBG_MSG("\n long Qset: ");
 		for (i = 0; i < pPortCtrl->rxqNum; i++)
-			printk(" %4d", mvBmRxqToQsetLongGet(mvPp2LogicRxqToPhysRxq(port, i)));
+			DBG_MSG(" %4d",
+				mvBmRxqToQsetLongGet(
+					mvPp2LogicRxqToPhysRxq(port, i)));
 
-		printk("\nshort Qset: ");
+		DBG_MSG("\nshort Qset: ");
 		for (i = 0; i < pPortCtrl->rxqNum; i++)
-			printk(" %4d", mvBmRxqToQsetShortGet(mvPp2LogicRxqToPhysRxq(port, i)));
+			DBG_MSG(" %4d",
+				mvBmRxqToQsetShortGet(
+					mvPp2LogicRxqToPhysRxq(port, i)));
 
-		printk("\n");
+		DBG_MSG("\n");
 	}
 	if (pPortCtrl->pTxQueue) {
 		for (txp = 0; txp < pPortCtrl->txpNum; txp++) {
-			printk("\nTXP %2d, TXQ:", txp);
+			DBG_MSG("\nTXP %2d, TXQ:", txp);
 			for (txq = 0; txq < pPortCtrl->txqNum; txq++)
-				printk(" %4d", txq);
+				DBG_MSG(" %4d", txq);
 
-			printk("\n long Qset: ");
+			DBG_MSG("\n long Qset: ");
 			for (txq = 0; txq < pPortCtrl->txqNum; txq++)
-				printk(" %4d", mvBmTxqToQsetLongGet(MV_PPV2_TXQ_PHYS(port, txp, txq)));
+				DBG_MSG(" %4d",
+					mvBmTxqToQsetLongGet(
+					MV_PPV2_TXQ_PHYS(port, txp, txq)));
 
-			printk("\nshort Qset: ");
+			DBG_MSG("\nshort Qset: ");
 			for (txq = 0; txq < pPortCtrl->txqNum; txq++)
-				printk(" %4d", mvBmTxqToQsetShortGet(MV_PPV2_TXQ_PHYS(port, txp, txq)));
+				DBG_MSG(" %4d",
+					mvBmTxqToQsetShortGet(
+					MV_PPV2_TXQ_PHYS(port, txp, txq)));
 
-			printk("\n");
+			DBG_MSG("\n");
 		}
 	}
 
-	printk("\n[Link: port=%d, ctrl=%p]\n", port, pPortCtrl);
+	DBG_MSG("\n[Link: port=%d, ctrl=%p]\n", port, pPortCtrl);
 
 	if (!MVPP2_IS_PON_PORT(port)) {
 
 		mvGmacLinkStatus(port, &link);
 
 		if (link.linkup) {
-			printk("link up");
-			printk(", %s duplex", (link.duplex == MV_ETH_DUPLEX_FULL) ? "full" : "half");
-			printk(", speed ");
+			DBG_MSG("link up");
+			DBG_MSG(", %s duplex",
+				(link.duplex == MV_ETH_DUPLEX_FULL) ?
+					"full" : "half");
+			DBG_MSG(", speed ");
 
 			if (link.speed == MV_ETH_SPEED_1000)
-				printk("1 Gbps\n");
+				DBG_MSG("1 Gbps\n");
 			else if (link.speed == MV_ETH_SPEED_100)
-				printk("100 Mbps\n");
+				DBG_MSG("100 Mbps\n");
 			else
-				printk("10 Mbps\n");
+				DBG_MSG("10 Mbps\n");
 
-			printk("rxFC - %s, txFC - %s\n",
-				(link.rxFc == MV_ETH_FC_DISABLE) ? "disabled" : "enabled",
-				(link.txFc == MV_ETH_FC_DISABLE) ? "disabled" : "enabled");
+			DBG_MSG("rxFC - %s, txFC - %s\n",
+				(link.rxFc == MV_ETH_FC_DISABLE) ?
+					"disabled" : "enabled",
+				(link.txFc == MV_ETH_FC_DISABLE) ?
+					"disabled" : "enabled");
 		} else
-			printk("link down\n");
+			DBG_MSG("link down\n");
 	}
 }
 #endif
@@ -1251,57 +1452,72 @@ void mvpp2_rx_desc_print(struct mvpp2 *priv, struct mvpp2_rx_desc *desc)
 	int i;
 	u32 *words = (u32 *) desc;
 
-	printk("RX desc - %p: ", desc);
+	DBG_MSG("RX desc - %p: ", desc);
 	for (i = 0; i < 8; i++)
-		printk("%8.8x ", *words++);
-	printk("\n");
+		DBG_MSG("%8.8x ", *words++);
+	DBG_MSG("\n");
 
-	printk("pkt_size=%d, L3_offs=%d, IP_hlen=%d, ",
+	DBG_MSG("pkt_size=%d, L3_offs=%d, IP_hlen=%d, ",
 	       desc->data_size,
-	       (desc->status & MVPP2_RXD_L3_OFFSET_MASK) >> MVPP2_RXD_L3_OFFSET_OFFS,
-	       (desc->status & MVPP2_RXD_IP_HLEN_MASK) >> MVPP2_RXD_IP_HLEN_OFFS);
+	       (desc->status & MVPP2_RXD_L3_OFFSET_MASK) >>
+			MVPP2_RXD_L3_OFFSET_OFFS,
+	       (desc->status & MVPP2_RXD_IP_HLEN_MASK) >>
+			MVPP2_RXD_IP_HLEN_OFFS);
 
-	printk("L2=%s, ",
-		mvpp2_prs_l2_info_str((desc->rsrvd_parser & MVPP2_RXD_L2_CAST_MASK) >> MVPP2_RXD_L2_CAST_OFFS));
+	DBG_MSG("L2=%s, ",
+		mvpp2_prs_l2_info_str((desc->rsrvd_parser &
+			MVPP2_RXD_L2_CAST_MASK) >> MVPP2_RXD_L2_CAST_OFFS));
 
-	printk("VLAN=");
-	printk("%s, ",
-		mvpp2_prs_vlan_info_str((desc->rsrvd_parser & MVPP2_RXD_VLAN_INFO_MASK) >> MVPP2_RXD_VLAN_INFO_OFFS));
+	DBG_MSG("VLAN=");
+	DBG_MSG("%s, ",
+		mvpp2_prs_vlan_info_str((desc->rsrvd_parser &
+			MVPP2_RXD_VLAN_INFO_MASK) >> MVPP2_RXD_VLAN_INFO_OFFS));
 
-	printk("L3=");
+	DBG_MSG("L3=");
 	if (MVPP2_RXD_L3_IS_IP4(desc->status))
-		printk("IPv4 (hdr=%s), ", MVPP2_RXD_IP4_HDR_ERR(desc->status) ? "bad" : "ok");
+		DBG_MSG("IPv4 (hdr=%s), ",
+			MVPP2_RXD_IP4_HDR_ERR(desc->status) ? "bad" : "ok");
 	else if (MVPP2_RXD_L3_IS_IP4_OPT(desc->status))
-		printk("IPv4 Options (hdr=%s), ", MVPP2_RXD_IP4_HDR_ERR(desc->status) ? "bad" : "ok");
+		DBG_MSG("IPv4 Options (hdr=%s), ",
+			MVPP2_RXD_IP4_HDR_ERR(desc->status) ? "bad" : "ok");
 	else if (MVPP2_RXD_L3_IS_IP4_OTHER(desc->status))
-		printk("IPv4 Other (hdr=%s), ", MVPP2_RXD_IP4_HDR_ERR(desc->status) ? "bad" : "ok");
+		DBG_MSG("IPv4 Other (hdr=%s), ",
+			MVPP2_RXD_IP4_HDR_ERR(desc->status) ? "bad" : "ok");
 	else if (MVPP2_RXD_L3_IS_IP6(desc->status))
-		printk("IPv6, ");
+		DBG_MSG("IPv6, ");
 	else if (MVPP2_RXD_L3_IS_IP6_EXT(desc->status))
-		printk("IPv6 Ext, ");
+		DBG_MSG("IPv6 Ext, ");
 	else
-		printk("Unknown, ");
+		DBG_MSG("Unknown, ");
 
 	if (desc->status & MVPP2_RXD_IP_FRAG_MASK)
-		printk("Frag, ");
+		DBG_MSG("Frag, ");
 
-	printk("L4=");
+	DBG_MSG("L4=");
 	if (MVPP2_RXD_L4_IS_TCP(desc->status))
-		printk("TCP (csum=%s)", (desc->status & MVPP2_RXD_L4_CHK_OK_MASK) ? "Ok" : "Bad");
+		DBG_MSG("TCP (csum=%s)", (desc->status &
+			MVPP2_RXD_L4_CHK_OK_MASK) ? "Ok" : "Bad");
 	else if (MVPP2_RXD_L4_IS_UDP(desc->status))
-		printk("UDP (csum=%s)", (desc->status & MVPP2_RXD_L4_CHK_OK_MASK) ? "Ok" : "Bad");
+		DBG_MSG("UDP (csum=%s)", (desc->status &
+			MVPP2_RXD_L4_CHK_OK_MASK) ? "Ok" : "Bad");
 	else
-		printk("Unknown");
+		DBG_MSG("Unknown");
 
-	printk("\n");
+	DBG_MSG("\n");
 
-	printk("Lookup_ID=0x%x, cpu_code=0x%x\n",
-		(desc->rsrvd_parser & MVPP2_RXD_LKP_ID_MASK) >> MVPP2_RXD_LKP_ID_OFFS,
-		(desc->rsrvd_parser & MVPP2_RXD_CPU_CODE_MASK) >> MVPP2_RXD_CPU_CODE_OFFS);
+	DBG_MSG("Lookup_ID=0x%x, cpu_code=0x%x\n",
+		(desc->rsrvd_parser &
+			MVPP2_RXD_LKP_ID_MASK) >> MVPP2_RXD_LKP_ID_OFFS,
+		(desc->rsrvd_parser &
+			MVPP2_RXD_CPU_CODE_MASK) >> MVPP2_RXD_CPU_CODE_OFFS);
 
 	if (priv->pp2_version == PPV22) {
-		printk("buf_phys_addr = 0x%llx\n", desc->u.pp22.buf_phys_addr_key_hash & DMA_BIT_MASK(40));
-		printk("buf_virt_addr = 0x%llx\n", desc->u.pp22.buf_cookie_bm_qset_cls_info & DMA_BIT_MASK(40));
+		DBG_MSG("buf_phys_addr = 0x%llx\n",
+			desc->u.pp22.buf_phys_addr_key_hash &
+			DMA_BIT_MASK(40));
+		DBG_MSG("buf_virt_addr = 0x%llx\n",
+			desc->u.pp22.buf_cookie_bm_qset_cls_info &
+			DMA_BIT_MASK(40));
 	}
 }
 
@@ -1314,40 +1530,45 @@ void mvpp2_skb_dump(struct sk_buff *skb, int size, int access)
 	void *addr = skb->head + NET_SKB_PAD;
 	uintptr_t memAddr = (uintptr_t)addr;
 
-	printk("skb=%p, buf=%p, ksize=%d\n", skb, skb->head, (int)ksize(skb->head));
+	DBG_MSG("skb=%p, buf=%p, ksize=%d\n", skb, skb->head,
+			(int)ksize(skb->head));
 
 	if (access == 0)
 		access = 1;
 
 	if ((access != 4) && (access != 2) && (access != 1)) {
-		printk("%d wrong access size. Access must be 1 or 2 or 4\n", access);
+		DBG_MSG("%d wrong access size. Access must be 1 or 2 or 4\n",
+				access);
 		return;
 	}
 	memAddr = MV_ALIGN_DOWN((uintptr_t)addr, 4);
 	size = MV_ALIGN_UP(size, 4);
 	addr = (void *)MV_ALIGN_DOWN((uintptr_t)addr, access);
 	while (size > 0) {
-		printk("%08lx: ", memAddr);
+		DBG_MSG("%08lx: ", memAddr);
 		i = 0;
 		/* 32 bytes in the line */
 		while (i < 32) {
 			if (memAddr >= (uintptr_t)addr) {
 				switch (access) {
 				case 1:
-					printk("%02x ", MV_MEMIO8_READ(memAddr));
+					DBG_MSG("%02x ",
+						MV_MEMIO8_READ(memAddr));
 					break;
 
 				case 2:
-					printk("%04x ", MV_MEMIO16_READ(memAddr));
+					DBG_MSG("%04x ",
+						MV_MEMIO16_READ(memAddr));
 					break;
 
 				case 4:
-					printk("%08x ", MV_MEMIO32_READ(memAddr));
+					DBG_MSG("%08x ",
+						MV_MEMIO32_READ(memAddr));
 					break;
 				}
 			} else {
 				for (j = 0; j < (access * 2 + 1); j++)
-					printk(" ");
+					DBG_MSG(" ");
 			}
 			i += access;
 			memAddr += access;
@@ -1355,12 +1576,13 @@ void mvpp2_skb_dump(struct sk_buff *skb, int size, int access)
 			if (size <= 0)
 				break;
 		}
-		printk("\n");
+		DBG_MSG("\n");
 	}
 }
 
 /* Wrap the API just for debug */
-int mvpp2_wrap_cos_mode_set(struct mvpp2_port *port, enum mvpp2_cos_classifier cos_mode)
+int mvpp2_wrap_cos_mode_set(struct mvpp2_port *port,
+		enum mvpp2_cos_classifier cos_mode)
 {
 	return mvpp2_cos_classifier_set(port, cos_mode);
 }
@@ -1417,7 +1639,8 @@ int mvpp2_port_bind_cpu_set(struct mvpp2_port *port, u8 bind_cpu)
 	u8 bound_cpu_first_rxq;
 
 	if (port->priv->pp2_cfg.rss_cfg.rss_en) {
-		netdev_err(port->dev, "cannot bind cpu to port when rss is enabled\n");
+		netdev_err(port->dev,
+			"cannot bind cpu to port when rss is enabled\n");
 		return -EINVAL;
 	}
 
@@ -1427,9 +1650,11 @@ int mvpp2_port_bind_cpu_set(struct mvpp2_port *port, u8 bind_cpu)
 	}
 
 	/* Check original cpu and new cpu is same or not */
-	if (bind_cpu != ((port->priv->pp2_cfg.rx_cpu_map >> (port->id * 4)) & 0xF)) {
+	if (bind_cpu != ((port->priv->pp2_cfg.rx_cpu_map >> (port->id * 4)) &
+			0xF)) {
 		port->priv->pp2_cfg.rx_cpu_map &= (~(0xF << (port->id * 4)));
-		port->priv->pp2_cfg.rx_cpu_map |= ((bind_cpu & 0xF) << (port->id * 4));
+		port->priv->pp2_cfg.rx_cpu_map |= ((bind_cpu & 0xF) <<
+			(port->id * 4));
 		bound_cpu_first_rxq = mvpp2_bound_cpu_first_rxq_calc(port);
 		ret = mvpp2_cls_c2_rule_set(port, bound_cpu_first_rxq);
 	}
@@ -1442,21 +1667,25 @@ static void mvpp2_bm_queue_map_dump(struct mvpp2_hw *hw, int queue)
 {
 	unsigned int regVal, shortQset, longQset;
 
-	printk("-------- queue #%d --------\n", queue);
+	DBG_MSG("-------- queue #%d --------\n", queue);
 
 	mvpp2_write(hw, MVPP2_BM_PRIO_IDX_REG, queue);
 	regVal = mvpp2_read(hw, MVPP2_BM_CPU_QSET_REG);
 
-	shortQset = ((regVal & (MVPP2_BM_CPU_SHORT_QSET_MASK)) >> MVPP2_BM_CPU_SHORT_QSET_OFFS);
-	longQset = ((regVal & (MVPP2_BM_CPU_LONG_QSET_MASK)) >> MVPP2_BM_CPU_LONG_QSET_OFFS);
-	printk("CPU SHORT QSET = 0x%02x\n", shortQset);
-	printk("CPU LONG QSET  = 0x%02x\n", longQset);
+	shortQset = ((regVal & (MVPP2_BM_CPU_SHORT_QSET_MASK)) >>
+			MVPP2_BM_CPU_SHORT_QSET_OFFS);
+	longQset = ((regVal & (MVPP2_BM_CPU_LONG_QSET_MASK)) >>
+			MVPP2_BM_CPU_LONG_QSET_OFFS);
+	DBG_MSG("CPU SHORT QSET = 0x%02x\n", shortQset);
+	DBG_MSG("CPU LONG QSET  = 0x%02x\n", longQset);
 
 	regVal = mvpp2_read(hw, MVPP2_BM_HWF_QSET_REG);
-	shortQset = ((regVal & (MVPP2_BM_HWF_SHORT_QSET_MASK)) >> MVPP2_BM_HWF_SHORT_QSET_OFFS);
-	longQset = ((regVal & (MVPP2_BM_HWF_LONG_QSET_MASK)) >> MVPP2_BM_HWF_LONG_QSET_OFFS);
-	printk("HWF SHORT QSET = 0x%02x\n", shortQset);
-	printk("HWF LONG QSET  = 0x%02x\n", longQset);
+	shortQset = ((regVal & (MVPP2_BM_HWF_SHORT_QSET_MASK)) >>
+			MVPP2_BM_HWF_SHORT_QSET_OFFS);
+	longQset = ((regVal & (MVPP2_BM_HWF_LONG_QSET_MASK)) >>
+			MVPP2_BM_HWF_LONG_QSET_OFFS);
+	DBG_MSG("HWF SHORT QSET = 0x%02x\n", shortQset);
+	DBG_MSG("HWF LONG QSET  = 0x%02x\n", longQset);
 }
 
 static bool mvpp2_bm_priority_en(struct mvpp2_hw *hw)
@@ -1469,7 +1698,7 @@ void mvpp2_bm_queue_map_dump_all(struct mvpp2_hw *hw)
 	int queue;
 
 	if (!mvpp2_bm_priority_en(hw))
-		printk("Note: The buffers priority algorithms is disabled.\n");
+		DBG_MSG("Note: The buffers priority algorithms is disabled.\n");
 
 	for (queue = 0; queue <= MVPP2_BM_PRIO_IDX_MAX; queue++)
 		mvpp2_bm_queue_map_dump(hw, queue);
@@ -1510,15 +1739,18 @@ int mvpp2_cls_c2_qos_color_set(struct mvpp2_cls_c2_qos_entry *qos, u8 color)
 }
 EXPORT_SYMBOL(mvpp2_cls_c2_qos_color_set);
 
-int mvpp2_cls_c2_queue_set(struct mvpp2_cls_c2_entry *c2, int cmd, int queue, int from)
+int mvpp2_cls_c2_queue_set(struct mvpp2_cls_c2_entry *c2, int cmd,
+		int queue, int from)
 {
 	int status = 0;
 	int qHigh, qLow;
 
 	/* cmd validation in set functions */
 
-	qHigh = (queue & MVPP2_CLS2_ACT_QOS_ATTR_QH_MASK) >> MVPP2_CLS2_ACT_QOS_ATTR_QH_OFF;
-	qLow = (queue & MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK) >> MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF;
+	qHigh = (queue & MVPP2_CLS2_ACT_QOS_ATTR_QH_MASK) >>
+			MVPP2_CLS2_ACT_QOS_ATTR_QH_OFF;
+	qLow = (queue & MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK) >>
+			MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF;
 
 	status |= mvpp2_cls_c2_queue_low_set(c2, cmd, qLow, from);
 	status |= mvpp2_cls_c2_queue_high_set(c2, cmd, qHigh, from);
@@ -1530,10 +1762,12 @@ EXPORT_SYMBOL(mvpp2_cls_c2_queue_set);
 int mvpp2_cls_c2_mtu_set(struct mvpp2_cls_c2_entry *c2, int mtu_inx)
 {
 	PTR_VALIDATE(c2);
-	POS_RANGE_VALIDATE(mtu_inx, (1 << MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_BITS) - 1);
+	POS_RANGE_VALIDATE(mtu_inx, (1 <<
+			MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_BITS) - 1);
 
 	c2->sram.regs.hwf_attr &= ~MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_MASK;
-	c2->sram.regs.hwf_attr |= (mtu_inx << MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_OFF);
+	c2->sram.regs.hwf_attr |= (mtu_inx <<
+			MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_OFF);
 
 	return MV_OK;
 }
@@ -1545,4 +1779,583 @@ int mvpp2_debug_param_set(u32 param)
 	return 0;
 }
 EXPORT_SYMBOL(mvpp2_debug_param_set);
+
+
+static int mvpp2_prs_hw_tcam_cnt_dump(struct mvpp2_hw *hw,
+		int tid, unsigned int *cnt)
+{
+	unsigned int regVal;
+
+	POS_RANGE_VALIDATE(tid, MVPP2_PRS_TCAM_SRAM_SIZE - 1);
+
+	/* write index */
+	mvpp2_write(hw, MVPP2_PRS_TCAM_HIT_IDX_REG, tid);
+
+	regVal = mvpp2_read(hw, MVPP2_PRS_TCAM_HIT_CNT_REG);
+	regVal &= MVPP2_PRS_TCAM_HIT_CNT_MASK;
+
+	if (cnt)
+		*cnt = regVal;
+	else
+		DBG_MSG("HIT COUNTER: %d\n", regVal);
+
+	return MV_OK;
+}
+
+
+static int mvpp2_prs_sw_sram_ri_dump(struct mvpp2_prs_entry *pe)
+{
+	unsigned int data, mask;
+	int i, bitsOffs = 0;
+	char bits[100];
+
+	PTR_VALIDATE(pe);
+
+	mvpp2_prs_sw_sram_ri_get(pe, &data, &mask);
+	if (mask == 0)
+		return 0;
+
+	DBG_MSG("\n       ");
+
+	DBG_MSG("S_RI=");
+	for (i = (MVPP2_PRS_SRAM_RI_CTRL_BITS-1); i > -1 ; i--)
+		if (mask & (1 << i)) {
+			DBG_MSG("%d", ((data & (1 << i)) != 0));
+			bitsOffs += sprintf(bits + bitsOffs, "%d:", i);
+		} else
+			DBG_MSG("x");
+
+	bits[bitsOffs] = '\0';
+	DBG_MSG(" %s", bits);
+
+	return 0;
+}
+
+static int mvpp2_prs_sw_sram_ai_dump(struct mvpp2_prs_entry *pe)
+{
+	int i, bitsOffs = 0;
+	unsigned int data, mask;
+	char bits[30];
+
+	PTR_VALIDATE(pe);
+
+	mvpp2_prs_sw_sram_ai_get(pe, &data, &mask);
+
+	if (mask == 0)
+		return 0;
+
+	DBG_MSG("\n       ");
+
+	DBG_MSG("S_AI=");
+	for (i = (MVPP2_PRS_SRAM_AI_CTRL_BITS-1); i > -1 ; i--)
+		if (mask & (1 << i)) {
+			DBG_MSG("%d", ((data & (1 << i)) != 0));
+			bitsOffs += sprintf(bits + bitsOffs, "%d:", i);
+		} else
+			DBG_MSG("x");
+	bits[bitsOffs] = '\0';
+	DBG_MSG(" %s", bits);
+	return 0;
+}
+
+
+int mvpp2_prs_sw_dump(struct mvpp2_prs_entry *pe)
+{
+	u32 op, type, lu, done, flowid;
+	int	shift, offset, i;
+
+	PTR_VALIDATE(pe);
+
+	/* hw entry id */
+	DBG_MSG("[%4d] ", pe->index);
+
+	i = MVPP2_PRS_TCAM_WORDS - 1;
+	DBG_MSG("%1.1x ", pe->tcam.word[i--] & 0xF);
+
+	while (i >= 0)
+		DBG_MSG("%4.4x ", (pe->tcam.word[i--]) & 0xFFFF);
+
+	DBG_MSG("| ");
+
+	//DBG_MSG(PRS_SRAM_FMT, PRS_SRAM_VAL(pe->sram.word));
+	DBG_MSG("%4.4x %8.8x %8.8x %8.8x", pe->sram.word[3] & 0xFFFF,
+		 pe->sram.word[2],  pe->sram.word[1],  pe->sram.word[0]);
+
+	DBG_MSG("\n       ");
+
+	i = MVPP2_PRS_TCAM_WORDS - 1;
+	DBG_MSG("%1.1x ", (pe->tcam.word[i--] >> 16) & 0xF);
+
+	while (i >= 0)
+		DBG_MSG("%4.4x ", ((pe->tcam.word[i--]) >> 16)  & 0xFFFF);
+
+	DBG_MSG("| ");
+
+	mvpp2_prs_sw_sram_shift_get(pe, &shift);
+	DBG_MSG("SH=%d ", shift);
+
+	mvpp2_prs_sw_sram_offset_get(pe, &type, &offset, &op);
+	if (offset != 0 || ((op >> MVPP2_PRS_SRAM_OP_SEL_SHIFT_BITS) != 0))
+		DBG_MSG("UDFT=%u UDFO=%d ", type, offset);
+
+	DBG_MSG("op=%u ", op);
+
+	mvpp2_prs_sw_sram_next_lu_get(pe, &lu);
+	DBG_MSG("LU=%u ", lu);
+
+	mvpp2_prs_sw_sram_lu_done_get(pe, &done);
+	DBG_MSG("%s ", done ? "DONE" : "N_DONE");
+
+	/*flow id generation bit*/
+	mvpp2_prs_sw_sram_flowid_gen_get(pe, &flowid);
+	DBG_MSG("%s ", flowid ? "FIDG" : "N_FIDG");
+
+	(pe->tcam.word[MVPP2_PRS_TCAM_INV_WORD] & MVPP2_PRS_TCAM_INV_MASK) ?
+		DBG_MSG(" [inv]") : 0;
+
+	if (mvpp2_prs_sw_sram_ri_dump(pe))
+		return MV_ERROR;
+
+	if (mvpp2_prs_sw_sram_ai_dump(pe))
+		return MV_ERROR;
+
+	DBG_MSG("\n");
+
+	return 0;
+
+}
+EXPORT_SYMBOL(mvpp2_prs_sw_dump);
+
+int mvpp2_prs_hw_dump(struct mvpp2_hw *hw)
+{
+	int index;
+	struct mvpp2_prs_entry pe;
+
+
+	DBG_MSG("%s\n", __func__);
+
+	for (index = 0; index < MVPP2_PRS_TCAM_SRAM_SIZE; index++) {
+		pe.index = index;
+		mvpp2_prs_hw_read(hw, &pe);
+		if ((pe.tcam.word[MVPP2_PRS_TCAM_INV_WORD] &
+			MVPP2_PRS_TCAM_INV_MASK) ==
+			MVPP2_PRS_TCAM_ENTRY_VALID) {
+			mvpp2_prs_sw_dump(&pe);
+			mvpp2_prs_hw_tcam_cnt_dump(hw, index, NULL);
+			DBG_MSG("-----------------------------------------\n");
+		}
+	}
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_prs_hw_dump);
+
+int mvpp2_prs_hw_regs_dump(struct mvpp2_hw *hw)
+{
+	int i;
+	char reg_name[100];
+
+	mvpp2_print_reg(hw, MVPP2_PRS_INIT_LOOKUP_REG,
+		"MVPP2_PRS_INIT_LOOKUP_REG");
+	mvpp2_print_reg(hw, MVPP2_PRS_INIT_OFFS_REG(0),
+		"MVPP2_PRS_INIT_OFFS_0_3_REG");
+	mvpp2_print_reg(hw, MVPP2_PRS_INIT_OFFS_REG(4),
+		"MVPP2_PRS_INIT_OFFS_4_7_REG");
+	mvpp2_print_reg(hw, MVPP2_PRS_MAX_LOOP_REG(0),
+		"MVPP2_PRS_MAX_LOOP_0_3_REG");
+	mvpp2_print_reg(hw, MVPP2_PRS_MAX_LOOP_REG(4),
+		"MVPP2_PRS_MAX_LOOP_4_7_REG");
+
+	/*mvpp2_print_reg(hw, MVPP2_PRS_INTR_CAUSE_REG,
+		"MVPP2_PRS_INTR_CAUSE_REG");*/
+	/*mvpp2_print_reg(hw, MVPP2_PRS_INTR_MASK_REG,
+		"MVPP2_PRS_INTR_MASK_REG");*/
+	mvpp2_print_reg(hw, MVPP2_PRS_TCAM_IDX_REG,
+		"MVPP2_PRS_TCAM_IDX_REG");
+
+	for (i = 0; i < MVPP2_PRS_TCAM_WORDS; i++) {
+		sprintf(reg_name, "MVPP2_PRS_TCAM_DATA_%d_REG", i);
+		mvpp2_print_reg(hw, MVPP2_PRS_TCAM_DATA_REG(i),
+			reg_name);
+	}
+	mvpp2_print_reg(hw, MVPP2_PRS_SRAM_IDX_REG,
+		"MVPP2_PRS_SRAM_IDX_REG");
+
+	for (i = 0; i < MVPP2_PRS_SRAM_WORDS; i++) {
+		sprintf(reg_name, "MVPP2_PRS_SRAM_DATA_%d_REG", i);
+		mvpp2_print_reg(hw, MVPP2_PRS_SRAM_DATA_REG(i),
+			reg_name);
+	}
+
+	mvpp2_print_reg(hw, MVPP2_PRS_EXP_REG,
+		"MVPP2_PRS_EXP_REG");
+	mvpp2_print_reg(hw, MVPP2_PRS_TCAM_CTRL_REG,
+		"MVPP2_PRS_TCAM_CTRL_REG");
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_prs_hw_regs_dump);
+
+
+int mvpp2_prs_hw_hits_dump(struct mvpp2_hw *hw)
+{
+	int index;
+	unsigned int cnt;
+	struct mvpp2_prs_entry pe;
+
+	for (index = 0; index < MVPP2_PRS_TCAM_SRAM_SIZE; index++) {
+		pe.index = index;
+		mvpp2_prs_hw_read(hw, &pe);
+		if ((pe.tcam.word[MVPP2_PRS_TCAM_INV_WORD] &
+			MVPP2_PRS_TCAM_INV_MASK) ==
+			MVPP2_PRS_TCAM_ENTRY_VALID) {
+			mvpp2_prs_hw_tcam_cnt_dump(hw, index, &cnt);
+			if (cnt == 0)
+				continue;
+			mvpp2_prs_sw_dump(&pe);
+			DBG_MSG("INDEX: %d       HITS: %d\n", index, cnt);
+			DBG_MSG("-----------------------------------------\n");
+		}
+	}
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_prs_hw_hits_dump);
+
+
+int mvPp2ClsC2QosSwDump(struct mvpp2_cls_c2_qos_entry *qos)
+{
+	int int32bit;
+	int status = 0;
+
+	PTR_VALIDATE(qos);
+
+	DBG_MSG(
+	"TABLE	SEL	LINE	PRI	DSCP	COLOR	GEM_ID	QUEUE\n");
+
+	/* table id */
+	DBG_MSG("0x%2.2x\t", qos->tbl_id);
+
+	/* table sel */
+	DBG_MSG("0x%1.1x\t", qos->tbl_sel);
+
+	/* table line */
+	DBG_MSG("0x%2.2x\t", qos->tbl_line);
+
+	/* priority */
+	status |= mvPp2ClsC2QosPrioGet(qos, &int32bit);
+	DBG_MSG("0x%1.1x\t", int32bit);
+
+	/* dscp */
+	status |= mvPp2ClsC2QosDscpGet(qos, &int32bit);
+	DBG_MSG("0x%2.2x\t", int32bit);
+
+	/* color */
+	status |= mvPp2ClsC2QosColorGet(qos, &int32bit);
+	DBG_MSG("0x%1.1x\t", int32bit);
+
+	/* gem port id */
+	status |= mvPp2ClsC2QosGpidGet(qos, &int32bit);
+	DBG_MSG("0x%3.3x\t", int32bit);
+
+	/* queue */
+	status |= mvPp2ClsC2QosQueueGet(qos, &int32bit);
+	DBG_MSG("0x%2.2x", int32bit);
+
+	DBG_MSG("\n");
+
+	return status;
+}
+/*----------------------------------------------------------------------*/
+
+int mvpp2_cls_c2_qos_dscp_hw_dump(struct mvpp2_hw *hw)
+{
+	int tbl_id, tbl_line, int32bit;
+	struct mvpp2_cls_c2_qos_entry qos;
+
+	for (tbl_id = 0; tbl_id < MVPP2_CLS_C2_QOS_DSCP_TBL_NUM; tbl_id++) {
+
+		DBG_MSG("\n------------ DSCP TABLE %d ------------\n", tbl_id);
+		DBG_MSG("LINE	DSCP	COLOR	GEM_ID	QUEUE\n");
+		for (tbl_line = 0; tbl_line < MVPP2_CLS_C2_QOS_DSCP_TBL_SIZE;
+				tbl_line++) {
+			mvpp2_cls_c2_qos_hw_read(hw, tbl_id,
+				1/*DSCP*/, tbl_line, &qos);
+			DBG_MSG("0x%2.2x\t", qos.tbl_line);
+			mvPp2ClsC2QosDscpGet(&qos, &int32bit);
+			DBG_MSG("0x%2.2x\t", int32bit);
+			mvPp2ClsC2QosColorGet(&qos, &int32bit);
+			DBG_MSG("0x%1.1x\t", int32bit);
+			mvPp2ClsC2QosGpidGet(&qos, &int32bit);
+			DBG_MSG("0x%3.3x\t", int32bit);
+			mvPp2ClsC2QosQueueGet(&qos, &int32bit);
+			DBG_MSG("0x%2.2x", int32bit);
+			DBG_MSG("\n");
+		}
+	}
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_qos_dscp_hw_dump);
+
+/*----------------------------------------------------------------------*/
+
+int mvpp2_cls_c2_qos_prio_hw_dump(struct mvpp2_hw *hw)
+{
+	int tbl_id, tbl_line, int32bit;
+
+	struct mvpp2_cls_c2_qos_entry qos;
+
+	for (tbl_id = 0; tbl_id < MVPP2_CLS_C2_QOS_PRIO_TBL_NUM; tbl_id++) {
+
+		DBG_MSG("\n-------- PRIORITY TABLE %d -----------\n", tbl_id);
+		DBG_MSG("LINE	PRIO	COLOR	GEM_ID	QUEUE\n");
+
+		for (tbl_line = 0; tbl_line < MVPP2_CLS_C2_QOS_PRIO_TBL_SIZE;
+				tbl_line++) {
+			mvpp2_cls_c2_qos_hw_read(hw, tbl_id,
+				0/*PRIO*/, tbl_line, &qos);
+			DBG_MSG("0x%2.2x\t", qos.tbl_line);
+			mvPp2ClsC2QosPrioGet(&qos, &int32bit);
+			DBG_MSG("0x%1.1x\t", int32bit);
+			mvPp2ClsC2QosColorGet(&qos, &int32bit);
+			DBG_MSG("0x%1.1x\t", int32bit);
+			mvPp2ClsC2QosGpidGet(&qos, &int32bit);
+			DBG_MSG("0x%3.3x\t", int32bit);
+			mvPp2ClsC2QosQueueGet(&qos, &int32bit);
+			DBG_MSG("0x%2.2x", int32bit);
+			DBG_MSG("\n");
+		}
+	}
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_qos_prio_hw_dump);
+
+
+/*----------------------------------------------------------------------*/
+
+int mvpp2_cls_c2_sw_dump(struct mvpp2_cls_c2_entry *c2)
+{
+	int id, sel, type, gemid, low_q, high_q, color, int32bit;
+
+	PTR_VALIDATE(c2);
+
+	mvpp2_cls_c2_sw_words_dump(c2);
+	DBG_MSG("\n");
+
+	/*------------------------------*/
+	/*	action_tbl 0x1B30	*/
+	/*------------------------------*/
+
+	id =  ((c2->sram.regs.action_tbl &
+		(MVPP2_CLS2_ACT_DATA_TBL_ID_MASK)) >>
+		MVPP2_CLS2_ACT_DATA_TBL_ID_OFF);
+	sel =  ((c2->sram.regs.action_tbl &
+		(MVPP2_CLS2_ACT_DATA_TBL_SEL_MASK)) >>
+		MVPP2_CLS2_ACT_DATA_TBL_SEL_OFF);
+	type =	((c2->sram.regs.action_tbl &
+		(MVPP2_CLS2_ACT_DATA_TBL_PRI_DSCP_MASK)) >>
+		MVPP2_CLS2_ACT_DATA_TBL_PRI_DSCP_OFF);
+	gemid = ((c2->sram.regs.action_tbl &
+		(MVPP2_CLS2_ACT_DATA_TBL_GEM_ID_MASK)) >>
+		MVPP2_CLS2_ACT_DATA_TBL_GEM_ID_OFF);
+	low_q = ((c2->sram.regs.action_tbl &
+		(MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_MASK)) >>
+		MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_OFF);
+	high_q = ((c2->sram.regs.action_tbl &
+		(MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_MASK)) >>
+		MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_OFF);
+	color =  ((c2->sram.regs.action_tbl &
+		(MVPP2_CLS2_ACT_DATA_TBL_COLOR_MASK)) >>
+		MVPP2_CLS2_ACT_DATA_TBL_COLOR_OFF);
+
+	DBG_MSG("FROM_QOS_%s_TBL[%2.2d]:  ", sel ? "DSCP" : "PRI", id);
+	type ? DBG_MSG("%s	", sel ? "DSCP" : "PRIO") : 0;
+	color ? DBG_MSG("COLOR	") : 0;
+	gemid ? DBG_MSG("GEMID	") : 0;
+	low_q ? DBG_MSG("LOW_Q	") : 0;
+	high_q ? DBG_MSG("HIGH_Q	") : 0;
+	DBG_MSG("\n");
+
+	DBG_MSG("FROM_ACT_TBL:		");
+	(type == 0) ? DBG_MSG("%s	", sel ? "DSCP" : "PRI") : 0;
+	(gemid == 0) ? DBG_MSG("GEMID	") : 0;
+	(low_q == 0) ? DBG_MSG("LOW_Q	") : 0;
+	(high_q == 0) ? DBG_MSG("HIGH_Q	") : 0;
+	(color == 0) ? DBG_MSG("COLOR	") : 0;
+	DBG_MSG("\n\n");
+
+	/*------------------------------*/
+	/*	actions 0x1B60		*/
+	/*------------------------------*/
+
+	DBG_MSG(
+		"ACT_CMD:	COLOR	PRIO	DSCP	GEMID	LOW_Q	HIGH_Q	FWD	POLICER	FID	RSS\n");
+	DBG_MSG("			");
+
+	DBG_MSG(
+		"%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t",
+		((c2->sram.regs.actions &
+			MVPP2_CLS2_ACT_DATA_TBL_COLOR_MASK) >>
+			MVPP2_CLS2_ACT_DATA_TBL_COLOR_OFF),
+		((c2->sram.regs.actions &
+			MVPP2_CLS2_ACT_PRI_MASK) >>
+			MVPP2_CLS2_ACT_PRI_OFF),
+		((c2->sram.regs.actions &
+			MVPP2_CLS2_ACT_DSCP_MASK) >>
+			MVPP2_CLS2_ACT_DSCP_OFF),
+		((c2->sram.regs.actions &
+			MVPP2_CLS2_ACT_DATA_TBL_GEM_ID_MASK) >>
+			MVPP2_CLS2_ACT_DATA_TBL_GEM_ID_OFF),
+		((c2->sram.regs.actions &
+			MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_MASK) >>
+			MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_OFF),
+		((c2->sram.regs.actions &
+			MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_MASK) >>
+			MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_OFF),
+		((c2->sram.regs.actions &
+			MVPP2_CLS2_ACT_FRWD_MASK) >>
+			MVPP2_CLS2_ACT_FRWD_OFF),
+		((c2->sram.regs.actions &
+			MVPP2_CLS2_ACT_PLCR_MASK) >>
+			MVPP2_CLS2_ACT_PLCR_OFF),
+		((c2->sram.regs.actions &
+			MVPP2_CLS2_ACT_FLD_EN_MASK) >>
+			MVPP2_CLS2_ACT_FLD_EN_OFF),
+		((c2->sram.regs.actions &
+			MVPP2_CLS2_ACT_RSS_MASK) >>
+			MVPP2_CLS2_ACT_RSS_OFF));
+	DBG_MSG("\n\n");
+
+
+	/*------------------------------*/
+	/*	qos_attr 0x1B64		*/
+	/*------------------------------*/
+	DBG_MSG(
+		"ACT_ATTR:		PRIO	DSCP	GEMID	LOW_Q	HIGH_Q	QUEUE\n");
+	DBG_MSG("		");
+	/* modify priority */
+	int32bit =  ((c2->sram.regs.qos_attr &
+		MVPP2_CLS2_ACT_QOS_ATTR_PRI_MASK) >>
+		MVPP2_CLS2_ACT_QOS_ATTR_PRI_OFF);
+	DBG_MSG("	%1.1d\t", int32bit);
+
+	/* modify dscp */
+	int32bit =  ((c2->sram.regs.qos_attr &
+		MVPP2_CLS2_ACT_QOS_ATTR_DSCP_MASK) >>
+		MVPP2_CLS2_ACT_QOS_ATTR_DSCP_OFF);
+	DBG_MSG("0x%2.2d\t", int32bit);
+
+	/* modify gemportid */
+	int32bit =  ((c2->sram.regs.qos_attr &
+		MVPP2_CLS2_ACT_QOS_ATTR_GEM_MASK) >>
+		MVPP2_CLS2_ACT_QOS_ATTR_GEM_OFF);
+	DBG_MSG("0x%4.4x\t", int32bit);
+
+	/* modify low Q */
+	int32bit =  ((c2->sram.regs.qos_attr &
+		MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK) >>
+		MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF);
+	DBG_MSG("0x%1.1d\t", int32bit);
+
+	/* modify high Q */
+	int32bit =  ((c2->sram.regs.qos_attr &
+		MVPP2_CLS2_ACT_QOS_ATTR_QH_MASK) >>
+		MVPP2_CLS2_ACT_QOS_ATTR_QH_OFF);
+	DBG_MSG("0x%2.2x\t", int32bit);
+
+	/*modify queue*/
+	int32bit = ((c2->sram.regs.qos_attr &
+		(MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK |
+		MVPP2_CLS2_ACT_QOS_ATTR_QH_MASK)));
+	int32bit >>= MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF;
+
+	DBG_MSG("0x%2.2x\t", int32bit);
+	DBG_MSG("\n\n");
+
+
+
+	/*------------------------------*/
+	/*	hwf_attr 0x1B68		*/
+	/*------------------------------*/
+	DBG_MSG("HWF_ATTR:		IPTR	DPTR	CHKSM   MTU_IDX\n");
+	DBG_MSG("			");
+
+	/* HWF modification instraction pointer */
+	int32bit =  ((c2->sram.regs.hwf_attr &
+		MVPP2_CLS2_ACT_HWF_ATTR_IPTR_MASK) >>
+		MVPP2_CLS2_ACT_HWF_ATTR_IPTR_OFF);
+	DBG_MSG("0x%1.1x\t", int32bit);
+
+	/* HWF modification data pointer */
+	int32bit =  ((c2->sram.regs.hwf_attr &
+		MVPP2_CLS2_ACT_HWF_ATTR_DPTR_MASK) >>
+		MVPP2_CLS2_ACT_HWF_ATTR_DPTR_OFF);
+	DBG_MSG("0x%4.4x\t", int32bit);
+
+	/* HWF modification instraction pointer */
+	int32bit =  ((c2->sram.regs.hwf_attr &
+		MVPP2_CLS2_ACT_HWF_ATTR_L4CHK_MASK) >>
+		MVPP2_CLS2_ACT_HWF_ATTR_L4CHK_OFF);
+	DBG_MSG("%s\t", int32bit ? "ENABLE " : "DISABLE");
+
+	/* mtu index */
+	int32bit =  ((c2->sram.regs.hwf_attr &
+		MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_MASK) >>
+		MVPP2_CLS2_ACT_HWF_ATTR_MTUIDX_OFF);
+	DBG_MSG("0x%1.1x\t", int32bit);
+	DBG_MSG("\n\n");
+
+	/*------------------------------*/
+	/*	CLSC2_ATTR2 0x1B6C	*/
+	/*------------------------------*/
+	DBG_MSG("RSS_ATTR:		RSS_EN\n");
+	DBG_MSG("			%d\n",
+		((c2->sram.regs.rss_attr &
+			MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_MASK) >>
+			MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_OFF));
+	DBG_MSG("\n");
+
+	/*------------------------------*/
+	/*	seq_attr 0x1B70		*/
+	/*------------------------------*/
+	/*PPv2.1 new feature MAS 3.14*/
+	DBG_MSG("SEQ_ATTR:		ID	MISS\n");
+	DBG_MSG("			0x%2.2x    0x%2.2x\n",
+			((c2->sram.regs.seq_attr &
+				MVPP21_CLS2_ACT_SEQ_ATTR_ID_MASK) >>
+				MVPP21_CLS2_ACT_SEQ_ATTR_ID),
+			((c2->sram.regs.seq_attr &
+				MVPP21_CLS2_ACT_SEQ_ATTR_MISS_MASK) >>
+				MVPP21_CLS2_ACT_SEQ_ATTR_MISS_OFF));
+
+	DBG_MSG("\n\n");
+
+
+	return MV_OK;
+}
+
+/*----------------------------------------------------------------------*/
+int	mvpp2_cls_c2_hw_dump(struct mvpp2_hw *hw)
+{
+	int index;
+	unsigned cnt;
+
+	struct mvpp2_cls_c2_entry c2;
+
+	memset(&c2, 0, sizeof(c2));
+
+	for (index = 0; index < MVPP2_CLS_C2_TCAM_SIZE; index++) {
+		mvpp2_cls_c2_hw_read(hw, index, &c2);
+		if (c2.inv == 0) {
+			mvpp2_cls_c2_sw_dump(&c2);
+			mvpp2_cls_c2_hit_cntr_read(hw, index, &cnt);
+			DBG_MSG("HITS: %d\n", cnt);
+			DBG_MSG("-----------------------------------------\n");
+		}
+	}
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvpp2_cls_c2_hw_dump);
+
+/*----------------------------------------------------------------------*/
 

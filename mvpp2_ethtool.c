@@ -93,133 +93,165 @@
 
 #endif
 
-extern void * mv_pp2_vfpga_address;
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
+extern void *mv_pp2_vfpga_address;
+#endif
+
 
 /* Get settings (phy address, speed) for ethtools */
 static int mvpp2_ethtool_get_settings(struct net_device *dev,
 				      struct ethtool_cmd *cmd)
 {
 	struct mvpp2_port *port = netdev_priv(dev);
+
 #ifdef CONFIG_MV_PP2_FPGA
 	int val;
-	void * addr;
+	void *addr;
 	int port_id = port->id;
 
-	pr_emerg(KERN_EMERG "\n\n\n\nmvpp2_ethtool_get_drvinfo(%d):dev->name=%s port->id=%d\n", __LINE__, dev->name, port->id);
+	pr_emerg("\n\n\n\nmvpp2_ethtool_get_drvinfo(%d):dev->name=%s port->id=%d\n",
+		__LINE__, dev->name, port->id);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_GOOD_FRAMES_SENT;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_GOOD_FRAMES_SENT;
 	val   = readl(addr);
 	pr_emerg("ETH_MIB_GOOD_FRAMES_SENT          =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_GOOD_FRAMES_RECEIVED;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_GOOD_FRAMES_RECEIVED;
 	val   = readl(addr);
 	pr_emerg("ETH_MIB_GOOD_FRAMES_RECEIVED      =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_GOOD_OCTETS_RECEIVED_LOW;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_GOOD_OCTETS_RECEIVED_LOW;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_GOOD_OCTETS_RECEIVED_LOW  =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_GOOD_OCTETS_RECEIVED_HIGH;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_GOOD_OCTETS_RECEIVED_HIGH;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_GOOD_OCTETS_RECEIVED_HIGH =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_BAD_OCTETS_RECEIVED;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_BAD_OCTETS_RECEIVED;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_BAD_OCTETS_RECEIVED       =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_INTERNAL_MAC_TRANSMIT_ERR;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_INTERNAL_MAC_TRANSMIT_ERR;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_INTERNAL_MAC_TRANSMIT_ERR =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_BAD_FRAMES_RECEIVED;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_BAD_FRAMES_RECEIVED;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_BAD_FRAMES_RECEIVED       =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_BROADCAST_FRAMES_RECEIVED;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_BROADCAST_FRAMES_RECEIVED;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_BROADCAST_FRAMES_RECEIVED =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_MULTICAST_FRAMES_RECEIVED;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_MULTICAST_FRAMES_RECEIVED;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_MULTICAST_FRAMES_RECEIVED =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_FRAMES_64_OCTETS;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_FRAMES_64_OCTETS;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_FRAMES_64_OCTETS          =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_GOOD_OCTETS_SENT_LOW;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_GOOD_OCTETS_SENT_LOW;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_GOOD_OCTETS_SENT_LOW      =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_EXCESSIVE_COLLISION;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_EXCESSIVE_COLLISION;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_EXCESSIVE_COLLISION       =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_BROADCAST_FRAMES_SENT;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_BROADCAST_FRAMES_SENT;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_BROADCAST_FRAMES_SENT     =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_UNREC_MAC_CONTROL_RECEIVED;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_UNREC_MAC_CONTROL_RECEIVED;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_UNREC_MAC_CONTROL_RECEIVED=%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_FC_SENT;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_FC_SENT;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_FC_SENT                   =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_GOOD_FC_RECEIVED;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_GOOD_FC_RECEIVED;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_GOOD_FC_RECEIVED          =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_BAD_FC_RECEIVED;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_BAD_FC_RECEIVED;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_BAD_FC_RECEIVED           =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_UNDERSIZE_RECEIVED;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_UNDERSIZE_RECEIVED;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_UNDERSIZE_RECEIVED        =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_OVERSIZE_RECEIVED;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_OVERSIZE_RECEIVED;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_OVERSIZE_RECEIVED         =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_JABBER_RECEIVED;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_JABBER_RECEIVED;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_JABBER_RECEIVED           =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_MAC_RECEIVE_ERROR;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_MAC_RECEIVE_ERROR;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_MAC_RECEIVE_ERROR         =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_BAD_CRC_EVENT;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_BAD_CRC_EVENT;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_BAD_CRC_EVENT             =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_COLLISION;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_COLLISION;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_COLLISION                 =%d  : 0x%p\n", val, addr);
 
-	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) + ETH_MIB_LATE_COLLISION;
+	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
+			ETH_MIB_LATE_COLLISION;
 	val  = readl(addr);
 	pr_emerg("ETH_MIB_LATE_COLLISION            =%d  : 0x%p\n", val, addr);
 
 	val = readl(port->base + 0x10);
-	pr_emerg("print_reg(%d):port_id=%d: [0x%p] = 0x%x\n", __LINE__, port_id, port->base + 0x10, val);
-	return(0);
+	pr_emerg("print_reg(%d):port_id=%d: [0x%p] = 0x%x\n", __LINE__,
+			port_id, port->base + 0x10, val);
+	return 0;
 #else
 	struct mv_port_link_status	status;
-	phy_interface_t 		phy_mode;
+	phy_interface_t			phy_mode;
 
 
-	mv_gop110_mib_counters_show(&port->priv->hw.gop, port->mac_data.gop_index);
+	mv_gop110_mib_counters_show(&port->priv->hw.gop,
+		port->mac_data.gop_index);
 
 	/* No Phy device mngmt */
 	if (!port->mac_data.phy_dev) {
 
-		/*for force link port, RXAUI port and link-down ports, follow old strategy*/
+		/*for force link port, RXAUI port and link-down ports,
+		 * follow old strategy*/
 
-		mv_gop110_port_link_status(&port->priv->hw.gop, &port->mac_data,
-			&status);
+		mv_gop110_port_link_status(&port->priv->hw.gop,
+			&port->mac_data, &status);
 
 		if (status.linkup == true) {
 			switch (status.speed) {
@@ -248,21 +280,28 @@ static int mvpp2_ethtool_get_settings(struct net_device *dev,
 		}
 
 		phy_mode = port->mac_data.phy_mode;
-		if ((phy_mode == PHY_INTERFACE_MODE_XAUI) || (phy_mode == PHY_INTERFACE_MODE_RXAUI)) {
+		if ((phy_mode == PHY_INTERFACE_MODE_XAUI) ||
+			(phy_mode == PHY_INTERFACE_MODE_RXAUI)) {
 			cmd->autoneg = AUTONEG_DISABLE;
-			cmd->supported = (SUPPORTED_10000baseT_Full | SUPPORTED_FIBRE);
-			cmd->advertising = (ADVERTISED_10000baseT_Full | ADVERTISED_FIBRE);
+			cmd->supported = (SUPPORTED_10000baseT_Full |
+				SUPPORTED_FIBRE);
+			cmd->advertising = (ADVERTISED_10000baseT_Full |
+				ADVERTISED_FIBRE);
 			cmd->port = PORT_FIBRE;
 			cmd->transceiver = XCVR_EXTERNAL;
 		} else {
-			cmd->supported = (SUPPORTED_10baseT_Half | SUPPORTED_10baseT_Full | SUPPORTED_100baseT_Half
-			| SUPPORTED_100baseT_Full | SUPPORTED_Autoneg | SUPPORTED_TP | SUPPORTED_MII
-			| SUPPORTED_1000baseT_Full);
+			cmd->supported = (SUPPORTED_10baseT_Half |
+				SUPPORTED_10baseT_Full |
+				SUPPORTED_100baseT_Half	|
+				SUPPORTED_100baseT_Full |
+				SUPPORTED_Autoneg | SUPPORTED_TP |
+				SUPPORTED_MII |	SUPPORTED_1000baseT_Full);
 			cmd->transceiver = XCVR_INTERNAL;
 			cmd->port = PORT_MII;
 
 			/* check if speed and duplex are AN */
-			if (status.speed == MV_PORT_SPEED_AN && status.duplex == MV_PORT_DUPLEX_AN) {
+			if (status.speed == MV_PORT_SPEED_AN &&
+				status.duplex == MV_PORT_DUPLEX_AN) {
 				cmd->lp_advertising = cmd->advertising = 0;
 				cmd->autoneg = AUTONEG_ENABLE;
 			} else
@@ -310,8 +349,8 @@ static int mvpp2_ethtool_set_coalesce(struct net_device *dev,
 	port->tx_time_coal = c->tx_coalesce_usecs;
 	for (queue = 0; queue < port->num_tx_queues; queue++) {
 		struct mvpp2_tx_queue *txq = port->txqs[queue];
-		txq->pkts_coal = c->tx_max_coalesced_frames;
 
+		txq->pkts_coal = c->tx_max_coalesced_frames;
 	}
 	if (port->priv->pp2xdata->interrupt_tx_done == true) {
 		mvpp2_tx_done_time_coal_set(port, port->tx_time_coal);
@@ -422,7 +461,7 @@ static u32 mvpp2_ethtool_get_rxfh_indir_size(struct net_device *dev)
 	return ARRAY_SIZE(port->priv->rx_indir_table);
 }
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,16,0)
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(3, 16, 0)
 static int mvpp2_ethtool_get_rxfh_indir(struct net_device *dev, u32 *indir)
 {
 	size_t copy_size;
@@ -439,7 +478,8 @@ static int mvpp2_ethtool_get_rxfh_indir(struct net_device *dev, u32 *indir)
 	return 0;
 }
 
-static int mvpp2_ethtool_set_rxfh_indir(struct net_device *dev, const u32 *indir)
+static int mvpp2_ethtool_set_rxfh_indir(struct net_device *dev,
+		const u32 *indir)
 {
 	int i;
 	int err;
@@ -461,7 +501,8 @@ static int mvpp2_ethtool_set_rxfh_indir(struct net_device *dev, const u32 *indir
 }
 #endif
 
-static int mvpp2_ethtool_get_rxnfc(struct net_device *dev, struct ethtool_rxnfc *info, u32 *rules)
+static int mvpp2_ethtool_get_rxnfc(struct net_device *dev,
+		struct ethtool_rxnfc *info, u32 *rules)
 {
 	struct mvpp2_port *port = netdev_priv(dev);
 
@@ -486,7 +527,7 @@ static const struct ethtool_ops mvpp2_eth_tool_ops = {
 	.set_ringparam		= mvpp2_ethtool_set_ringparam,
 	/* For rxfh relevant command, only support LK-3.18 */
 	.get_rxfh_indir_size	= mvpp2_ethtool_get_rxfh_indir_size,
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,16,0)
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(3, 16, 0)
 	.get_rxfh_indir		= mvpp2_ethtool_get_rxfh_indir,
 	.set_rxfh_indir		= mvpp2_ethtool_set_rxfh_indir,
 #endif
