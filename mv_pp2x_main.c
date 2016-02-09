@@ -1468,8 +1468,10 @@ void mv_pp2_link_change_tasklet(unsigned long data)
 
 	mv_pp22_dev_link_event(dev);
 
+#if !defined(CONFIG_MV_PP2_POLLING)
 	/* Unmask interrupt */
 	mv_gop110_port_events_unmask(&port->priv->hw.gop, &port->mac_data);
+#endif
 }
 static void mvpp2_timer_set(struct mvpp2_port_pcpu *port_pcpu)
 {
@@ -2606,13 +2608,14 @@ if (!netif_carrier_ok(port->dev))
 #endif
 
 	tasklet_init(&port->link_change_tasklet, mv_pp2_link_change_tasklet,
-		(unsigned long)(&port->dev));
+		(unsigned long)(port->dev));
 	/* Unmask link_event */
 	if (!FPGA && port->priv->pp2_version == PPV22)
 		mv_gop110_port_events_unmask(gop, mac);
 
 	mvpp2_egress_enable(port);
 	mvpp2_ingress_enable(port);
+	MVPP2_PRINT_VAR(mac->phy_mode);
 }
 
 /* Set hw internals when stopping port */
@@ -3423,6 +3426,7 @@ static int mv_pp2_init_emac_data(struct mvpp2_port *port,
 		port->mac_data.force_link = false;
 
 		phy_mode = of_get_phy_mode(emac_node);
+		phy_mode = PHY_INTERFACE_MODE_KR;
 		pr_debug("gop_mac(%d), phy_mode(%d) (%s)\n", id,  phy_mode,
 			phy_modes(phy_mode));
 
@@ -4093,10 +4097,6 @@ static int mvpp2_init(struct platform_device *pdev, struct mvpp2 *priv)
 
 	MVPP2_PRINT_LINE();
 
-#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
-	writel(MVPP2_EXT_GLOBAL_CTRL_DEFAULT,
-	       hw->lms_base + MVPP2_MNG_EXTENDED_GLOBAL_CTRL_REG);
-#endif
 
 	/* Allow cache snoop when transmiting packets */
 	mvpp2_write(hw, MVPP2_TX_SNOOP_REG, 0x1);
@@ -4949,6 +4949,16 @@ static void mv_pp22_cpu_timer_callback(unsigned long data)
 	struct mvpp2_port *port;
 	u32 timeout;
 
+
+	/* Check link_change for initialized ports */
+	for (i = 0 ; i < priv->num_ports; i++) {
+		port = priv->port_list[i];
+		if (port && port->link_change_tasklet.func) {
+			tasklet_schedule(&port->link_change_tasklet);
+		}
+	}
+
+	/* Schedule napi for ports with link_up. */
 	for (i = 0 ; i < priv->num_ports; i++) {
 		port = priv->port_list[i];
 		if (port && netif_carrier_ok(port->dev)) {

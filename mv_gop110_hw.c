@@ -1104,7 +1104,8 @@ bool mv_gop110_port_is_link_up(struct gop_hw *gop, struct mv_mac_data *mac)
 		return mv_gop110_xlg_mac_link_status_get(gop, port_num);
 	break;
 	default:
-		pr_err("%s: Wrong port mode (%d)", __func__, mac->phy_mode);
+		pr_err("%s: Wrong port mode gop_port(%d), phy_mode(%d)",
+			__func__, port_num, mac->phy_mode);
 		return false;
 	}
 }
