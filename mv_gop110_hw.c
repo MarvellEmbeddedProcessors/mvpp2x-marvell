@@ -37,7 +37,7 @@
 #include <net/ip.h>
 #include <net/ipv6.h>
 
-#include "mvpp2.h"
+#include "mv_pp2x.h"
 #include "mv_gop110_hw.h"
 
 
@@ -2350,40 +2350,47 @@ void mv_gop110_ptp_enable(struct gop_hw *gop, int port, bool state)
 		/* configure TAI clock */
 		reg_data = mv_gop110_ptp_read(MV_TAI_TIME_CNTR_FUNC_CFG_0_REG);
 		/* Generate an external clock signal */
-		U32_SET_FIELD(reg_data , MV_TAI_TIME_CNTR_FUNC_CFG_0_CLOCK_MODE_MASK, 1);
+		U32_SET_FIELD(reg_data,
+			MV_TAI_TIME_CNTR_FUNC_CFG_0_CLOCK_MODE_MASK, 1);
 		mv_gop110_ptp_write(MV_TAI_TIME_CNTR_FUNC_CFG_0_REG, reg_data);
 
 		/* set clock step */
-		mv_gop110_ptp_write(MV_TAI_TOD_STEP_NANO_CFG_REG, 1000 / mv_pp3_hmac_mghz_tclk);
+		mv_gop110_ptp_write(MV_TAI_TOD_STEP_NANO_CFG_REG,
+			1000 / mv_pp3_hmac_mghz_tclk);
 
 		/* start clock */
 		reg_data = mv_gop110_ptp_read(MV_TAI_CTRL_REG0_REG);
 		/* Generate an external clock signal */
-		U32_SET_FIELD(reg_data , MV_TAI_CTRL_REG0_SW_RESET_MASK, 1);
+		U32_SET_FIELD(reg_data, MV_TAI_CTRL_REG0_SW_RESET_MASK, 1);
 		mv_gop110_ptp_write(MV_TAI_CTRL_REG0_REG, reg_data);
 #endif
 
 		/* PTP enable */
-		reg_data = mv_gop110_ptp_read(gop, port, MV_PTP_GENERAL_CTRL_REG);
+		reg_data = mv_gop110_ptp_read(gop, port,
+			MV_PTP_GENERAL_CTRL_REG);
 		reg_data |= MV_PTP_GENERAL_CTRL_PTP_UNIT_ENABLE_MASK;
 		/* enable PTP */
-		mv_gop110_ptp_write(gop, port, MV_PTP_GENERAL_CTRL_REG, reg_data);
+		mv_gop110_ptp_write(gop, port, MV_PTP_GENERAL_CTRL_REG,
+			reg_data);
 		/* unreset unit */
 		reg_data |= MV_PTP_GENERAL_CTRL_PTP_RESET_MASK;
-		mv_gop110_ptp_write(gop, port, MV_PTP_GENERAL_CTRL_REG, reg_data);
+		mv_gop110_ptp_write(gop, port, MV_PTP_GENERAL_CTRL_REG,
+			reg_data);
 	} else {
 #if 0
 		/* stop clock */
 		reg_data = mv_gop110_ptp_read(MV_TAI_CTRL_REG0_REG);
 		/* Generate an external clock signal */
-		U32_SET_FIELD(reg_data , MV_TAI_CTRL_REG0_SW_RESET_MASK, 0);
+		U32_SET_FIELD(reg_data, MV_TAI_CTRL_REG0_SW_RESET_MASK, 0);
 		mv_gop110_ptp_write(MV_TAI_CTRL_REG0_REG, reg_data);
 #endif
 
-		reg_data = mv_gop110_ptp_read(gop, port, MV_PTP_GENERAL_CTRL_REG);
+		reg_data = mv_gop110_ptp_read(gop, port,
+			MV_PTP_GENERAL_CTRL_REG);
 		reg_data &= ~MV_PTP_GENERAL_CTRL_PTP_UNIT_ENABLE_MASK;
 		/* disable PTP */
-		mv_gop110_ptp_write(gop, port, MV_PTP_GENERAL_CTRL_REG, reg_data);
+		mv_gop110_ptp_write(gop, port, MV_PTP_GENERAL_CTRL_REG,
+			reg_data);
 	}
 
 }

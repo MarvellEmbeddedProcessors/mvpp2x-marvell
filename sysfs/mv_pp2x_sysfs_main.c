@@ -51,10 +51,10 @@ disclaimer.
 //#include "prs/mvPp2PrsHw.h"
 //#include "cls/mvPp2Classifier.h"
 
-#include "mvPp2Common.h"
+#include "mv_pp2x_sysfs.h"
 #include "mv_eth_sysfs.h"
 
-#include "mvpp2.h"
+#include "mv_pp2x.h"
 
 
 

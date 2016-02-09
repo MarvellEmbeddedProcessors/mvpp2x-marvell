@@ -31,7 +31,7 @@ disclaimer.
 #include <linux/capability.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
-#include "mvPp2Common.h"
+#include "mv_pp2x_sysfs.h"
 
 
 static ssize_t mv_rss_help(char *buf)

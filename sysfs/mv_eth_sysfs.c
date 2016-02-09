@@ -32,7 +32,7 @@ disclaimer.
 #include <linux/platform_device.h>
 #include <linux/netdevice.h>
 
-#include "mvPp2Common.h"
+#include "mv_pp2x_sysfs.h"
 
 
 static ssize_t mv_pp2_help(char *buf)
@@ -46,8 +46,7 @@ static ssize_t mv_pp2_help(char *buf)
 static ssize_t mv_pp2_show(struct device *dev,
 				  struct device_attribute *attr, char *buf)
 {
-	const char      *name = attr->attr.name;
-	int             off = 0;
+	int off = 0;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;

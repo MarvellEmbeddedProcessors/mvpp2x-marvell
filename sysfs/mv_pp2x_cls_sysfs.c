@@ -31,7 +31,7 @@ disclaimer.
 #include <linux/capability.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
-#include "mvPp2Common.h"
+#include "mv_pp2x_sysfs.h"
 
 static struct mvpp2_cls_lookup_entry lkp_entry;
 static struct mvpp2_cls_flow_entry flow_entry;
@@ -127,7 +127,6 @@ static ssize_t mv_cls_store_unsigned(struct device *dev,
 	const char    *name = attr->attr.name;
 	unsigned int  err = 0, a = 0, b = 0, c = 0, d = 0;
 	unsigned long flags;
-	u32 val;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;

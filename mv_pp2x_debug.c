@@ -50,9 +50,9 @@
 #include <net/ip.h>
 #include <net/ipv6.h>
 
-#include "mvpp2.h"
-#include "mvpp2_hw.h"
-#include "mvpp2_debug.h"
+#include "mv_pp2x.h"
+#include "mv_pp2x_hw.h"
+#include "mv_pp2x_debug.h"
 
 
 
@@ -1877,7 +1877,7 @@ int mvpp2_prs_sw_dump(struct mvpp2_prs_entry *pe)
 
 	DBG_MSG("| ");
 
-	//DBG_MSG(PRS_SRAM_FMT, PRS_SRAM_VAL(pe->sram.word));
+	/*DBG_MSG(PRS_SRAM_FMT, PRS_SRAM_VAL(pe->sram.word)); */
 	DBG_MSG("%4.4x %8.8x %8.8x %8.8x", pe->sram.word[3] & 0xFFFF,
 		 pe->sram.word[2],  pe->sram.word[1],  pe->sram.word[0]);
 

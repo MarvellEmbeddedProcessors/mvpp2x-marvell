@@ -60,10 +60,10 @@
 #ifdef CONFIG_MV_PP2_FPGA
 #include <linux/pci.h>
 #endif
-#include "mvpp2.h"
-#include "mvpp2_hw.h"
+#include "mv_pp2x.h"
+#include "mv_pp2x_hw.h"
 #include "mv_gop110_hw.h"
-#include "mvpp2_debug.h"
+#include "mv_pp2x_debug.h"
 
 #if defined(CONFIG_NETMAP) || defined(CONFIG_NETMAP_MODULE)
 #include <if_mvpp2_netmap.h>
@@ -95,11 +95,12 @@ static u8 first_log_rxq_queue;
 u32 debug_param;
 
 
-#if defined(CONFIG_MV_PP2_POLLING) || defined(CONFIG_MV_PP2_FPGA)
-#define MV_PP2_FPGA_PERODIC_TIME 10
-#endif
+#if defined(CONFIG_MV_PP2_POLLING)
 #ifdef CONFIG_MV_PP2_PALLADIUM
 #define MV_PP2_FPGA_PERODIC_TIME 2
+#else
+#define MV_PP2_FPGA_PERODIC_TIME 10
+#endif
 #endif
 #ifdef CONFIG_MV_PP2_FPGA
 #define MAC_PORT0_OFFSET       0x104000
@@ -2294,13 +2295,13 @@ static int mvpp2_tx(struct sk_buff *skb, struct net_device *dev)
 	tx_desc->phys_txq = txq->id;
 	tx_desc->data_size = skb_headlen(skb);
 	pr_debug(
-		"tx_desc=%p, cmd(0x%lx), pkt_offset(%d), phys_txq=%d, data_size=%d\n"
-		"rsrvd_hw_cmd1(0x%llx) \n"
-		"buf_phys_addr_hw_cmd2(0x%llx) \n"
-		"buf_cookie_bm_qset_hw_cmd3(0x%llx) \n"
+		"tx_desc=%p, cmd(0x%x), pkt_offset(%d), phys_txq=%d, data_size=%d\n"
+		"rsrvd_hw_cmd1(0x%llx)\n"
+		"buf_phys_addr_hw_cmd2(0x%llx)\n"
+		"buf_cookie_bm_qset_hw_cmd3(0x%llx)\n"
 		"skb_len=%d, skb_data_len=%d\n",
 		tx_desc, tx_desc->command, tx_desc->packet_offset,
-		tx_desc->phys_txq,tx_desc->data_size,
+		tx_desc->phys_txq, tx_desc->data_size,
 		tx_desc->u.pp22.rsrvd_hw_cmd1,
 		tx_desc->u.pp22.buf_phys_addr_hw_cmd2,
 		tx_desc->u.pp22.buf_cookie_bm_qset_hw_cmd3,
@@ -2948,7 +2949,7 @@ err_free_irq:
 	mvpp2_cleanup_irqs(port);
 	PALAD(MVPP2_PRINT_LINE());
 #endif
-#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
+#if !defined(CONFIG_MV_PP2_POLLING)
 err_cleanup_txqs:
 	mvpp2_cleanup_txqs(port);
 	MVPP2_PRINT_2LINE();
@@ -3567,9 +3568,12 @@ static int mvpp2_port_probe(struct platform_device *pdev,
 	const char *mac_from;
 	char hw_mac_addr[ETH_ALEN];
 	u32 id;
-	unsigned int *port_irqs;
-	int features, err = 0, i, port_num_irq, cpu;
+	int features, err = 0, i, cpu;
 	int priv_common_regs_num = 2;
+#if !defined(CONFIG_MV_PP2_POLLING)
+	unsigned int *port_irqs;
+	int port_num_irq;
+#endif
 
 	dev = alloc_etherdev_mqs(sizeof(struct mvpp2_port), mvpp2_txq_number,
 				 mvpp2_rxq_number);
@@ -4461,7 +4465,8 @@ static int mvpp2_platform_data_get(struct platform_device *pdev,
 		if ((res->start <= mspg_base) || (res->end >= mspg_end))
 			return -ENXIO;
 		hw->gop.gop_110.xpcs_base =
-			(void *)(hw->gop.gop_110.mspg_base + (res->start-mspg_base));
+			(void *)(hw->gop.gop_110.mspg_base +
+				(res->start-mspg_base));
 
 
 		MVPP2_PRINT_2LINE();
@@ -4475,7 +4480,8 @@ static int mvpp2_platform_data_get(struct platform_device *pdev,
 		if ((res->start <= mspg_base) || (res->end >= mspg_end))
 			return -ENXIO;
 		hw->gop.gop_110.gmac.base =
-			(void *)(hw->gop.gop_110.mspg_base + (res->start-mspg_base));
+			(void *)(hw->gop.gop_110.mspg_base +
+			(res->start-mspg_base));
 		hw->gop.gop_110.gmac.obj_size = 0x1000;
 
 
@@ -4488,7 +4494,8 @@ static int mvpp2_platform_data_get(struct platform_device *pdev,
 		if ((res->start <= mspg_base) || (res->end >= mspg_end))
 			return -ENXIO;
 		hw->gop.gop_110.xlg_mac.base =
-			(void *)(hw->gop.gop_110.mspg_base + (res->start-mspg_base));
+			(void *)(hw->gop.gop_110.mspg_base +
+			(res->start-mspg_base));
 		hw->gop.gop_110.xlg_mac.obj_size = 0x1000;
 
 
@@ -4523,7 +4530,7 @@ static int mvpp2_platform_data_get(struct platform_device *pdev,
 	MVPP2_PRINT_2LINE();
 #endif
 	/* Get system's tclk rate */
-	hw->tclk = 333330000;// PKAK clk_get_rate(hw->pp_clk);
+	hw->tclk = 333330000;/* PKAK clk_get_rate(hw->pp_clk);*/
 	MVPP2_PRINT_VAR(hw->tclk);
 
 #else
@@ -4594,7 +4601,7 @@ static int mvpp2_probe(struct platform_device *pdev)
 #ifdef CONFIG_MV_PP2_FPGA
 	pdev->dev.archdata.dma_coherent = 0;
 #else
-	pdev->dev.archdata.dma_coherent = 0; //PKAK not coherent
+	pdev->dev.archdata.dma_coherent = 0; /*PKAK not coherent*/
 #endif
 MVPP2_PRINT_LINE();
 
@@ -4698,7 +4705,7 @@ MVPP2_PRINT_LINE();
 #endif
 
 	platform_set_drvdata(pdev, priv);
-	pr_debug("Platform Device Name : %s\n",kobject_name(&pdev->dev.kobj));
+	pr_debug("Platform Device Name : %s\n", kobject_name(&pdev->dev.kobj));
 	return 0;
 
 err_gop_clk:

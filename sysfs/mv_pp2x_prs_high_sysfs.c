@@ -31,8 +31,8 @@ disclaimer.
 #include <linux/capability.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
-#include "mvPp2Common.h"
-#include "mvpp2_prs_sysfs.h"
+#include "mv_pp2x_sysfs.h"
+#include "mv_pp2x_prs_sysfs.h"
 
 
 static struct kobject *prs_kobj;

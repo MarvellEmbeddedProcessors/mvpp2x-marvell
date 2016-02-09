@@ -31,7 +31,7 @@ disclaimer.
 #include <linux/capability.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
-#include "mvPp2Common.h"
+#include "mv_pp2x_sysfs.h"
 
 struct mvpp2_cls_c2_qos_entry qos_entry;
 struct mvpp2_cls_c2_entry c2_entry;

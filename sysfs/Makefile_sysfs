@@ -30,8 +30,8 @@ ccflags-y += -I${KDIR}/include
 ccflags-y += -DARMADA_390
 ccflags-y += -DDEBUG
 
-mvpp2x_sysfs-y := mvpp2_sysfs_main.o mvpp2_prs_high_sysfs.o mvpp2_prs_low_sysfs.o mvpp2_cls_sysfs.o mvpp2_cls2_sysfs.o
-mvpp2x_sysfs-y += mv_eth_bm_sysfs.o mv_eth_rx_sysfs.o mv_eth_tx_sysfs.o mvpp2_rss_sysfs.o mvpp2_cos_sysfs.o mvpp2_debug_sysfs.o
+mvpp2x_sysfs-y := mv_pp2x_sysfs_main.o mv_pp2x_prs_high_sysfs.o mv_pp2x_prs_low_sysfs.o mv_pp2x_cls_sysfs.o mv_pp2x_cls2_sysfs.o
+mvpp2x_sysfs-y += mv_eth_bm_sysfs.o mv_eth_rx_sysfs.o mv_eth_tx_sysfs.o mv_pp2x_rss_sysfs.o mv_pp2x_cos_sysfs.o mv_pp2x_debug_sysfs.o
 mvpp2x_sysfs-y += mv_eth_tx_sched_sysfs.o mv_eth_sysfs.o mv_eth_gop_sysfs.o
 
 

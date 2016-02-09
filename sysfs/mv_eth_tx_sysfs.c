@@ -32,7 +32,7 @@ disclaimer.
 #include <linux/platform_device.h>
 #include <linux/netdevice.h>
 
-#include "mvPp2Common.h"
+#include "mv_pp2x_sysfs.h"
 
 static ssize_t mv_pp2_help(char *b)
 {

@@ -37,9 +37,9 @@
 #include <net/ip.h>
 #include <net/ipv6.h>
 
-#include "mvpp2.h"
-#include "mvpp2_hw.h"
-#include "mvpp2_debug.h"
+#include "mv_pp2x.h"
+#include "mv_pp2x_hw.h"
+#include "mv_pp2x_debug.h"
 
 
 

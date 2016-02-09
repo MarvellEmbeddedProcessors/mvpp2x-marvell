@@ -61,22 +61,18 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 *******************************************************************************/
-#ifndef __MV_PP2_COMMON_H__
-#define __MV_PP2_COMMON_H__
+#ifndef __MV_PP2X_SYSFS_H__
+#define __MV_PP2X_SYSFS_H__
 
 #ifdef ARMADA_390
 #include <linux/phy.h>
 #endif
 
 
-#include "mvpp2.h"
-#include "mvpp2_hw.h"
+#include "mv_pp2x.h"
+#include "mv_pp2x_hw.h"
+#include "mv_pp2x_debug.h"
 #include "mv_gop110_hw.h"
-#include "mvpp2_debug.h"
-
-
-#include "pp2_defines.h"
-
 
 
 
@@ -86,4 +82,4 @@ extern struct mvpp2 *sysfs_cur_priv;
 
 
 
-#endif /* __MV_PP2_COMMON_H__ */
+#endif /* __MV_PP2X_SYSFS_H__ */

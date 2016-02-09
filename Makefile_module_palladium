@@ -7,8 +7,8 @@ config := CONFIG_MV_PP2_PALLADIUM
 
 
 obj-m := mvpp2x.o
-mvpp2x-objs := mvpp2_ethtool.o mvpp2_hw.o mvpp2_main.o mvpp2_debug.o
-
+mvpp2x-objs := mv_pp2x_ethtool.o mv_pp2x_hw.o mv_pp2x_main.o mv_pp2x_debug.o
+mvpp2x-objs += mv_gop110_hw.o
 ccflags-y := -I$(M)
 ccflags-y += -I${KDIR}/include
 ccflags-y += -DDEBUG
@@ -21,6 +21,6 @@ all:
 
 clean:
 	make -C ${KDIR} SUBDIRS=$(M) clean
-	
-	
+
+
 $(info NOTICE: config=$(config))

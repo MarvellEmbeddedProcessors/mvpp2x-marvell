@@ -36,7 +36,7 @@
 #include <linux/log2.h>
 
 
-#include "mvpp2_hw_type.h"
+#include "mv_pp2x_hw_type.h"
 #include "mv_gop110_hw_type.h"
 
 
