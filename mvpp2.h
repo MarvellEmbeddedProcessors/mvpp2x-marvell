@@ -48,6 +48,10 @@
 
 #define PFX			MVPP2_DRIVER_NAME ": "
 
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
+#define CONFIG_MV_PP2_POLLING
+#endif
+
 #ifdef CONFIG_MV_PP2_PALLADIUM
 #define PALAD(x)	x
 #else
@@ -206,12 +210,12 @@
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? \
 	strrchr(__FILE__, '/') + 1 : __FILE__)
-#define MVPP2_PRINT_LINE()
-#define MVPP2_PRINT_2LINE()
-/*#define MVPP2_PRINT_2LINE() \
-	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)*/
-/*#define MVPP2_PRINT_LINE() \
-	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)*/
+/*#define MVPP2_PRINT_LINE()*/
+/*//#define MVPP2_PRINT_2LINE()*/
+#define MVPP2_PRINT_2LINE() \
+	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
+#define MVPP2_PRINT_LINE() \
+	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
 
 
 #define MVPP2_PRINT_VAR(var) \
@@ -473,6 +477,7 @@ struct cpn110_gop_hw {
 	struct mv_mac_unit_desc xlg_mac;
 	struct mv_mac_unit_desc serdes;
 	struct mv_mac_unit_desc xmib;
+	struct mv_mac_unit_desc ptp;
 	void __iomem *smi_base;
 	void __iomem *xsmi_base;
 	void __iomem *mspg_base;

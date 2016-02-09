@@ -41,10 +41,20 @@
 #include "mv_gop110_hw.h"
 
 
+void mv_gop110_register_bases_dump(struct gop_hw *gop)
+{
+	pr_info("  %-32s: 0x%p\n", "GMAC", gop->gop_110.gmac.base);
+	pr_info("  %-32s: 0x%p\n", "XLG_MAC", gop->gop_110.xlg_mac.base);
+	pr_info("  %-32s: 0x%p\n", "SERDES", gop->gop_110.serdes.base);
+	pr_info("  %-32s: 0x%p\n", "XMIB", gop->gop_110.xmib.base);
+	pr_info("  %-32s: 0x%p\n", "SMI", gop->gop_110.smi_base);
+	pr_info("  %-32s: 0x%p\n", "XSMI", gop->gop_110.xsmi_base);
+	pr_info("  %-32s: 0x%p\n", "MSPG", gop->gop_110.mspg_base);
+	pr_info("  %-32s: 0x%p\n", "XPCS", gop->gop_110.xpcs_base);
+	pr_info("  %-32s: 0x%p\n", "PTP", gop->gop_110.ptp.base);
 
-
-
-
+}
+EXPORT_SYMBOL(mv_gop110_register_bases_dump);
 
 
 /* print value of unit registers */
@@ -130,6 +140,7 @@ void mv_gop110_gmac_regs_dump(struct gop_hw *gop, int port)
 	mv_gop110_gmac_print(gop, "INT_SUM_MASK", port,
 				MV_GMAC_INTERRUPT_SUM_MASK_REG);
 }
+EXPORT_SYMBOL(mv_gop110_gmac_regs_dump);
 
 /* Set the MAC to reset or exit from reset */
 int mv_gop110_gmac_reset(struct gop_hw *gop, int mac_num, enum mv_reset reset)
@@ -864,6 +875,8 @@ int mv_gop110_port_init(struct gop_hw *gop, struct mv_mac_data *mac)
 		pr_err("%s: illegal port number %d", __func__, mac_num);
 		return -1;
 	}
+	MVPP2_PRINT_VAR(mac_num);
+	MVPP2_PRINT_VAR(mac->phy_mode);
 
 	switch (mac->phy_mode) {
 	case PHY_INTERFACE_MODE_RGMII:
@@ -873,6 +886,10 @@ int mv_gop110_port_init(struct gop_hw *gop, struct mv_mac_data *mac)
 
 		/* configure MAC */
 		mv_gop110_gmac_mode_cfg(gop, mac);
+
+		/* select proper Mac mode */
+		mv_gop110_xlg_2_gig_mac_cfg(gop, mac_num);
+
 		/* pcs unreset */
 		mv_gop110_gpcs_reset(gop, mac_num, UNRESET);
 		/* mac unreset */
@@ -1559,6 +1576,7 @@ void mv_gop110_serdes_lane_regs_dump(struct gop_hw *gop, int lane)
 	mv_gop110_serdes_print(gop, "MV_SERDES_MISC_REG", lane,
 		MV_SERDES_MISC_REG);
 }
+EXPORT_SYMBOL(mv_gop110_serdes_lane_regs_dump);
 
 void mv_gop110_serdes_init(struct gop_hw *gop, int lane,
 		enum sd_media_mode mode)
@@ -1696,6 +1714,7 @@ void mv_gop110_xlg_mac_regs_dump(struct gop_hw *gop, int port)
 	mv_gop110_xlg_mac_print(gop, "EXTERNAL_INT_MASK", port,
 		MV_XLG_EXTERNAL_INTERRUPT_MASK_REG);
 }
+EXPORT_SYMBOL(mv_gop110_xlg_mac_regs_dump);
 
 /* Set the MAC to reset or exit from reset */
 int mv_gop110_xlg_mac_reset(struct gop_hw *gop, int mac_num,
@@ -2132,6 +2151,7 @@ void mv_gop110_xpcs_gl_regs_dump(struct gop_hw *gop)
 		MV_XPCS_TX_PCKTS_CNTR_MSB_REG);
 
 }
+EXPORT_SYMBOL(mv_gop110_xpcs_gl_regs_dump);
 
 /* print value of unit registers */
 void mv_gop110_xpcs_lane_regs_dump(struct gop_hw *gop, int lane)
@@ -2166,6 +2186,7 @@ void mv_gop110_xpcs_lane_regs_dump(struct gop_hw *gop, int lane)
 	mv_gop110_xpcs_lane_print(gop, "CYCLIC_DATA_3", lane,
 		MV_XPCS_CYCLIC_DATA_3_REG);
 }
+EXPORT_SYMBOL(mv_gop110_xpcs_lane_regs_dump);
 
 /* Set PCS to reset or exit from reset */
 int mv_gop110_xpcs_reset(struct gop_hw *gop, enum mv_reset reset)
@@ -2316,4 +2337,53 @@ void mv_gop110_mib_counters_show(struct gop_hw *gop, int port)
 	mv_gop110_mib_print(gop, port, MV_MIB_LATE_COLLISION,
 		"LATE_COLLISION");
 }
+EXPORT_SYMBOL(mv_gop110_mib_counters_show);
 
+void mv_gop110_ptp_enable(struct gop_hw *gop, int port, bool state)
+{
+	u32 reg_data;
+#if 0
+	int mv_pp3_hmac_mghz_tclk = mv_hw_silicon_hz_tclk_get() / 1000000;
+#endif
+	if (state) {
+#if 0
+		/* configure TAI clock */
+		reg_data = mv_gop110_ptp_read(MV_TAI_TIME_CNTR_FUNC_CFG_0_REG);
+		/* Generate an external clock signal */
+		U32_SET_FIELD(reg_data , MV_TAI_TIME_CNTR_FUNC_CFG_0_CLOCK_MODE_MASK, 1);
+		mv_gop110_ptp_write(MV_TAI_TIME_CNTR_FUNC_CFG_0_REG, reg_data);
+
+		/* set clock step */
+		mv_gop110_ptp_write(MV_TAI_TOD_STEP_NANO_CFG_REG, 1000 / mv_pp3_hmac_mghz_tclk);
+
+		/* start clock */
+		reg_data = mv_gop110_ptp_read(MV_TAI_CTRL_REG0_REG);
+		/* Generate an external clock signal */
+		U32_SET_FIELD(reg_data , MV_TAI_CTRL_REG0_SW_RESET_MASK, 1);
+		mv_gop110_ptp_write(MV_TAI_CTRL_REG0_REG, reg_data);
+#endif
+
+		/* PTP enable */
+		reg_data = mv_gop110_ptp_read(gop, port, MV_PTP_GENERAL_CTRL_REG);
+		reg_data |= MV_PTP_GENERAL_CTRL_PTP_UNIT_ENABLE_MASK;
+		/* enable PTP */
+		mv_gop110_ptp_write(gop, port, MV_PTP_GENERAL_CTRL_REG, reg_data);
+		/* unreset unit */
+		reg_data |= MV_PTP_GENERAL_CTRL_PTP_RESET_MASK;
+		mv_gop110_ptp_write(gop, port, MV_PTP_GENERAL_CTRL_REG, reg_data);
+	} else {
+#if 0
+		/* stop clock */
+		reg_data = mv_gop110_ptp_read(MV_TAI_CTRL_REG0_REG);
+		/* Generate an external clock signal */
+		U32_SET_FIELD(reg_data , MV_TAI_CTRL_REG0_SW_RESET_MASK, 0);
+		mv_gop110_ptp_write(MV_TAI_CTRL_REG0_REG, reg_data);
+#endif
+
+		reg_data = mv_gop110_ptp_read(gop, port, MV_PTP_GENERAL_CTRL_REG);
+		reg_data &= ~MV_PTP_GENERAL_CTRL_PTP_UNIT_ENABLE_MASK;
+		/* disable PTP */
+		mv_gop110_ptp_write(gop, port, MV_PTP_GENERAL_CTRL_REG, reg_data);
+	}
+
+}

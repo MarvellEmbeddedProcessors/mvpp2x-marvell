@@ -71,6 +71,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "mvpp2.h"
 #include "mvpp2_hw.h"
+#include "mv_gop110_hw.h"
 #include "mvpp2_debug.h"
 
 

@@ -322,7 +322,7 @@ static inline void mvpp2_port_interrupts_enable(struct mvpp2_port *port)
 
 	for (i = 0; i < port->num_qvector; i++)
 		sw_thread_mask |= q_vec[i].sw_thread_mask;
-#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
+#if !defined(CONFIG_MV_PP2_POLLING)
 	mvpp2_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
 		    MVPP2_ISR_ENABLE_INTERRUPT(sw_thread_mask));
 #endif
@@ -343,7 +343,7 @@ static inline void mvpp2_port_interrupts_disable(struct mvpp2_port *port)
 
 static inline void mvpp2_qvector_interrupt_enable(struct queue_vector *q_vec)
 {
-#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
+#if !defined(CONFIG_MV_PP2_POLLING)
 	struct mvpp2_port *port = q_vec->parent;
 
 	mvpp2_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
@@ -375,6 +375,7 @@ static inline int mvpp2_txq_sent_desc_proc(struct mvpp2_port *port,
 	else {
 		val = mvpp2_read(&(port->priv->hw),
 			MVPP22_TXQ_SENT_REG(txq->id));
+		pr_crit("MVPP22_TXQ_SENT_REG txq(%d), val(%d)\n", txq->id, val);
 		return (val & MVPP22_TRANSMITTED_COUNT_MASK) >>
 			MVPP22_TRANSMITTED_COUNT_OFFSET;
 		}
