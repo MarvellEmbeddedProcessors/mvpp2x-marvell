@@ -1472,7 +1472,9 @@ static void mv_pp21_link_event(struct net_device *dev)
 void mv_pp2_link_change_tasklet(unsigned long data)
 {
 	struct net_device *dev = (struct net_device *)data;
+#if !defined(CONFIG_MV_PP2_POLLING)
 	struct mv_pp2x_port *port = netdev_priv(dev);
+#endif
 
 	mv_pp22_dev_link_event(dev);
 
@@ -3437,9 +3439,11 @@ static int mv_pp2_init_emac_data(struct mv_pp2x_port *port,
 		port->mac_data.force_link = false;
 
 		phy_mode = of_get_phy_mode(emac_node);
-		phy_mode = PHY_INTERFACE_MODE_KR;
+		if (id == 0)
+			phy_mode = PHY_INTERFACE_MODE_KR;
 		pr_debug("gop_mac(%d), phy_mode(%d) (%s)\n", id,  phy_mode,
 			phy_modes(phy_mode));
+
 
 		switch (phy_mode) {
 		case PHY_INTERFACE_MODE_SGMII:
@@ -3464,6 +3468,9 @@ static int mv_pp2_init_emac_data(struct mv_pp2x_port *port,
 			break;
 		case PHY_INTERFACE_MODE_RGMII:
 			break;
+		case PHY_INTERFACE_MODE_KR:
+			break;
+
 		default:
 			pr_err("%s: incorrect phy-mode\n", __func__);
 			return -1;
@@ -3708,6 +3715,7 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 		dev_err(&pdev->dev, "failed to init port %d\n", id);
 		goto err_free_stats;
 	}
+	MVPP2_PRINT_LINE();
 	if (port->priv->pp2_version == PPV21)
 		mv_pp21_port_power_up(port);
 
@@ -3716,7 +3724,7 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 		err = -ENOMEM;
 		goto err_free_txq_pcpu;
 	}
-
+	MVPP2_PRINT_LINE();
 	if (port->priv->pp2xdata->interrupt_tx_done == false) {
 		for_each_online_cpu(cpu) {
 			port_pcpu = per_cpu_ptr(port->pcpu, cpu);
@@ -3730,6 +3738,7 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 				mv_pp2x_tx_proc_cb, (unsigned long)dev);
 		}
 	}
+	MVPP2_PRINT_LINE();
 	features = NETIF_F_SG | NETIF_F_IP_CSUM;
 	dev->features = features | NETIF_F_RXCSUM;
 	dev->hw_features |= features | NETIF_F_RXCSUM | NETIF_F_GRO;
@@ -3737,7 +3746,7 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 	if (mv_pp2x_queue_mode)
 		dev->hw_features |= NETIF_F_RXHASH;
 	dev->vlan_features |= features;
-
+	MVPP2_PRINT_LINE();
 	err = register_netdev(dev);
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to register netdev\n");
@@ -3745,7 +3754,7 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 	}
 	netdev_info(dev, "Using %s mac address %pM\n", mac_from, dev->dev_addr);
 
-
+	MVPP2_PRINT_LINE();
 	priv->port_list[priv->num_ports] = port;
 	priv->num_ports++;
 	return 0;
@@ -4653,8 +4662,6 @@ MVPP2_PRINT_LINE();
 		}
 	}
 	priv->cpu_map = cpu_map;
-
-	MVPP2_PRINT_LINE();
 
 	/* Initialize network controller */
 	err = mv_pp2x_init(pdev, priv);
