@@ -58,7 +58,7 @@ static ssize_t mv_prs_high_show(struct device *dev,
 		return -EPERM;
 
 	if (!strcmp(name, "dump"))
-		mvpp2_prs_hw_dump(sysfs_cur_hw);
+		mv_pp2x_prs_hw_dump(sysfs_cur_hw);
 	else
 		off += mv_prs_high_help(buf);
 

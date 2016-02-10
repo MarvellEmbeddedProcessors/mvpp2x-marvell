@@ -34,7 +34,7 @@ disclaimer.
 #include "mv_pp2x_sysfs.h"
 
 
-static  struct mvpp2_prs_entry pe;
+static  struct mv_pp2x_prs_entry pe;
 
 
 static ssize_t mv_prs_low_help(char *buf)
@@ -84,13 +84,13 @@ static ssize_t mv_prs_low_show(struct device *dev,
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
 	if (!strcmp(name, "hw_dump"))
-		mvpp2_prs_hw_dump(sysfs_cur_hw);
+		mv_pp2x_prs_hw_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "hw_regs"))
-		mvpp2_prs_hw_regs_dump(sysfs_cur_hw);
+		mv_pp2x_prs_hw_regs_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "hw_hits"))
-		mvpp2_prs_hw_hits_dump(sysfs_cur_hw);
+		mv_pp2x_prs_hw_hits_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "sw_dump"))
-		mvpp2_prs_sw_dump(&pe);
+		mv_pp2x_prs_sw_dump(&pe);
 	else
 		off += mv_prs_low_help(buf);
 
@@ -114,37 +114,37 @@ static ssize_t mv_prs_low_store_unsigned(struct device *dev,
 
 	if (!strcmp(name, "hw_write")) {
 		pe.index = a;
-		mvpp2_prs_hw_write(sysfs_cur_hw, &pe);
+		mv_pp2x_prs_hw_write(sysfs_cur_hw, &pe);
 	} else if (!strcmp(name, "hw_read")) {
 		pe.index = a;
-		mvpp2_prs_hw_read(sysfs_cur_hw, &pe);
+		mv_pp2x_prs_hw_read(sysfs_cur_hw, &pe);
 	} else if (!strcmp(name, "sw_clear"))
-		mvpp2_prs_sw_clear(&pe);
+		mv_pp2x_prs_sw_clear(&pe);
 	else if (!strcmp(name, "hw_inv"))
-		mvpp2_prs_hw_inv(sysfs_cur_hw, a);
+		mv_pp2x_prs_hw_inv(sysfs_cur_hw, a);
 	else if (!strcmp(name, "hw_inv_all")) {
 		for (index = 0; index < MVPP2_PRS_TCAM_SRAM_SIZE; index++)
-			mvpp2_prs_hw_inv(sysfs_cur_hw, index);
+			mv_pp2x_prs_hw_inv(sysfs_cur_hw, index);
 	} else if (!strcmp(name, "t_port"))
-		mvpp2_prs_tcam_port_set(&pe, a, b);
+		mv_pp2x_prs_tcam_port_set(&pe, a, b);
 	else if (!strcmp(name, "t_port_map"))
-		mvpp2_prs_tcam_port_map_set(&pe, a);
+		mv_pp2x_prs_tcam_port_map_set(&pe, a);
 	else if (!strcmp(name, "t_lu"))
-		mvpp2_prs_tcam_lu_set(&pe, a);
+		mv_pp2x_prs_tcam_lu_set(&pe, a);
 	else if (!strcmp(name, "t_ai"))
-		mvpp2_prs_tcam_ai_update(&pe, a, b);
+		mv_pp2x_prs_tcam_ai_update(&pe, a, b);
 	else if (!strcmp(name, "t_byte"))
-		mvpp2_prs_tcam_data_byte_set(&pe, a, b, c);
+		mv_pp2x_prs_tcam_data_byte_set(&pe, a, b, c);
 	else if (!strcmp(name, "s_ri"))
-		mvpp2_prs_sram_ri_update(&pe, a, b);
+		mv_pp2x_prs_sram_ri_update(&pe, a, b);
 	else if (!strcmp(name, "s_ai"))
-		mvpp2_prs_sram_ai_update(&pe, a, b);
+		mv_pp2x_prs_sram_ai_update(&pe, a, b);
 	else if (!strcmp(name, "s_next_lu"))
-		mvpp2_prs_sram_next_lu_set(&pe, a);
+		mv_pp2x_prs_sram_next_lu_set(&pe, a);
 	else if (!strcmp(name, "s_lu_done"))
-		(a == 1) ? mvpp2_prs_sw_sram_lu_done_set(&pe) : mvpp2_prs_sw_sram_lu_done_clear(&pe);
+		(a == 1) ? mv_pp2x_prs_sw_sram_lu_done_set(&pe) : mv_pp2x_prs_sw_sram_lu_done_clear(&pe);
 	else if (!strcmp(name, "s_fid_gen"))
-		(a == 1) ? mvpp2_prs_sw_sram_flowid_set(&pe) : mvpp2_prs_sw_sram_flowid_clear(&pe);
+		(a == 1) ? mv_pp2x_prs_sw_sram_flowid_set(&pe) : mv_pp2x_prs_sw_sram_flowid_clear(&pe);
 	else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
@@ -171,11 +171,11 @@ static ssize_t mv_prs_low_store_signed(struct device *dev,
 	local_irq_save(flags);
 
 	if (!strcmp(name, "s_shift"))
-		mvpp2_prs_sw_sram_shift_set(&pe, a, MVPP2_PRS_SRAM_OP_SEL_SHIFT_ADD);
+		mv_pp2x_prs_sw_sram_shift_set(&pe, a, MVPP2_PRS_SRAM_OP_SEL_SHIFT_ADD);
 	else if (!strcmp(name, "s_offs"))
-		mvpp2_prs_sw_sram_offset_set(&pe, a, b, MVPP2_PRS_SRAM_OP_SEL_SHIFT_ADD);
+		mv_pp2x_prs_sw_sram_offset_set(&pe, a, b, MVPP2_PRS_SRAM_OP_SEL_SHIFT_ADD);
 	else if (!strcmp(name, "hw_frst_itr"))
-		mvpp2_prs_hw_port_init(sysfs_cur_hw, a, b, c, d);
+		mv_pp2x_prs_hw_port_init(sysfs_cur_hw, a, b, c, d);
 	else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);

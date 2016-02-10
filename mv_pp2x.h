@@ -68,7 +68,7 @@
 #if defined(CONFIG_MV_PP2_PALLADIUM)
 /*These are the indexes of
  * MVPP2_PRS_FL_IP4_UNTAG_NO_OPV4_OPTIONS/MVPP2_PRS_FL_NON_IP_UNTAG
- * in mvpp2_prs_flow_id_array[] */
+ * in mv_pp2x_prs_flow_id_array[] */
 #define MVPP2_PRS_FL_IP4_UNTAG_NO_OPV4_OPTIONS	40
 #define MVPP2_PRS_FL_NON_IP_UNTAG_INDEX		50
 #endif
@@ -275,12 +275,12 @@ enum mvppv2_version {
 	PPV22
 };
 
-enum mvpp2_queue_vector_type {
+enum mv_pp2x_queue_vector_type {
 	MVPP2_SHARED,
 	MVPP2_PRIVATE
 };
 
-enum mvpp2_queue_distribution_mode {
+enum mv_pp2x_queue_distribution_mode {
 	/* All queues are shared.
 	PPv2.1 – this is the only supported mode.
 	PPv2.2 – Requires (N+1) interrupts. All rx_queues are
@@ -289,7 +289,7 @@ enum mvpp2_queue_distribution_mode {
 	MVPP2_QDIST_MULTI_MODE	/* PPv2.2 only requires N interrupts */
 };
 
-enum mvpp2_cos_classifier {
+enum mv_pp2x_cos_classifier {
 	MVPP2_COS_CLS_VLAN, /* CoS based on VLAN pri */
 	MVPP2_COS_CLS_DSCP,
 	MVPP2_COS_CLS_VLAN_DSCP, /* CoS based on VLAN pri, */
@@ -297,7 +297,7 @@ enum mvpp2_cos_classifier {
 	MVPP2_COS_CLS_DSCP_VLAN
 };
 
-enum mvpp2_rss_nf_udp_mode {
+enum mv_pp2x_rss_nf_udp_mode {
 	MVPP2_RSS_NF_UDP_2T, /* non-frag UDP packet hash value
 				*is calculated based on 2T */
 	MVPP2_RSS_NF_UDP_5T /* non-frag UDP packet hash value
@@ -339,7 +339,7 @@ struct mv_mac_data {
 
 
 /* Per-CPU Tx queue control */
-struct mvpp2_txq_pcpu {
+struct mv_pp2x_txq_pcpu {
 	int cpu;
 
 	/* Number of Tx DMA descriptors in the descriptor ring */
@@ -367,7 +367,7 @@ struct mvpp2_txq_pcpu {
 };
 
 
-struct mvpp2_tx_queue {
+struct mv_pp2x_tx_queue {
 	/* Physical number of this Tx queue */
 	u8 id;
 
@@ -378,7 +378,7 @@ struct mvpp2_tx_queue {
 	int size;
 
 	/* Per-CPU control of physical Tx queues */
-	struct mvpp2_txq_pcpu __percpu *pcpu;
+	struct mv_pp2x_txq_pcpu __percpu *pcpu;
 
 	u32 pkts_coal;
 
@@ -387,7 +387,7 @@ struct mvpp2_tx_queue {
 	void *desc_mem;
 
 	/* Virtual address of thex Tx DMA descriptors array */
-	struct mvpp2_tx_desc *first_desc;
+	struct mv_pp2x_tx_desc *first_desc;
 
 	/* DMA address of the Tx DMA descriptors array */
 	dma_addr_t descs_phys;
@@ -400,7 +400,7 @@ struct mvpp2_tx_queue {
 };
 
 
-struct mvpp2_aggr_tx_queue {
+struct mv_pp2x_aggr_tx_queue {
 	/* Physical number of this Tx queue */
 	u8 id;
 
@@ -415,7 +415,7 @@ struct mvpp2_aggr_tx_queue {
 	void *desc_mem;
 
 	/* Virtual pointer to address of the Aggr_Tx DMA descriptors array */
-	struct mvpp2_tx_desc *first_desc;
+	struct mv_pp2x_tx_desc *first_desc;
 
 	/* DMA address of the Tx DMA descriptors array */
 	dma_addr_t descs_phys;
@@ -428,7 +428,7 @@ struct mvpp2_aggr_tx_queue {
 };
 
 
-struct mvpp2_rx_queue {
+struct mv_pp2x_rx_queue {
 	/* RX queue number, in the range 0-31 for physical RXQs */
 	u8 id;
 
@@ -446,7 +446,7 @@ struct mvpp2_rx_queue {
 	void *desc_mem;
 
 	/* Virtual address of the RX DMA descriptors array */
-	struct mvpp2_rx_desc *first_desc;
+	struct mv_pp2x_rx_desc *first_desc;
 
 	/* DMA address of the RX DMA descriptors array */
 	dma_addr_t descs_phys;
@@ -494,7 +494,7 @@ struct gop_hw {
 	};
 };
 
-struct mvpp2_hw {
+struct mv_pp2x_hw {
 
 	/* Shared registers' base addresses */
 	void __iomem *base;/* PPV22 base_address as received in */
@@ -514,16 +514,16 @@ struct mvpp2_hw {
 	u32 tclk;
 
 	/* PRS shadow table */
-	struct mvpp2_prs_shadow *prs_shadow;
+	struct mv_pp2x_prs_shadow *prs_shadow;
 	/* PRS auxiliary table for double vlan entries control */
 	bool *prs_double_vlans;
 	/* CLS shadow info for update in running time */
-	struct mvpp2_cls_shadow *cls_shadow;
+	struct mv_pp2x_cls_shadow *cls_shadow;
 	/* C2 shadow info */
-	struct mvpp2_c2_shadow *c2_shadow;
+	struct mv_pp2x_c2_shadow *c2_shadow;
 };
 
-struct mvpp2_cos {
+struct mv_pp2x_cos {
 	u8 cos_classifier;    /* CoS based on VLAN or DSCP */
 	u8 num_cos_queues;     /* number of queue to do CoS */
 	u8 default_cos;       /* Default CoS value for non-IP or non-VLAN */
@@ -532,15 +532,15 @@ struct mvpp2_cos {
 				* to a queue.*/
 };
 
-struct mvpp2_rss {
+struct mv_pp2x_rss {
 	u8 rss_mode; /*UDP packet */
 	u8 dflt_cpu; /*non-IP packet */
 	u8 rss_en;
 };
 
-struct mvpp2_param_config {
-	struct mvpp2_cos cos_cfg;
-	struct mvpp2_rss rss_cfg;
+struct mv_pp2x_param_config {
+	struct mv_pp2x_cos cos_cfg;
+	struct mv_pp2x_rss rss_cfg;
 	u8 first_bm_pool;
 	bool jumbo_pool; /* pp2 always supports 2 pools :
 			 * short=MV_DEF_256, long=MV_DEF_2K.
@@ -551,42 +551,42 @@ struct mvpp2_param_config {
 	u8 first_log_rxq; /* The first cos rx queue used in the port */
 	u8 cell_index; /* The cell_index of the PPv22
 			* (could be 0,1, set according to dtsi) */
-	enum mvpp2_queue_distribution_mode queue_mode;
+	enum mv_pp2x_queue_distribution_mode queue_mode;
 	u32 rx_cpu_map; /* The CPU that port bind, each port has a nibble
 			* indexed by port_id, nibble value is CPU id*/
 };
 
 /* Shared Packet Processor resources */
-struct mvpp2 {
+struct mv_pp2x {
 	enum mvppv2_version pp2_version; /* Redundant, consider to delete.
 					* (prevents extra pointer lookup from
-					* mvpp2x_platform_data) */
-	struct	mvpp2_hw hw;
-	struct mvpp2x_platform_data *pp2xdata;
+					* mv_pp2x_platform_data) */
+	struct	mv_pp2x_hw hw;
+	struct mv_pp2x_platform_data *pp2xdata;
 
 	u16 cpu_map; /* Bitmap of the participating cpu's */
 
 
-	struct mvpp2_param_config pp2_cfg;
+	struct mv_pp2x_param_config pp2_cfg;
 
 	/* List of pointers to port structures */
 	u16 num_ports;
-	struct mvpp2_port **port_list;
+	struct mv_pp2x_port **port_list;
 
 	/* Aggregated TXQs */
 	u16 num_aggr_qs;
-	struct mvpp2_aggr_tx_queue *aggr_txqs;
+	struct mv_pp2x_aggr_tx_queue *aggr_txqs;
 
 	/* BM pools */
 	u16 num_pools;
-	struct mvpp2_bm_pool *bm_pools;
+	struct mv_pp2x_bm_pool *bm_pools;
 
 	/* RX flow hash indir'n table, in pp22, the table contains the
 	* CPU idx according to weight */
 	u32 rx_indir_table[MVPP22_RSS_TBL_LINE_NUM];
 };
 
-struct mvpp2_pcpu_stats {
+struct mv_pp2x_pcpu_stats {
 	struct	u64_stats_sync syncp;
 	u64	rx_packets;
 	u64	rx_bytes;
@@ -595,7 +595,7 @@ struct mvpp2_pcpu_stats {
 };
 
 /* Per-CPU port control */
-struct mvpp2_port_pcpu {
+struct mv_pp2x_port_pcpu {
 	struct hrtimer tx_done_timer;
 #ifdef CONFIG_MV_PP2_PALLADIUM
 	struct timer_list slow_tx_done_timer;
@@ -607,7 +607,7 @@ struct mvpp2_port_pcpu {
 struct queue_vector {
 	unsigned int irq;
 	struct napi_struct napi;
-	enum mvpp2_queue_vector_type qv_type;
+	enum mv_pp2x_queue_vector_type qv_type;
 	u16 sw_thread_id; /* address_space index used to
 			* retrieve interrupt_cause */
 	u16 sw_thread_mask; /* Mask for Interrupt PORT_ENABLE Register */
@@ -615,17 +615,17 @@ struct queue_vector {
 	u8 num_rx_queues;
 	u32 pending_cause_rx; /* mask in absolute port_queues, not relative as
 			* in Ethernet Occupied Interrupt Cause (EthOccIC)) */
-	struct mvpp2_port *parent;
+	struct mv_pp2x_port *parent;
 };
 
 
-struct mvpp2_port {
+struct mv_pp2x_port {
 	u8 id;
 
 	u8 num_irqs;
 	u32 *of_irqs;
 
-	struct mvpp2 *priv;
+	struct mv_pp2x *priv;
 
 	struct mv_mac_data mac_data;
 	struct tasklet_struct	link_change_tasklet;
@@ -642,8 +642,8 @@ struct mvpp2_port {
 	/* port's  number of tx_queues */
 	u8 num_tx_queues;
 
-	struct mvpp2_rx_queue **rxqs; /*Each Port has up tp 32 rxq_queues.*/
-	struct mvpp2_tx_queue **txqs;
+	struct mv_pp2x_rx_queue **rxqs; /*Each Port has up tp 32 rxq_queues.*/
+	struct mv_pp2x_tx_queue **txqs;
 	struct net_device *dev;
 
 	int pkt_size; /* pkt_size determines which is pool_long:
@@ -651,7 +651,7 @@ struct mvpp2_port {
 
 
 	/* Per-CPU port control */
-	struct mvpp2_port_pcpu __percpu *pcpu;
+	struct mv_pp2x_port_pcpu __percpu *pcpu;
 	/* Flags */
 	unsigned long flags;
 
@@ -659,12 +659,12 @@ struct mvpp2_port {
 	u16 rx_ring_size;
 
 	u32 tx_time_coal;
-	struct mvpp2_pcpu_stats __percpu *stats;
+	struct mv_pp2x_pcpu_stats __percpu *stats;
 
 
-	struct mvpp2_bm_pool *pool_long; /* Pointer to the pool_id
+	struct mv_pp2x_bm_pool *pool_long; /* Pointer to the pool_id
 					* (long or jumbo) */
-	struct mvpp2_bm_pool *pool_short; /* Pointer to the short pool_id */
+	struct mv_pp2x_bm_pool *pool_short; /* Pointer to the short pool_id */
 
 
 	u32 num_qvector;
@@ -678,17 +678,17 @@ struct pp2x_hw_params {
 };
 
 
-struct mvpp2x_platform_data {
+struct mv_pp2x_platform_data {
 	enum mvppv2_version pp2x_ver;
 	u8 pp2x_max_port_rxqs;
 	u8 num_port_irq;
 	bool multi_addr_space;
 	bool interrupt_tx_done;
 	bool multi_hw_instance;
-	void (*mvpp2x_rxq_short_pool_set)(struct mvpp2_hw *, int, int);
-	void (*mvpp2x_rxq_long_pool_set)(struct mvpp2_hw *, int, int);
-	void (*mvpp2x_port_queue_vectors_init)(struct mvpp2_port *);
-	void (*mvpp2x_port_isr_rx_group_cfg)(struct mvpp2_port *);
+	void (*mv_pp2x_rxq_short_pool_set)(struct mv_pp2x_hw *, int, int);
+	void (*mv_pp2x_rxq_long_pool_set)(struct mv_pp2x_hw *, int, int);
+	void (*mv_pp2x_port_queue_vectors_init)(struct mv_pp2x_port *);
+	void (*mv_pp2x_port_isr_rx_group_cfg)(struct mv_pp2x_port *);
 	struct pp2x_hw_params hw;
 #ifdef CONFIG_64BIT
 	uintptr_t skb_base_addr;
@@ -696,7 +696,7 @@ struct mvpp2x_platform_data {
 #endif
 };
 
-static inline int mvpp2_max_check(int value, int limit, char *name)
+static inline int mv_pp2x_max_check(int value, int limit, char *name)
 {
 	if ((value < 0) || (value >= limit)) {
 		DBG_MSG("%s %d is out of range [0..%d]\n",
@@ -706,7 +706,7 @@ static inline int mvpp2_max_check(int value, int limit, char *name)
 	return 0;
 }
 
-static inline struct mvpp2_port *mvpp2_port_struct_get(struct mvpp2 *priv,
+static inline struct mv_pp2x_port *mv_pp2x_port_struct_get(struct mv_pp2x *priv,
 		int port)
 {
 	int i;
@@ -718,7 +718,7 @@ static inline struct mvpp2_port *mvpp2_port_struct_get(struct mvpp2 *priv,
 	return NULL;
 }
 
-static inline u8 mvpp2_cosval_queue_map(struct mvpp2_port *port,
+static inline u8 mv_pp2x_cosval_queue_map(struct mv_pp2x_port *port,
 		u8 cos_value)
 {
 	int cos_width, cos_mask;
@@ -731,7 +731,7 @@ static inline u8 mvpp2_cosval_queue_map(struct mvpp2_port *port,
 		(cos_value * 4)) & cos_mask);
 }
 
-static inline u8 mvpp2_bound_cpu_first_rxq_calc(struct mvpp2_port *port)
+static inline u8 mv_pp2x_bound_cpu_first_rxq_calc(struct mv_pp2x_port *port)
 {
 
 	u8 cos_width, bind_cpu;
@@ -744,7 +744,7 @@ static inline u8 mvpp2_bound_cpu_first_rxq_calc(struct mvpp2_port *port)
 }
 
 /* Swap RX descriptor to be BE */
-static inline void mvpp21_rx_desc_swap(struct mvpp2_rx_desc *rx_desc)
+static inline void mv_pp21_rx_desc_swap(struct mv_pp2x_rx_desc *rx_desc)
 {
 	cpu_to_le32s(&rx_desc->status);
 	cpu_to_le16s(&rx_desc->rsrvd_parser);
@@ -758,7 +758,7 @@ static inline void mvpp21_rx_desc_swap(struct mvpp2_rx_desc *rx_desc)
 	cpu_to_le32s(&rx_desc->u.pp21.rsrvd_abs);
 }
 
-static inline void mvpp22_rx_desc_swap(struct mvpp2_rx_desc *rx_desc)
+static inline void mv_pp22_rx_desc_swap(struct mv_pp2x_rx_desc *rx_desc)
 {
 	cpu_to_le32s(&rx_desc->status);
 	cpu_to_le16s(&rx_desc->rsrvd_parser);
@@ -771,7 +771,7 @@ static inline void mvpp22_rx_desc_swap(struct mvpp2_rx_desc *rx_desc)
 }
 
 /* Swap TX descriptor to be BE */
-static inline void mvpp21_tx_desc_swap(struct mvpp2_tx_desc *tx_desc)
+static inline void mv_pp21_tx_desc_swap(struct mv_pp2x_tx_desc *tx_desc)
 {
 	cpu_to_le32s(&tx_desc->command);
 	cpu_to_le16s(&tx_desc->data_size);
@@ -783,7 +783,7 @@ static inline void mvpp21_tx_desc_swap(struct mvpp2_tx_desc *tx_desc)
 	cpu_to_le32s(&tx_desc->u.pp21.rsrvd1);
 }
 
-static inline void mvpp22_tx_desc_swap(struct mvpp2_tx_desc *tx_desc)
+static inline void mv_pp22_tx_desc_swap(struct mv_pp2x_tx_desc *tx_desc)
 {
 	cpu_to_le32s(&tx_desc->command);
 	cpu_to_le16s(&tx_desc->data_size);
@@ -793,41 +793,41 @@ static inline void mvpp22_tx_desc_swap(struct mvpp2_tx_desc *tx_desc)
 }
 
 
-struct mvpp2_pool_attributes {
+struct mv_pp2x_pool_attributes {
 	char description[32];
 	int pkt_size;
 	int buf_num;
 };
 
 
-extern struct mvpp2_pool_attributes mvpp2_pools[];
-void mvpp2_bm_bufs_free(struct mvpp2 *priv,
-		struct mvpp2_bm_pool *bm_pool, int buf_num);
-int mvpp2_bm_bufs_add(struct mvpp2_port *port,
-		struct mvpp2_bm_pool *bm_pool, int buf_num);
-int mvpp2_open(struct net_device *dev);
-int mvpp2_check_ringparam_valid(struct net_device *dev,
+extern struct mv_pp2x_pool_attributes mv_pp2x_pools[];
+void mv_pp2x_bm_bufs_free(struct mv_pp2x *priv,
+		struct mv_pp2x_bm_pool *bm_pool, int buf_num);
+int mv_pp2x_bm_bufs_add(struct mv_pp2x_port *port,
+		struct mv_pp2x_bm_pool *bm_pool, int buf_num);
+int mv_pp2x_open(struct net_device *dev);
+int mv_pp2x_check_ringparam_valid(struct net_device *dev,
 		struct ethtool_ringparam *ring);
-void mvpp2_start_dev(struct mvpp2_port *port);
-void mvpp2_stop_dev(struct mvpp2_port *port);
-void mvpp2_cleanup_rxqs(struct mvpp2_port *port);
-int mvpp2_setup_rxqs(struct mvpp2_port *port);
-int mvpp2_setup_txqs(struct mvpp2_port *port);
-void mvpp2_cleanup_txqs(struct mvpp2_port *port);
+void mv_pp2x_start_dev(struct mv_pp2x_port *port);
+void mv_pp2x_stop_dev(struct mv_pp2x_port *port);
+void mv_pp2x_cleanup_rxqs(struct mv_pp2x_port *port);
+int mv_pp2x_setup_rxqs(struct mv_pp2x_port *port);
+int mv_pp2x_setup_txqs(struct mv_pp2x_port *port);
+void mv_pp2x_cleanup_txqs(struct mv_pp2x_port *port);
 
 
-void mvpp2_set_ethtool_ops(struct net_device *netdev);
+void mv_pp2x_set_ethtool_ops(struct net_device *netdev);
 
-int mvpp22_rss_rxfh_indir_set(struct mvpp2_port *port);
+int mv_pp22_rss_rxfh_indir_set(struct mv_pp2x_port *port);
 
-int mvpp2_cos_classifier_set(struct mvpp2_port *port,
-		enum mvpp2_cos_classifier cos_mode);
-int mvpp2_cos_classifier_get(struct mvpp2_port *port);
-int mvpp2_cos_pri_map_set(struct mvpp2_port *port, int cos_pri_map);
-int mvpp2_cos_pri_map_get(struct mvpp2_port *port);
-int mvpp2_cos_default_value_set(struct mvpp2_port *port, int cos_value);
-int mvpp2_cos_default_value_get(struct mvpp2_port *port);
-int mvpp22_rss_mode_set(struct mvpp2_port *port, int rss_mode);
-int mvpp22_rss_default_cpu_set(struct mvpp2_port *port, int default_cpu);
+int mv_pp2x_cos_classifier_set(struct mv_pp2x_port *port,
+		enum mv_pp2x_cos_classifier cos_mode);
+int mv_pp2x_cos_classifier_get(struct mv_pp2x_port *port);
+int mv_pp2x_cos_pri_map_set(struct mv_pp2x_port *port, int cos_pri_map);
+int mv_pp2x_cos_pri_map_get(struct mv_pp2x_port *port);
+int mv_pp2x_cos_default_value_set(struct mv_pp2x_port *port, int cos_value);
+int mv_pp2x_cos_default_value_get(struct mv_pp2x_port *port);
+int mv_pp22_rss_mode_set(struct mv_pp2x_port *port, int rss_mode);
+int mv_pp22_rss_default_cpu_set(struct mv_pp2x_port *port, int default_cpu);
 #endif /*_MVPP2_H_*/
 

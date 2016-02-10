@@ -94,7 +94,7 @@ static ssize_t mv_pp2_port_store(struct device *dev,
 		mvPp2RxFifoRegs(sysfs_cur_hw, p);
 	} else if (!strcmp(name, "rx_group_regs")) {
 		if (sysfs_cur_priv->pp2_version == PPV22)
-			mvpp22_isr_rx_group_regs(sysfs_cur_priv, p, v);
+			mv_pp22_isr_rx_group_regs(sysfs_cur_priv, p, v);
 		else
 			printk("PPV22 isr_group - TBD\n");
 	} else if (!strcmp(name, "rxqCounters")) {

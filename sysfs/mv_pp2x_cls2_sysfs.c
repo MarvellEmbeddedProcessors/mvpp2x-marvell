@@ -33,8 +33,8 @@ disclaimer.
 #include <linux/platform_device.h>
 #include "mv_pp2x_sysfs.h"
 
-struct mvpp2_cls_c2_qos_entry qos_entry;
-struct mvpp2_cls_c2_entry c2_entry;
+struct mv_pp2x_cls_c2_qos_entry qos_entry;
+struct mv_pp2x_cls_c2_entry c2_entry;
 
 static ssize_t mv_cls2_help(char *buf)
 {
@@ -100,15 +100,15 @@ static ssize_t mv_cls2_show(struct device *dev,
 		return -EPERM;
 
 	if (!strcmp(name, "prio_hw_dump"))
-		off += mvpp2_cls_c2_qos_prio_hw_dump(sysfs_cur_hw);
+		off += mv_pp2x_cls_c2_qos_prio_hw_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "dscp_hw_dump"))
-		off += mvpp2_cls_c2_qos_dscp_hw_dump(sysfs_cur_hw);
+		off += mv_pp2x_cls_c2_qos_dscp_hw_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "act_hw_dump"))
-		off += mvpp2_cls_c2_hw_dump(sysfs_cur_hw);
+		off += mv_pp2x_cls_c2_hw_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "cnt_dump"))
-		off += mvpp2_cls_c2_hit_cntr_dump(sysfs_cur_hw);
+		off += mv_pp2x_cls_c2_hit_cntr_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "hw_regs"))
-		off += mvpp2_cls_c2_regs_dump(sysfs_cur_hw);
+		off += mv_pp2x_cls_c2_regs_dump(sysfs_cur_hw);
 	else
 		off += mv_cls2_help(buf);
 
@@ -131,60 +131,60 @@ static ssize_t mv_cls2_store(struct device *dev,
 	local_irq_save(flags);
 
 	if (!strcmp(name, "cnt_clr_all"))
-		mvpp2_cls_c2_hit_cntr_clear_all(sysfs_cur_hw);
+		mv_pp2x_cls_c2_hit_cntr_clear_all(sysfs_cur_hw);
 	else if (!strcmp(name, "cnt_read"))
-		mvpp2_cls_c2_hit_cntr_read(sysfs_cur_hw, a, NULL);
+		mv_pp2x_cls_c2_hit_cntr_read(sysfs_cur_hw, a, NULL);
 	else if (!strcmp(name, "act_hw_inv_all"))
-		mvpp2_cls_c2_hw_inv_all(sysfs_cur_hw);
+		mv_pp2x_cls_c2_hw_inv_all(sysfs_cur_hw);
 	else if (!strcmp(name, "act_hw_inv"))
-		mvpp2_cls_c2_hw_inv(sysfs_cur_hw, a);
+		mv_pp2x_cls_c2_hw_inv(sysfs_cur_hw, a);
 	else if (!strcmp(name, "qos_sw_clear"))
-		memset(&qos_entry, 0, sizeof(struct mvpp2_cls_c2_qos_entry));
+		memset(&qos_entry, 0, sizeof(struct mv_pp2x_cls_c2_qos_entry));
 	else if (!strcmp(name, "qos_hw_write")) {
 		qos_entry.tbl_id = a;
 		qos_entry.tbl_sel = b;
 		qos_entry.tbl_line = c;
-		mvpp2_cls_c2_qos_hw_write(sysfs_cur_hw, &qos_entry);
+		mv_pp2x_cls_c2_qos_hw_write(sysfs_cur_hw, &qos_entry);
 	} else if (!strcmp(name, "qos_hw_read"))
-		mvpp2_cls_c2_qos_hw_read(sysfs_cur_hw, a, b, c, &qos_entry);
+		mv_pp2x_cls_c2_qos_hw_read(sysfs_cur_hw, a, b, c, &qos_entry);
 	else if (!strcmp(name, "qos_sw_prio"))
-		mvpp2_cls_c2_qos_prio_set(&qos_entry, a);
+		mv_pp2x_cls_c2_qos_prio_set(&qos_entry, a);
 	else if (!strcmp(name, "qos_sw_dscp"))
-		mvpp2_cls_c2_qos_dscp_set(&qos_entry, a);
+		mv_pp2x_cls_c2_qos_dscp_set(&qos_entry, a);
 	else if (!strcmp(name, "qos_sw_color"))
-		mvpp2_cls_c2_qos_color_set(&qos_entry, a);
+		mv_pp2x_cls_c2_qos_color_set(&qos_entry, a);
 	else if (!strcmp(name, "qos_sw_queue"))
-		mvpp2_cls_c2_qos_queue_set(&qos_entry, a);
+		mv_pp2x_cls_c2_qos_queue_set(&qos_entry, a);
 	else if (!strcmp(name, "act_sw_clear"))
-		memset(&c2_entry, 0, sizeof(struct mvpp2_c2_add_entry));
+		memset(&c2_entry, 0, sizeof(struct mv_pp2x_c2_add_entry));
 	else if (!strcmp(name, "act_hw_write"))
-		mvpp2_cls_c2_hw_write(sysfs_cur_hw, a, &c2_entry);
+		mv_pp2x_cls_c2_hw_write(sysfs_cur_hw, a, &c2_entry);
 	else if (!strcmp(name, "act_hw_read"))
-		mvpp2_cls_c2_hw_read(sysfs_cur_hw, a, &c2_entry);
+		mv_pp2x_cls_c2_hw_read(sysfs_cur_hw, a, &c2_entry);
 	else if (!strcmp(name, "act_sw_byte"))
-		mvpp2_cls_c2_tcam_byte_set(&c2_entry, a, b, c);
+		mv_pp2x_cls_c2_tcam_byte_set(&c2_entry, a, b, c);
 	else if (!strcmp(name, "act_sw_qos"))
-		mvpp2_cls_c2_qos_tbl_set(&c2_entry, a, b);
+		mv_pp2x_cls_c2_qos_tbl_set(&c2_entry, a, b);
 	else if (!strcmp(name, "act_sw_color"))
-		mvpp2_cls_c2_color_set(&c2_entry, a, b);
+		mv_pp2x_cls_c2_color_set(&c2_entry, a, b);
 	else if (!strcmp(name, "act_sw_prio"))
-		mvpp2_cls_c2_prio_set(&c2_entry, a, b, c);
+		mv_pp2x_cls_c2_prio_set(&c2_entry, a, b, c);
 	else if (!strcmp(name, "act_sw_dscp"))
-		mvpp2_cls_c2_dscp_set(&c2_entry, a, b, c);
+		mv_pp2x_cls_c2_dscp_set(&c2_entry, a, b, c);
 	else if (!strcmp(name, "act_sw_qh"))
-		mvpp2_cls_c2_queue_high_set(&c2_entry, a, b, c);
+		mv_pp2x_cls_c2_queue_high_set(&c2_entry, a, b, c);
 	else if (!strcmp(name, "act_sw_ql"))
-		mvpp2_cls_c2_queue_low_set(&c2_entry, a, b, c);
+		mv_pp2x_cls_c2_queue_low_set(&c2_entry, a, b, c);
 	else if (!strcmp(name, "act_sw_queue"))
-		mvpp2_cls_c2_queue_set(&c2_entry, a, b, c);
+		mv_pp2x_cls_c2_queue_set(&c2_entry, a, b, c);
 	else if (!strcmp(name, "act_sw_hwf"))
-		mvpp2_cls_c2_forward_set(&c2_entry, a);
+		mv_pp2x_cls_c2_forward_set(&c2_entry, a);
 	else if (!strcmp(name, "act_sw_rss"))
-		mvpp2_cls_c2_rss_set(&c2_entry, a, b);
+		mv_pp2x_cls_c2_rss_set(&c2_entry, a, b);
 	else if (!strcmp(name, "act_sw_mtu"))
-		mvpp2_cls_c2_mtu_set(&c2_entry, a);
+		mv_pp2x_cls_c2_mtu_set(&c2_entry, a);
 	else if (!strcmp(name, "act_sw_flowid"))
-		mvpp2_cls_c2_flow_id_en(&c2_entry, a);
+		mv_pp2x_cls_c2_flow_id_en(&c2_entry, a);
 	else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);

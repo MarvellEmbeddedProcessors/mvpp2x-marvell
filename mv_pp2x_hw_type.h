@@ -1255,7 +1255,7 @@ SCAN STATUS
 
 
 /* Marvell tag types */
-enum mvpp2_tag_type {
+enum mv_pp2x_tag_type {
 	MVPP2_TAG_TYPE_NONE = 0,
 	MVPP2_TAG_TYPE_MH   = 1,
 	MVPP2_TAG_TYPE_DSA  = 2,
@@ -1625,7 +1625,7 @@ enum mvpp2_tag_type {
 #define MVPP22_RSS_WIDTH_MAX			8
 
 /* MAC entries, shadow udf */
-enum mvpp2_prs_udf {
+enum mv_pp2x_prs_udf {
 	MVPP2_PRS_UDF_MAC_DEF,
 	MVPP2_PRS_UDF_MAC_RANGE,
 	MVPP2_PRS_UDF_L2_DEF,
@@ -1634,7 +1634,7 @@ enum mvpp2_prs_udf {
 };
 
 /* Lookup ID */
-enum mvpp2_prs_lookup {
+enum mv_pp2x_prs_lookup {
 	MVPP2_PRS_LU_MH,
 	MVPP2_PRS_LU_MAC,
 	MVPP2_PRS_LU_DSA,
@@ -1648,14 +1648,14 @@ enum mvpp2_prs_lookup {
 };
 
 /* L3 cast enum */
-enum mvpp2_prs_l3_cast {
+enum mv_pp2x_prs_l3_cast {
 	MVPP2_PRS_L3_UNI_CAST,
 	MVPP2_PRS_L3_MULTI_CAST,
 	MVPP2_PRS_L3_BROAD_CAST
 };
 
 /* Packet flow ID */
-enum mvpp2_prs_flow {
+enum mv_pp2x_prs_flow {
 	MVPP2_PRS_FL_START = 8,
 	MVPP2_PRS_FL_IP4_TCP_NF_UNTAG = MVPP2_PRS_FL_START,
 	MVPP2_PRS_FL_IP4_UDP_NF_UNTAG,
@@ -1684,7 +1684,7 @@ enum mvpp2_prs_flow {
 					*generate flow ID */
 };
 
-enum mvpp2_cls_engine_num {
+enum mv_pp2x_cls_engine_num {
 	MVPP2_CLS_ENGINE_C2 = 1,
 	MVPP2_CLS_ENGINE_C3A,
 	MVPP2_CLS_ENGINE_C3B,
@@ -1693,7 +1693,7 @@ enum mvpp2_cls_engine_num {
 	MVPP2_CLS_ENGINE_C3HB,
 };
 
-enum mvpp2_cls_lkp_type {
+enum mv_pp2x_cls_lkp_type {
 	MVPP2_CLS_LKP_HASH = 0,
 	MVPP2_CLS_LKP_VLAN_PRI,
 	MVPP2_CLS_LKP_DSCP_PRI,
@@ -1701,12 +1701,12 @@ enum mvpp2_cls_lkp_type {
 	MVPP2_CLS_LKP_MAX,
 };
 
-enum mvpp2_cls_fl_pri {
+enum mv_pp2x_cls_fl_pri {
 	MVPP2_CLS_FL_COS_PRI = 0,
 	MVPP2_CLS_FL_RSS_PRI,
 };
 
-enum mvpp2_cls_filed_id {
+enum mv_pp2x_cls_filed_id {
 	MVPP2_CLS_FIELD_IP4SA = 0x10,
 	MVPP2_CLS_FIELD_IP4DA = 0x11,
 	MVPP2_CLS_FIELD_IP6SA = 0x17,
@@ -1715,25 +1715,25 @@ enum mvpp2_cls_filed_id {
 	MVPP2_CLS_FIELD_L4DIP = 0x1E,
 };
 
-enum mvpp2_cos_type {
+enum mv_pp2x_cos_type {
 	MVPP2_COS_TYPE_DEF = 0,
 	MVPP2_COS_TYPE_VLAN,
 	MVPP2_COS_TYPE_DSCP,
 };
 
-enum mvpp2_rss_hash_mode {
+enum mv_pp2x_rss_hash_mode {
 	MVPP2_RSS_HASH_2T = 0,
 	MVPP2_RSS_HASH_5T,
 };
 
-struct mvpp2_prs_result_info {
+struct mv_pp2x_prs_result_info {
 	u32 ri;
 	u32 ri_mask;
 };
 
-struct mvpp2_prs_flow_id {
+struct mv_pp2x_prs_flow_id {
 	u32 flow_id;
-	struct mvpp2_prs_result_info prs_result;
+	struct mv_pp2x_prs_result_info prs_result;
 };
 
 /* Classifier constants */
@@ -1759,7 +1759,7 @@ struct mvpp2_prs_flow_id {
 
 
 
-enum mvpp2_bm_pool_log_num {
+enum mv_pp2x_bm_pool_log_num {
 	MVPP2_BM_SWF_SHORT_POOL,
 	MVPP2_BM_SWF_LONG_POOL,
 	MVPP2_BM_SWF_JUMBO_POOL,
@@ -1768,7 +1768,7 @@ enum mvpp2_bm_pool_log_num {
 
 
 
-/* The mvpp2_tx_desc and mvpp2_rx_desc structures describe the
+/* The mv_pp2x_tx_desc and mv_pp2x_rx_desc structures describe the
  * layout of the transmit and reception DMA descriptors, and their
  * layout is therefore defined by the hardware design
  */
@@ -1897,7 +1897,7 @@ union pp2x_specific_tx_desc {
 	struct pp22_specific_tx_desc pp22;
 };
 
-struct mvpp2_tx_desc {
+struct mv_pp2x_tx_desc {
 	u32 command;		/* Options used by HW for packet xmitting */
 	u8  packet_offset;	/* the offset from the buffer beginning	*/
 	u8  phys_txq;		/* destination queue ID			*/
@@ -1906,7 +1906,7 @@ struct mvpp2_tx_desc {
 };
 
 #if 0
-struct1 mvpp2_tx_desc {
+struct1 mv_pp2x_tx_desc {
 	u32 command;		/* Options used by HW for packet transmitting*/
 	u8  packet_offset;	/* the offset from the buffer beginning	*/
 	u8  phys_txq;		/* destination queue ID			*/
@@ -1945,7 +1945,7 @@ union pp2x_specific_rx_desc {
 	struct pp22_specific_rx_desc pp22;
 };
 
-struct mvpp2_rx_desc {
+struct mv_pp2x_rx_desc {
 	u32 status;		/* info about received packet */
 	u16 rsrvd_parser;	/* parser_info (for future use, PnC)	*/
 	u16 data_size;		/* size of received packet in bytes	*/
@@ -1953,7 +1953,7 @@ struct mvpp2_rx_desc {
 };
 
 #if 0
-struct mvpp2_rx_desc {
+struct mv_pp2x_rx_desc {
 	u32 status;		/* info about received packet		*/
 	u16 reserved1;		/* parser_info (for future use, PnC)	*/
 	u16 data_size;		/* size of received packet in bytes	*/
@@ -1969,23 +1969,23 @@ struct mvpp2_rx_desc {
 };
 #endif
 
-union mvpp2_prs_tcam_entry {
+union mv_pp2x_prs_tcam_entry {
 	u32 word[MVPP2_PRS_TCAM_WORDS];
 	u8  byte[MVPP2_PRS_TCAM_WORDS * 4];
 };
 
-union mvpp2_prs_sram_entry {
+union mv_pp2x_prs_sram_entry {
 	u32 word[MVPP2_PRS_SRAM_WORDS];
 	u8  byte[MVPP2_PRS_SRAM_WORDS * 4];
 };
 
-struct mvpp2_prs_entry {
+struct mv_pp2x_prs_entry {
 	u32 index;
-	union mvpp2_prs_tcam_entry tcam;
-	union mvpp2_prs_sram_entry sram;
+	union mv_pp2x_prs_tcam_entry tcam;
+	union mv_pp2x_prs_sram_entry sram;
 };
 
-struct mvpp2_prs_shadow {
+struct mv_pp2x_prs_shadow {
 	bool valid;
 	bool finish;
 
@@ -2000,18 +2000,18 @@ struct mvpp2_prs_shadow {
 	u32 ri_mask;
 };
 
-struct mvpp2_cls_flow_entry {
+struct mv_pp2x_cls_flow_entry {
 	u32 index;
 	u32 data[MVPP2_CLS_FLOWS_TBL_DATA_WORDS];
 };
 
-struct mvpp2_cls_lookup_entry {
+struct mv_pp2x_cls_lookup_entry {
 	u32 lkpid;
 	u32 way;
 	u32 data;
 };
 
-struct mvpp2_cls_flow_info {
+struct mv_pp2x_cls_flow_info {
 	u32 lkpid;
 	/* The flow table entry index of CoS default rule */
 	u32 flow_entry_dflt;
@@ -2026,8 +2026,8 @@ struct mvpp2_cls_flow_info {
 	u32 flow_entry_rss2;
 };
 
-struct mvpp2_cls_shadow {
-	struct mvpp2_cls_flow_info *flow_info;
+struct mv_pp2x_cls_shadow {
+	struct mv_pp2x_cls_flow_info *flow_info;
 	u32 flow_free_start; /* The start of free entry index in flow table */
 	/* TODO: does need a spin_lock for flow_free_start? */
 };
@@ -2056,7 +2056,7 @@ struct mvpp2_cls_shadow {
 #define MVPP2_CLS_C2_QOS_DSCP_TBL_NUM		8
 #define MVPP2_CLS_C2_QOS_PRIO_TBL_NUM		64
 
-struct mvpp2_cls_c2_entry {
+struct mv_pp2x_cls_c2_entry {
 	u32          index;
 	bool         inv;
 	union {
@@ -2076,7 +2076,7 @@ struct mvpp2_cls_c2_entry {
 	} sram;
 };
 
-enum mvpp2_cls2_hek_offs {
+enum mv_pp2x_cls2_hek_offs {
 	MVPP2_CLS_C2_HEK_OFF_BYTE0 = 0,
 	MVPP2_CLS_C2_HEK_OFF_BYTE1,
 	MVPP2_CLS_C2_HEK_OFF_BYTE2,
@@ -2090,52 +2090,52 @@ enum mvpp2_cls2_hek_offs {
 	MVPP2_CLS_C2_HEK_OFF_MAX
 };
 
-struct mvpp2_cls_c2_qos_entry {
+struct mv_pp2x_cls_c2_qos_entry {
 	u32 tbl_id;
 	u32 tbl_sel;
 	u32 tbl_line;
 	u32 data;
 };
 
-enum mvpp2_src_port_type {
+enum mv_pp2x_src_port_type {
 	MVPP2_SRC_PORT_TYPE_PHY,
 	MVPP2_SRC_PORT_TYPE_UNI,
 	MVPP2_SRC_PORT_TYPE_VIR
 };
 
-struct mvpp2_src_port {
-	enum mvpp2_src_port_type	port_type;
+struct mv_pp2x_src_port {
+	enum mv_pp2x_src_port_type	port_type;
 	unsigned int			port_value;
 	unsigned int			port_mask;
 };
 
-enum mvpp2_qos_tbl_sel {
+enum mv_pp2x_qos_tbl_sel {
 	MVPP2_QOS_TBL_SEL_PRI = 0,
 	MVPP2_QOS_TBL_SEL_DSCP,
 };
 
-enum mvpp2_qos_src_tbl {
+enum mv_pp2x_qos_src_tbl {
 	MVPP2_QOS_SRC_ACTION_TBL = 0,
 	MVPP2_QOS_SRC_DSCP_PBIT_TBL,
 };
 
-struct mvpp2_engine_qos_info {
+struct mv_pp2x_engine_qos_info {
 	/* dscp pri table or none */
-	enum mvpp2_qos_tbl_sel	qos_tbl_type;
+	enum mv_pp2x_qos_tbl_sel	qos_tbl_type;
 	/* dscp or pri table index */
 	unsigned int		qos_tbl_index;
 	/* policer id, 0xffff do not assign policer */
 	unsigned short		policer_id;
 	/* pri/dscp comes from qos or act tbl */
-	enum mvpp2_qos_src_tbl	pri_dscp_src;
+	enum mv_pp2x_qos_src_tbl	pri_dscp_src;
 	/* gemport comes from qos or act tbl */
-	enum mvpp2_qos_src_tbl	gemport_src;
-	enum mvpp2_qos_src_tbl	q_low_src;
-	enum mvpp2_qos_src_tbl	q_high_src;
-	enum mvpp2_qos_src_tbl	color_src;
+	enum mv_pp2x_qos_src_tbl	gemport_src;
+	enum mv_pp2x_qos_src_tbl	q_low_src;
+	enum mv_pp2x_qos_src_tbl	q_high_src;
+	enum mv_pp2x_qos_src_tbl	color_src;
 };
 
-enum mvpp2_color_action_type {
+enum mv_pp2x_color_action_type {
 	/* Do not update color */
 	MVPP2_COLOR_ACTION_TYPE_NO_UPDT = 0,
 	/* Do not update color and lock */
@@ -2154,7 +2154,7 @@ enum mvpp2_color_action_type {
 	MVPP2_COLOR_ACTION_TYPE_RED_LOCK,
 };
 
-enum mvpp2_general_action_type {
+enum mv_pp2x_general_action_type {
 	/* The field will be not updated */
 	MVPP2_ACTION_TYPE_NO_UPDT,
 	/* The field will be not updated and lock */
@@ -2165,14 +2165,14 @@ enum mvpp2_general_action_type {
 	MVPP2_ACTION_TYPE_UPDT_LOCK,
 };
 
-enum mvpp2_flowid_action_type {
+enum mv_pp2x_flowid_action_type {
 	/* FlowID is disable */
 	MVPP2_ACTION_FLOWID_DISABLE = 0,
 	/* FlowID is enable */
 	MVPP2_ACTION_FLOWID_ENABLE,
 };
 
-enum mvpp2_frwd_action_type {
+enum mv_pp2x_frwd_action_type {
 	/* The decision will be not updated */
 	MVPP2_FRWD_ACTION_TYPE_NO_UPDT,
 	/* The decision is not updated, and following no change to it */
@@ -2191,19 +2191,19 @@ enum mvpp2_frwd_action_type {
 	MVPP2_FRWD_ACTION_TYPE_HWF_LOW_LATENCY_LOCK,
 };
 
-struct mvpp2_engine_pkt_action {
-	enum mvpp2_color_action_type		color_act;
-	enum mvpp2_general_action_type		pri_act;
-	enum mvpp2_general_action_type		dscp_act;
-	enum mvpp2_general_action_type		gemp_act;
-	enum mvpp2_general_action_type		q_low_act;
-	enum mvpp2_general_action_type		q_high_act;
-	enum mvpp2_general_action_type		rss_act;
-	enum mvpp2_flowid_action_type		flowid_act;
-	enum mvpp2_frwd_action_type		frwd_act;
+struct mv_pp2x_engine_pkt_action {
+	enum mv_pp2x_color_action_type		color_act;
+	enum mv_pp2x_general_action_type		pri_act;
+	enum mv_pp2x_general_action_type		dscp_act;
+	enum mv_pp2x_general_action_type		gemp_act;
+	enum mv_pp2x_general_action_type		q_low_act;
+	enum mv_pp2x_general_action_type		q_high_act;
+	enum mv_pp2x_general_action_type		rss_act;
+	enum mv_pp2x_flowid_action_type		flowid_act;
+	enum mv_pp2x_frwd_action_type		frwd_act;
 };
 
-struct mvpp2_qos_value {
+struct mv_pp2x_qos_value {
 	unsigned short		pri;
 	unsigned short		dscp;
 	unsigned short		gemp;
@@ -2211,13 +2211,13 @@ struct mvpp2_qos_value {
 	unsigned short		q_high;
 };
 
-struct mvpp2_engine_pkt_mod {
+struct mv_pp2x_engine_pkt_mod {
 	unsigned int	mod_cmd_idx;
 	unsigned int	mod_data_idx;
 	unsigned int	l4_chksum_update_flag;
 };
 
-struct mvpp2_duplicate_info {
+struct mv_pp2x_duplicate_info {
 	/* pkt duplication flow id */
 	unsigned int	flow_id;
 	/* pkt duplication count */
@@ -2225,27 +2225,27 @@ struct mvpp2_duplicate_info {
 };
 
 /* The logic C2 entry, easy to understand and use */
-struct mvpp2_c2_add_entry {
-	struct mvpp2_src_port		port;
+struct mv_pp2x_c2_add_entry {
+	struct mv_pp2x_src_port		port;
 	unsigned char			lkp_type;
 	unsigned char			lkp_type_mask;
 	/* priority in this look_type */
 	unsigned int			priority;
 	/* all the qos input */
-	struct mvpp2_engine_qos_info	qos_info;
+	struct mv_pp2x_engine_qos_info	qos_info;
 	/* update&lock info */
-	struct mvpp2_engine_pkt_action	action;
+	struct mv_pp2x_engine_pkt_action	action;
 	/* pri/dscp/gemport/qLow/qHigh */
-	struct mvpp2_qos_value		qos_value;
+	struct mv_pp2x_qos_value		qos_value;
 	/* PMT cmd_idx and data_idx */
-	struct mvpp2_engine_pkt_mod	pkt_mod;
+	struct mv_pp2x_engine_pkt_mod	pkt_mod;
 	/* RSS enable or disable */
 	int				rss_en;
 	/* pkt duplication flow info */
-	struct mvpp2_duplicate_info	flow_info;
+	struct mv_pp2x_duplicate_info	flow_info;
 };
 
-struct mvpp2_c2_rule_idx {
+struct mv_pp2x_c2_rule_idx {
 	/* The TCAM rule index for VLAN pri check with QoS pbit table */
 	u32 vlan_pri_idx;
 	/* The TCAM rule index for DSCP check with QoS dscp table */
@@ -2254,27 +2254,27 @@ struct mvpp2_c2_rule_idx {
 	u32 default_rule_idx;
 };
 
-struct mvpp2_c2_shadow {
+struct mv_pp2x_c2_shadow {
 	int c2_tcam_free_start;
 	/* Per src port */
-	struct mvpp2_c2_rule_idx rule_idx_info[8];
+	struct mv_pp2x_c2_rule_idx rule_idx_info[8];
 };
 
 /* BM specific defines */
 #if DEBUG
-struct mvpp2_bm_pool_stats {
+struct mv_pp2x_bm_pool_stats {
 	u32 skb_alloc_oom;
 	u32 skb_alloc_ok;
 	u32 bm_put;
 };
 #endif
 
-struct mvpp2_bm_pool {
+struct mv_pp2x_bm_pool {
 	/* Pool number in the range 0-7 */
 	int id;
 
 	/*Logical id, equals to index in parent priv */
-	enum mvpp2_bm_pool_log_num  log_id;
+	enum mv_pp2x_bm_pool_log_num  log_id;
 
 	/* Buffer Pointers Pool External (BPPE) size */
 	int size;
@@ -2298,11 +2298,11 @@ struct mvpp2_bm_pool {
 	int in_use_thresh;
 	/* Stats info */
 #if DEBUG
-	struct mvpp2_bm_pool_stats stats;
+	struct mv_pp2x_bm_pool_stats stats;
 #endif
 };
 
-struct mvpp2_buff_hdr {
+struct mv_pp2x_buff_hdr {
 	u32 next_buff_phys_addr;
 	u32 next_buff_virt_addr;
 	u16 byte_count;
@@ -2324,33 +2324,33 @@ struct mvpp2_buff_hdr {
 		MVPP2_RXD_BM_POOL_ID_MASK) >> MVPP2_RXD_BM_POOL_ID_OFFS)
 
 /* RSS related definetions */
-enum mvpp22_rss_access_sel {
+enum mv_pp22_rss_access_sel {
 	MVPP22_RSS_ACCESS_POINTER,
 	MVPP22_RSS_ACCESS_TBL,
 };
 
 /* Structure dexcribe RXQ and corresponding rss table */
-struct mvpp22_rss_tbl_ptr {
+struct mv_pp22_rss_tbl_ptr {
 	u8 rxq_idx;
 	u8 rss_tbl_ptr;
 };
 
 /* Normal RSS entry */
-struct mvpp22_rss_tbl_entry {
+struct mv_pp22_rss_tbl_entry {
 	u8 tbl_id;
 	u8 tbl_line;
 	u8 width;
 	u8 rxq;
 };
 
-union mvpp22_rss_access_entry {
-	struct mvpp22_rss_tbl_ptr pointer;
-	struct mvpp22_rss_tbl_entry entry;
+union mv_pp22_rss_access_entry {
+	struct mv_pp22_rss_tbl_ptr pointer;
+	struct mv_pp22_rss_tbl_entry entry;
 };
 
-struct mvpp22_rss_entry {
-	enum mvpp22_rss_access_sel sel;
-	union mvpp22_rss_access_entry u;
+struct mv_pp22_rss_entry {
+	enum mv_pp22_rss_access_sel sel;
+	union mv_pp22_rss_access_entry u;
 };
 
 #endif /*_MVPP2_HW_TYPE_H_*/

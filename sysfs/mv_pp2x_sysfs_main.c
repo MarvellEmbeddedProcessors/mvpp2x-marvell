@@ -52,7 +52,7 @@ disclaimer.
 //#include "cls/mvPp2Classifier.h"
 
 #include "mv_pp2x_sysfs.h"
-#include "mv_eth_sysfs.h"
+#include "mv_pp2x_eth_sysfs.h"
 
 #include "mv_pp2x.h"
 
@@ -62,19 +62,19 @@ disclaimer.
 //#include "wol/mvPp2Wol.h"
 
 
-struct mvpp2 *sysfs_cur_priv;
-struct mvpp2_hw *sysfs_cur_hw;
+struct mv_pp2x *sysfs_cur_priv;
+struct mv_pp2x_hw *sysfs_cur_hw;
 static struct platform_device * pp2_sysfs;
 
 
-extern void mvpp2_pp2_basic_print(struct platform_device *pdev, struct mvpp2 *priv);
+extern void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv);
 
 static int mv_pp2_sysfs_init(void)
 {
 	struct device *pd;
 	struct device *pp2_dev;
 	struct platform_device *pp2_plat_dev;
-	struct mvpp2 *priv;
+	struct mv_pp2x *priv;
 	char *pp2_dev_name = "f2000000.ppv22";
 
 
@@ -96,7 +96,7 @@ static int mv_pp2_sysfs_init(void)
 
 	priv = dev_get_drvdata(pp2_dev);
 	pp2_plat_dev = to_platform_device(pp2_dev);
-	mvpp2_pp2_basic_print(pp2_plat_dev, priv);
+	mv_pp2x_pp2_basic_print(pp2_plat_dev, priv);
 	sysfs_cur_priv = priv;
 	sysfs_cur_hw = &priv->hw;
 

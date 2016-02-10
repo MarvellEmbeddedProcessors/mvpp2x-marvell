@@ -33,8 +33,8 @@ disclaimer.
 #include <linux/platform_device.h>
 #include "mv_pp2x_sysfs.h"
 
-static struct mvpp2_cls_lookup_entry lkp_entry;
-static struct mvpp2_cls_flow_entry flow_entry;
+static struct mv_pp2x_cls_lookup_entry lkp_entry;
+static struct mv_pp2x_cls_flow_entry flow_entry;
 
 
 static ssize_t mv_cls_help(char *buf)
@@ -100,19 +100,19 @@ static ssize_t mv_cls_show(struct device *dev,
 		return -EPERM;
 
 	if (!strcmp(name, "lkp_hw_hits"))
-		mvpp2_cls_hw_lkp_hits_dump(sysfs_cur_hw);
+		mv_pp2x_cls_hw_lkp_hits_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "flow_hw_hits"))
-		mvpp2_cls_hw_flow_hits_dump(sysfs_cur_hw);
+		mv_pp2x_cls_hw_flow_hits_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "lkp_hw_dump"))
-		mvpp2_cls_hw_lkp_dump(sysfs_cur_hw);
+		mv_pp2x_cls_hw_lkp_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "flow_hw_dump"))
-		mvpp2_cls_hw_flow_dump(sysfs_cur_hw);
+		mv_pp2x_cls_hw_flow_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "hw_regs"))
-		mvpp2_cls_hw_regs_dump(sysfs_cur_hw);
+		mv_pp2x_cls_hw_regs_dump(sysfs_cur_hw);
 	else if (!strcmp(name, "flow_sw_dump"))
-		mvpp2_cls_sw_flow_dump(&flow_entry);
+		mv_pp2x_cls_sw_flow_dump(&flow_entry);
 	else if (!strcmp(name, "lkp_sw_dump"))
-		mvpp2_cls_sw_lkp_dump(&lkp_entry);
+		mv_pp2x_cls_sw_lkp_dump(&lkp_entry);
 	else
 		off += mv_cls_help(buf);
 
@@ -136,58 +136,58 @@ static ssize_t mv_cls_store_unsigned(struct device *dev,
 	local_irq_save(flags);
 
 	if (!strcmp(name, "lkp_hw_read"))
-		mvpp2_cls_hw_lkp_read(sysfs_cur_hw, a, b, &lkp_entry);
+		mv_pp2x_cls_hw_lkp_read(sysfs_cur_hw, a, b, &lkp_entry);
 	else if (!strcmp(name, "flow_hw_read"))
-		mvpp2_cls_hw_flow_read(sysfs_cur_hw, a, &flow_entry);
+		mv_pp2x_cls_hw_flow_read(sysfs_cur_hw, a, &flow_entry);
 	else if (!strcmp(name, "lkp_sw_clear"))
-		memset(&lkp_entry, 0, sizeof(struct mvpp2_cls_lookup_entry));
+		memset(&lkp_entry, 0, sizeof(struct mv_pp2x_cls_lookup_entry));
 	else if (!strcmp(name, "lkp_hw_write"))
-		mvpp2_cls_hw_lkp_write(sysfs_cur_hw, a, b, &lkp_entry);
+		mv_pp2x_cls_hw_lkp_write(sysfs_cur_hw, a, b, &lkp_entry);
 	else if (!strcmp(name, "lkp_sw_rxq"))
-		mvpp2_cls_sw_lkp_rxq_set(&lkp_entry, a);
+		mv_pp2x_cls_sw_lkp_rxq_set(&lkp_entry, a);
 	else if (!strcmp(name, "lkp_sw_flow"))
-		mvpp2_cls_sw_lkp_flow_set(&lkp_entry, a);
+		mv_pp2x_cls_sw_lkp_flow_set(&lkp_entry, a);
 	else if (!strcmp(name, "lkp_sw_mod"))
-		mvpp2_cls_sw_lkp_mod_set(&lkp_entry, a);
+		mv_pp2x_cls_sw_lkp_mod_set(&lkp_entry, a);
 	else if (!strcmp(name, "lkp_sw_en"))
-		mvpp2_cls_sw_lkp_en_set(&lkp_entry, a);
+		mv_pp2x_cls_sw_lkp_en_set(&lkp_entry, a);
 	else if (!strcmp(name, "flow_sw_clear"))
-		memset(&flow_entry, 0, sizeof(struct mvpp2_cls_flow_entry));
+		memset(&flow_entry, 0, sizeof(struct mv_pp2x_cls_flow_entry));
 	else if (!strcmp(name, "flow_hw_write")) {
 		flow_entry.index = a;
-		mvpp2_cls_flow_write(sysfs_cur_hw, &flow_entry);
+		mv_pp2x_cls_flow_write(sysfs_cur_hw, &flow_entry);
 	} else if (!strcmp(name, "flow_sw_port"))
-		mvpp2_cls_sw_flow_port_set(&flow_entry, a, b);
+		mv_pp2x_cls_sw_flow_port_set(&flow_entry, a, b);
 	else if (!strcmp(name, "flow_sw_portid"))
-		mvpp2_cls_sw_flow_portid_select(&flow_entry, a);
+		mv_pp2x_cls_sw_flow_portid_select(&flow_entry, a);
 	else if (!strcmp(name, "flow_sw_pppoe"))
-		mvpp2_cls_sw_flow_pppoe_set(&flow_entry, a);
+		mv_pp2x_cls_sw_flow_pppoe_set(&flow_entry, a);
 	else if (!strcmp(name, "flow_sw_vlan"))
-		mvpp2_cls_sw_flow_vlan_set(&flow_entry, a);
+		mv_pp2x_cls_sw_flow_vlan_set(&flow_entry, a);
 	else if (!strcmp(name, "flow_sw_macme"))
-		mvpp2_cls_sw_flow_macme_set(&flow_entry, a);
+		mv_pp2x_cls_sw_flow_macme_set(&flow_entry, a);
 	else if (!strcmp(name, "flow_sw_udf7"))
-		mvpp2_cls_sw_flow_udf7_set(&flow_entry, a);
+		mv_pp2x_cls_sw_flow_udf7_set(&flow_entry, a);
 	else if (!strcmp(name, "flow_sw_sq"))
-		mvpp2_cls_sw_flow_seq_ctrl_set(&flow_entry, a);
+		mv_pp2x_cls_sw_flow_seq_ctrl_set(&flow_entry, a);
 	else if (!strcmp(name, "flow_sw_engine"))
-		mvpp2_cls_sw_flow_engine_set(&flow_entry, a, b);
+		mv_pp2x_cls_sw_flow_engine_set(&flow_entry, a, b);
 	else if (!strcmp(name, "flow_sw_extra"))
-		mvpp2_cls_sw_flow_extra_set(&flow_entry, a, b);
+		mv_pp2x_cls_sw_flow_extra_set(&flow_entry, a, b);
 	else if (!strcmp(name, "flow_sw_hek"))
-		mvpp2_cls_sw_flow_hek_set(&flow_entry, a, b);
+		mv_pp2x_cls_sw_flow_hek_set(&flow_entry, a, b);
 	else if (!strcmp(name, "flow_sw_num_of_heks"))
-		mvpp2_cls_sw_flow_hek_num_set(&flow_entry, a);
+		mv_pp2x_cls_sw_flow_hek_num_set(&flow_entry, a);
 	else if (!strcmp(name, "hw_enable"))
-		mvpp2_write(sysfs_cur_hw, MVPP2_CLS_MODE_REG, (unsigned int)a);
+		mv_pp2x_write(sysfs_cur_hw, MVPP2_CLS_MODE_REG, (unsigned int)a);
 	else if (!strcmp(name, "hw_port_way"))
-		mvpp2_cls_lkp_port_way_set(sysfs_cur_hw, a, b);
+		mv_pp2x_cls_lkp_port_way_set(sysfs_cur_hw, a, b);
 	else if (!strcmp(name, "hw_udf"))
-		mvpp2_cls_hw_udf_set(sysfs_cur_hw, a, b, c, d);
+		mv_pp2x_cls_hw_udf_set(sysfs_cur_hw, a, b, c, d);
 	else if (!strcmp(name, "hw_mtu"))
-		mvpp2_write(sysfs_cur_hw, MVPP2_CLS_MTU_REG(a), b);
+		mv_pp2x_write(sysfs_cur_hw, MVPP2_CLS_MTU_REG(a), b);
 	else if (!strcmp(name, "hw_over_rxq_low"))
-		mvpp2_write(sysfs_cur_hw, MVPP2_CLS_OVERSIZE_RXQ_LOW_REG(a), b);
+		mv_pp2x_write(sysfs_cur_hw, MVPP2_CLS_OVERSIZE_RXQ_LOW_REG(a), b);
 	else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);

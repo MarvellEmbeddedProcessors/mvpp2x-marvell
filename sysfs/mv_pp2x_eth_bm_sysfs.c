@@ -58,7 +58,7 @@ static ssize_t mv_pp2_show(struct device *dev,
 		return -EPERM;
 
 	if (!strcmp(name, "queueMappDump"))
-		mvpp2_bm_queue_map_dump_all(sysfs_cur_hw);
+		mv_pp2x_bm_queue_map_dump_all(sysfs_cur_hw);
 	else
 		off = mv_pp2_help(buf);
 
@@ -83,11 +83,11 @@ static ssize_t mv_pp2_port_store(struct device *dev,
 	local_irq_save(flags);
 
 	if (!strcmp(name, "poolRegs")) {
-		mvpp2_bm_pool_regs(sysfs_cur_hw, a);
+		mv_pp2x_bm_pool_regs(sysfs_cur_hw, a);
 	} else if (!strcmp(name, "poolDropCnt")) {
-		mvpp2_bm_pool_drop_count(sysfs_cur_hw, a);
+		mv_pp2x_bm_pool_drop_count(sysfs_cur_hw, a);
 	} else if (!strcmp(name, "poolStatus")) {
-		mvpp2_pool_status(sysfs_cur_priv, a);
+		mv_pp2x_pool_status(sysfs_cur_priv, a);
 		mv_pp2_pool_stats_print(sysfs_cur_priv, a);
 	} else {
 		err = 1;

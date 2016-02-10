@@ -75,7 +75,7 @@ static ssize_t mv_cos_store(struct device *dev,
 	unsigned int    b;
 	char		if_name[10];
 	struct net_device *netdev;
-	struct mvpp2_port *port;
+	struct mv_pp2x_port *port;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -93,17 +93,17 @@ static ssize_t mv_cos_store(struct device *dev,
 	port = netdev_priv(netdev);
 
 	if (!strcmp(name, "classifier_set")) {
-		mvpp2_wrap_cos_mode_set(port, b);
+		mv_pp2x_wrap_cos_mode_set(port, b);
 	} else if (!strcmp(name, "classifier_show")) {
-		printk("On port %s, classifier mode is %d\n", if_name, mvpp2_wrap_cos_mode_get(port));
+		printk("On port %s, classifier mode is %d\n", if_name, mv_pp2x_wrap_cos_mode_get(port));
 	} else if (!strcmp(name, "pri_map_set")) {
-		mvpp2_wrap_cos_pri_map_set(port, b);
+		mv_pp2x_wrap_cos_pri_map_set(port, b);
 	} else if (!strcmp(name, "pri_map_show")) {
-		printk("On port %s, pri_map is 0x%x\n", if_name, mvpp2_wrap_cos_pri_map_get(port));
+		printk("On port %s, pri_map is 0x%x\n", if_name, mv_pp2x_wrap_cos_pri_map_get(port));
 	} else if (!strcmp(name, "cos_default_set")) {
-		mvpp2_wrap_cos_dflt_value_set(port, b);
+		mv_pp2x_wrap_cos_dflt_value_set(port, b);
 	} else if (!strcmp(name, "cos_default_show")) {
-		printk("On port %s, default cos value is %d\n", if_name, mvpp2_wrap_cos_dflt_value_get(port));
+		printk("On port %s, default cos value is %d\n", if_name, mv_pp2x_wrap_cos_dflt_value_get(port));
 	} else {
 		err = 1;
 		printk("%s: illegal operation <%s>\n", __func__, attr->attr.name);

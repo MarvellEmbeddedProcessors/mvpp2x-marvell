@@ -56,72 +56,72 @@
 
 
 
-void mvpp2_print_reg(struct mvpp2_hw *hw, unsigned int reg_addr,
+void mv_pp2x_print_reg(struct mv_pp2x_hw *hw, unsigned int reg_addr,
 	char *reg_name)
 {
 	DBG_MSG("  %-32s: 0x%x = 0x%08x\n", reg_name, reg_addr,
-		mvpp2_read(hw, reg_addr));
+		mv_pp2x_read(hw, reg_addr));
 }
 
-void mvpp2_print_reg2(struct mvpp2_hw *hw, unsigned int reg_addr,
+void mv_pp2x_print_reg2(struct mv_pp2x_hw *hw, unsigned int reg_addr,
 	char *reg_name, unsigned int index)
 {
 	char buf[64];
 
 	sprintf(buf, "%s[%d]", reg_name, index);
 	DBG_MSG("  %-32s: 0x%x = 0x%08x\n", reg_name, reg_addr,
-		mvpp2_read(hw, reg_addr));
+		mv_pp2x_read(hw, reg_addr));
 }
 
 
 
-void mvpp2_bm_pool_regs(struct mvpp2_hw *hw, int pool)
+void mv_pp2x_bm_pool_regs(struct mv_pp2x_hw *hw, int pool)
 {
-	if (mvpp2_max_check(pool, MVPP2_BM_POOLS_NUM, "bm_pool"))
+	if (mv_pp2x_max_check(pool, MVPP2_BM_POOLS_NUM, "bm_pool"))
 		return;
 
 	DBG_MSG("\n[BM pool registers: pool=%d]\n", pool);
-	mvpp2_print_reg(hw, MVPP2_BM_POOL_BASE_ADDR_REG(pool),
+	mv_pp2x_print_reg(hw, MVPP2_BM_POOL_BASE_ADDR_REG(pool),
 		"MV_BM_POOL_BASE_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_POOL_SIZE_REG(pool),
+	mv_pp2x_print_reg(hw, MVPP2_BM_POOL_SIZE_REG(pool),
 		"MVPP2_BM_POOL_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_POOL_READ_PTR_REG(pool),
+	mv_pp2x_print_reg(hw, MVPP2_BM_POOL_READ_PTR_REG(pool),
 		"MVPP2_BM_POOL_READ_PTR_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_POOL_PTRS_NUM_REG(pool),
+	mv_pp2x_print_reg(hw, MVPP2_BM_POOL_PTRS_NUM_REG(pool),
 		"MVPP2_BM_POOL_PTRS_NUM_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_BPPI_READ_PTR_REG(pool),
+	mv_pp2x_print_reg(hw, MVPP2_BM_BPPI_READ_PTR_REG(pool),
 		"MVPP2_BM_BPPI_READ_PTR_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_BPPI_PTRS_NUM_REG(pool),
+	mv_pp2x_print_reg(hw, MVPP2_BM_BPPI_PTRS_NUM_REG(pool),
 		"MVPP2_BM_BPPI_PTRS_NUM_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_POOL_CTRL_REG(pool),
+	mv_pp2x_print_reg(hw, MVPP2_BM_POOL_CTRL_REG(pool),
 		"MVPP2_BM_POOL_CTRL_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_INTR_CAUSE_REG(pool),
+	mv_pp2x_print_reg(hw, MVPP2_BM_INTR_CAUSE_REG(pool),
 		"MVPP2_BM_INTR_CAUSE_REG");
-	mvpp2_print_reg(hw, MVPP2_BM_INTR_MASK_REG(pool),
+	mv_pp2x_print_reg(hw, MVPP2_BM_INTR_MASK_REG(pool),
 		"MVPP2_BM_INTR_MASK_REG");
 }
-EXPORT_SYMBOL(mvpp2_bm_pool_regs);
+EXPORT_SYMBOL(mv_pp2x_bm_pool_regs);
 
 
-void mvpp2_bm_pool_drop_count(struct mvpp2_hw *hw, int pool)
+void mv_pp2x_bm_pool_drop_count(struct mv_pp2x_hw *hw, int pool)
 {
-	if (mvpp2_max_check(pool, MVPP2_BM_POOLS_NUM, "bm_pool"))
+	if (mv_pp2x_max_check(pool, MVPP2_BM_POOLS_NUM, "bm_pool"))
 		return;
 
-	mvpp2_print_reg2(hw, MVPP2_BM_DROP_CNTR_REG(pool),
+	mv_pp2x_print_reg2(hw, MVPP2_BM_DROP_CNTR_REG(pool),
 		"MVPP2_BM_DROP_CNTR_REG", pool);
-	mvpp2_print_reg2(hw, MVPP2_BM_MC_DROP_CNTR_REG(pool),
+	mv_pp2x_print_reg2(hw, MVPP2_BM_MC_DROP_CNTR_REG(pool),
 		"MVPP2_BM_MC_DROP_CNTR_REG", pool);
 }
-EXPORT_SYMBOL(mvpp2_bm_pool_drop_count);
+EXPORT_SYMBOL(mv_pp2x_bm_pool_drop_count);
 
 
-void mvpp2_pool_status(struct mvpp2 *priv, int log_pool_num)
+void mv_pp2x_pool_status(struct mv_pp2x *priv, int log_pool_num)
 {
-	struct mvpp2_bm_pool *bm_pool = NULL;
+	struct mv_pp2x_bm_pool *bm_pool = NULL;
 	int /*buf_size,*/ total_size, i, pool;
 
-	if (mvpp2_max_check(log_pool_num, MVPP2_BM_SWF_POOL_OUT_OF_RANGE,
+	if (mv_pp2x_max_check(log_pool_num, MVPP2_BM_SWF_POOL_OUT_OF_RANGE,
 		"log_pool"))
 		return;
 
@@ -142,20 +142,20 @@ void mvpp2_pool_status(struct mvpp2 *priv, int log_pool_num)
 
 	DBG_MSG(
 		"\n%12s log_pool=%d, phy_pool=%d: pkt_size=%d, buf_size=%d total_size=%d\n",
-		mvpp2_pools[log_pool_num].description, log_pool_num, pool,
+		mv_pp2x_pools[log_pool_num].description, log_pool_num, pool,
 		bm_pool->pkt_size, bm_pool->buf_size, total_size);
 	DBG_MSG("\tcapacity=%d, buf_num=%d, in_use=%u, in_use_thresh=%u\n",
 		bm_pool->size, bm_pool->buf_num, atomic_read(&bm_pool->in_use),
 		bm_pool->in_use_thresh);
 }
-EXPORT_SYMBOL(mvpp2_pool_status);
+EXPORT_SYMBOL(mv_pp2x_pool_status);
 
-void mv_pp2_pool_stats_print(struct mvpp2 *priv, int log_pool_num)
+void mv_pp2_pool_stats_print(struct mv_pp2x *priv, int log_pool_num)
 {
 	int i, pool;
-	struct mvpp2_bm_pool *bm_pool = NULL;
+	struct mv_pp2x_bm_pool *bm_pool = NULL;
 
-	if (mvpp2_max_check(log_pool_num, MVPP2_BM_SWF_POOL_OUT_OF_RANGE,
+	if (mv_pp2x_max_check(log_pool_num, MVPP2_BM_SWF_POOL_OUT_OF_RANGE,
 			"log_pool"))
 		return;
 
@@ -180,13 +180,13 @@ void mv_pp2_pool_stats_print(struct mvpp2 *priv, int log_pool_num)
 }
 EXPORT_SYMBOL(mv_pp2_pool_stats_print);
 
-void mvPp2RxDmaRegsPrint(struct mvpp2 *priv, bool print_all,
+void mvPp2RxDmaRegsPrint(struct mv_pp2x *priv, bool print_all,
 		int start, int stop)
 {
 	int i, num_rx_queues, result;
 	bool enabled;
 
-	struct mvpp2_hw *hw = &priv->hw;
+	struct mv_pp2x_hw *hw = &priv->hw;
 
 	num_rx_queues = (MVPP2_MAX_PORTS*priv->pp2xdata->pp2x_max_port_rxqs);
 	if (stop >= num_rx_queues || start > stop || start < 0) {
@@ -199,43 +199,43 @@ void mvPp2RxDmaRegsPrint(struct mvpp2 *priv, bool print_all,
 
 	for (i = start; i <= stop; i++) {
 		if (!print_all) {
-			result = mvpp2_read(hw, MVPP2_RXQ_CONFIG_REG(i));
+			result = mv_pp2x_read(hw, MVPP2_RXQ_CONFIG_REG(i));
 			enabled = !(result & MVPP2_RXQ_DISABLE_MASK);
 		}
 		if (print_all || enabled) {
 			DBG_MSG("RXQ[%d]:\n", i);
-			mvpp2_print_reg(hw, MVPP2_RXQ_STATUS_REG(i),
+			mv_pp2x_print_reg(hw, MVPP2_RXQ_STATUS_REG(i),
 				"MVPP2_RX_STATUS");
-			mvpp2_print_reg2(hw, MVPP2_RXQ_CONFIG_REG(i),
+			mv_pp2x_print_reg2(hw, MVPP2_RXQ_CONFIG_REG(i),
 				"MVPP2_RXQ_CONFIG_REG", i);
 		}
 	}
 	DBG_MSG("\nBM pools [0..%d] registers\n", MVPP2_BM_POOLS_NUM-1);
 	for (i = 0; i < MVPP2_BM_POOLS_NUM; i++) {
 		if (!print_all) {
-			enabled = mvpp2_read(hw, MVPP2_BM_POOL_CTRL_REG(i)) &
+			enabled = mv_pp2x_read(hw, MVPP2_BM_POOL_CTRL_REG(i)) &
 				MVPP2_BM_STATE_MASK;
 		}
 		if (print_all || enabled) {
 			DBG_MSG("POOL[%d]:\n", i);
-			mvpp2_print_reg2(hw, MVPP2_POOL_BUF_SIZE_REG(i),
+			mv_pp2x_print_reg2(hw, MVPP2_POOL_BUF_SIZE_REG(i),
 				"MVPP2_POOL_BUF_SIZE_REG", i);
 		}
 	}
 	DBG_MSG("\nIngress ports [0..%d] registers\n", MVPP2_MAX_PORTS-1);
 	for (i = 0; i < MVPP2_MAX_PORTS; i++) {
-		mvpp2_print_reg2(hw, MVPP2_RX_CTRL_REG(i),
+		mv_pp2x_print_reg2(hw, MVPP2_RX_CTRL_REG(i),
 				"MVPP2_RX_CTRL_REG", i);
 	}
 	DBG_MSG("\n");
 }
 EXPORT_SYMBOL(mvPp2RxDmaRegsPrint);
 
-static void mvPp2RxQueueDetailedShow(struct mvpp2 *priv,
-		struct mvpp2_rx_queue *pp_rxq)
+static void mvPp2RxQueueDetailedShow(struct mv_pp2x *priv,
+		struct mv_pp2x_rx_queue *pp_rxq)
 {
 	int i;
-	struct mvpp2_rx_desc *rx_desc = pp_rxq->first_desc;
+	struct mv_pp2x_rx_desc *rx_desc = pp_rxq->first_desc;
 
 	for (i = 0; i < pp_rxq->size; i++) {
 		DBG_MSG("%3d. desc=%p, status=%08x, data_size=%4d",
@@ -243,12 +243,12 @@ static void mvPp2RxQueueDetailedShow(struct mvpp2 *priv,
 			   rx_desc[i].data_size);
 		if (priv->pp2_version == PPV21) {
 			DBG_MSG("buf_addr=%lx, buf_cookie=%p",
-			   (unsigned long)mvpp21_rxdesc_phys_addr_get(rx_desc),
-			   mvpp21_rxdesc_cookie_get(rx_desc));
+			   (unsigned long)mv_pp21_rxdesc_phys_addr_get(rx_desc),
+			   mv_pp21_rxdesc_cookie_get(rx_desc));
 		} else {
 			DBG_MSG("buf_addr=%lx, buf_cookie=%p",
-			   (unsigned long)mvpp22_rxdesc_phys_addr_get(rx_desc),
-			   mvpp22_rxdesc_cookie_get(rx_desc));
+			   (unsigned long)mv_pp22_rxdesc_phys_addr_get(rx_desc),
+			   mv_pp22_rxdesc_cookie_get(rx_desc));
 		}
 
 		DBG_MSG("parser_info=%03x\n", rx_desc->rsrvd_parser);
@@ -256,19 +256,19 @@ static void mvPp2RxQueueDetailedShow(struct mvpp2 *priv,
 }
 
 /* Show Port/Rxq descriptors ring */
-void mvPp2RxqShow(struct mvpp2 *priv, int port, int rxq, int mode)
+void mvPp2RxqShow(struct mv_pp2x *priv, int port, int rxq, int mode)
 {
-	struct mvpp2_port *pp_port;
-	struct mvpp2_rx_queue *pp_rxq;
+	struct mv_pp2x_port *pp_port;
+	struct mv_pp2x_rx_queue *pp_rxq;
 
-	pp_port = mvpp2_port_struct_get(priv, port);
+	pp_port = mv_pp2x_port_struct_get(priv, port);
 
 	if (pp_port == NULL) {
 		DBG_MSG("port #%d is not initialized\n", port);
 		return;
 	}
 
-	if (mvpp2_max_check(rxq, pp_port->num_rx_queues, "logical rxq"))
+	if (mv_pp2x_max_check(rxq, pp_port->num_rx_queues, "logical rxq"))
 		return;
 
 	pp_rxq = pp_port->rxqs[rxq];
@@ -289,8 +289,8 @@ void mvPp2RxqShow(struct mvpp2 *priv, int port, int rxq, int mode)
 		pp_rxq->first_desc,
 		(unsigned long)MVPP2_DESCQ_MEM_ALIGN(pp_rxq->descs_phys),
 		pp_rxq->next_desc_to_proc,
-		mvpp2_rxq_received(pp_port, pp_rxq->id),
-		mvpp2_rxq_free(pp_port, pp_rxq->id));
+		mv_pp2x_rxq_received(pp_port, pp_rxq->id),
+		mv_pp2x_rxq_free(pp_port, pp_rxq->id));
 	DBG_MSG("virt_mem_area_addr=%p, dma_mem_area_addr=%lx\n",
 		pp_rxq->desc_mem, (unsigned long)pp_rxq->descs_phys);
 
@@ -299,34 +299,34 @@ void mvPp2RxqShow(struct mvpp2 *priv, int port, int rxq, int mode)
 }
 EXPORT_SYMBOL(mvPp2RxqShow);
 
-void mvPp2PhysRxqRegs(struct mvpp2 *pp2, int rxq)
+void mvPp2PhysRxqRegs(struct mv_pp2x *pp2, int rxq)
 {
-	struct mvpp2_hw *hw  = &pp2->hw;
+	struct mv_pp2x_hw *hw  = &pp2->hw;
 
 	DBG_MSG("\n[PPv2 RxQ registers: global rxq=%d]\n", rxq);
 
-	mvpp2_write(hw, MVPP2_RXQ_NUM_REG, rxq);
-	mvpp2_print_reg(hw, MVPP2_RXQ_NUM_REG,
+	mv_pp2x_write(hw, MVPP2_RXQ_NUM_REG, rxq);
+	mv_pp2x_print_reg(hw, MVPP2_RXQ_NUM_REG,
 			"MVPP2_RXQ_NUM_REG");
-	mvpp2_print_reg(hw, MVPP2_RXQ_DESC_ADDR_REG,
+	mv_pp2x_print_reg(hw, MVPP2_RXQ_DESC_ADDR_REG,
 			"MVPP2_RXQ_DESC_ADDR_REG");
-	mvpp2_print_reg(hw, MVPP2_RXQ_DESC_SIZE_REG,
+	mv_pp2x_print_reg(hw, MVPP2_RXQ_DESC_SIZE_REG,
 			"MVPP2_RXQ_DESC_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_RXQ_STATUS_REG(rxq),
+	mv_pp2x_print_reg(hw, MVPP2_RXQ_STATUS_REG(rxq),
 			"MVPP2_RXQ_STATUS_REG");
-	mvpp2_print_reg(hw, MVPP2_RXQ_THRESH_REG,
+	mv_pp2x_print_reg(hw, MVPP2_RXQ_THRESH_REG,
 			"MVPP2_RXQ_THRESH_REG");
-	mvpp2_print_reg(hw, MVPP2_RXQ_INDEX_REG,
+	mv_pp2x_print_reg(hw, MVPP2_RXQ_INDEX_REG,
 			"MVPP2_RXQ_INDEX_REG");
-	mvpp2_print_reg(hw, MVPP2_RXQ_CONFIG_REG(rxq),
+	mv_pp2x_print_reg(hw, MVPP2_RXQ_CONFIG_REG(rxq),
 			"MVPP2_RXQ_CONFIG_REG");
 }
 EXPORT_SYMBOL(mvPp2PhysRxqRegs);
 
-void mvPp2PortRxqRegs(struct mvpp2 *pp2, int port, int rxq)
+void mvPp2PortRxqRegs(struct mv_pp2x *pp2, int port, int rxq)
 {
 	int phy_rxq;
-	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(pp2, port);
+	struct mv_pp2x_port *pp2_port = mv_pp2x_port_struct_get(pp2, port);
 
 	DBG_MSG("\n[PPv2 RxQ registers: port=%d, local rxq=%d]\n", port, rxq);
 
@@ -342,14 +342,14 @@ void mvPp2PortRxqRegs(struct mvpp2 *pp2, int port, int rxq)
 EXPORT_SYMBOL(mvPp2PortRxqRegs);
 
 
-void mvpp22_isr_rx_group_regs(struct mvpp2 *priv, int port, bool print_all)
+void mv_pp22_isr_rx_group_regs(struct mv_pp2x *priv, int port, bool print_all)
 {
 	int val, i, num_threads, cpu_offset, cpu;
-	struct mvpp2_hw *hw = &priv->hw;
-	struct mvpp2_port *pp_port;
+	struct mv_pp2x_hw *hw = &priv->hw;
+	struct mv_pp2x_port *pp_port;
 
 
-	pp_port = mvpp2_port_struct_get(priv, port);
+	pp_port = mv_pp2x_port_struct_get(priv, port);
 	if (!pp_port) {
 		pr_crit("Input Error\n %s", __func__);
 		return;
@@ -365,13 +365,13 @@ void mvpp22_isr_rx_group_regs(struct mvpp2 *priv, int port, bool print_all)
 				port, i);
 
 		val = (port << MVPP22_ISR_RXQ_GROUP_INDEX_GROUP_OFFSET) | i;
-		mvpp2_write(hw, MVPP22_ISR_RXQ_GROUP_INDEX_REG, val);
+		mv_pp2x_write(hw, MVPP22_ISR_RXQ_GROUP_INDEX_REG, val);
 
-		mvpp2_print_reg(hw, MVPP22_ISR_RXQ_GROUP_INDEX_REG,
+		mv_pp2x_print_reg(hw, MVPP22_ISR_RXQ_GROUP_INDEX_REG,
 				"MVPP22_ISR_RXQ_GROUP_INDEX_REG");
-		mvpp2_print_reg(hw, MVPP22_ISR_RXQ_SUB_GROUP_CONFIG_REG,
+		mv_pp2x_print_reg(hw, MVPP22_ISR_RXQ_SUB_GROUP_CONFIG_REG,
 				"MVPP22_ISR_RXQ_SUB_GROUP_CONFIG_REG");
-		/*reg_val = mvpp2_read(hw,
+		/*reg_val = mv_pp2x_read(hw,
 			MVPP22_ISR_RXQ_SUB_GROUP_CONFIG_REG);*/
 		/*start_queue  = reg_val &
 			MVPP22_ISR_RXQ_SUB_GROUP_STARTQ_MASK;*/
@@ -379,7 +379,7 @@ void mvpp22_isr_rx_group_regs(struct mvpp2 *priv, int port, bool print_all)
 			MVPP22_ISR_RXQ_SUB_GROUP_SIZE_MASK;*/
 	}
 	DBG_MSG("\n[PPv2 Port Interrupt Enable register : port=%d]\n", port);
-	mvpp2_print_reg(hw, MVPP2_ISR_ENABLE_REG(port),
+	mv_pp2x_print_reg(hw, MVPP2_ISR_ENABLE_REG(port),
 			"MVPP2_ISR_ENABLE_REG");
 
 
@@ -391,30 +391,30 @@ void mvpp22_isr_rx_group_regs(struct mvpp2 *priv, int port, bool print_all)
 			cpu = pp_port->q_vector[i].sw_thread_id;
 		cpu_offset = cpu*MVPP2_ADDR_SPACE_SIZE;
 		DBG_MSG("cpu=%d]\n", cpu);
-		mvpp2_print_reg(hw, cpu_offset +
+		mv_pp2x_print_reg(hw, cpu_offset +
 				MVPP2_ISR_RX_TX_CAUSE_REG(port),
 				"MVPP2_ISR_RX_TX_CAUSE_REG");
-		mvpp2_print_reg(hw, cpu_offset +
+		mv_pp2x_print_reg(hw, cpu_offset +
 				MVPP2_ISR_RX_TX_MASK_REG(port),
 				"MVPP2_ISR_RX_TX_MASK_REG");
 	}
 
 }
-EXPORT_SYMBOL(mvpp22_isr_rx_group_regs);
+EXPORT_SYMBOL(mv_pp22_isr_rx_group_regs);
 
 
-static void mvPp2TxQueueDetailedShow(struct mvpp2 *priv,
+static void mvPp2TxQueueDetailedShow(struct mv_pp2x *priv,
 		void *pp_txq, bool aggr_queue)
 {
 	int i, j, size;
-	struct mvpp2_tx_desc *tx_desc;
+	struct mv_pp2x_tx_desc *tx_desc;
 
 	if (aggr_queue) {
-		size = ((struct mvpp2_aggr_tx_queue *)pp_txq)->size;
-		tx_desc = ((struct mvpp2_aggr_tx_queue *)pp_txq)->first_desc;
+		size = ((struct mv_pp2x_aggr_tx_queue *)pp_txq)->size;
+		tx_desc = ((struct mv_pp2x_aggr_tx_queue *)pp_txq)->first_desc;
 	} else {
-		size = ((struct mvpp2_tx_queue *)pp_txq)->size;
-		tx_desc = ((struct mvpp2_tx_queue *)pp_txq)->first_desc;
+		size = ((struct mv_pp2x_tx_queue *)pp_txq)->size;
+		tx_desc = ((struct mv_pp2x_tx_queue *)pp_txq)->first_desc;
 	}
 
 	for (i = 0; i < 16/*size*/; i++) {
@@ -448,21 +448,21 @@ static void mvPp2TxQueueDetailedShow(struct mvpp2 *priv,
 
 
 /* Show Port/TXQ descriptors ring */
-void mvPp2TxqShow(struct mvpp2 *priv, int port, int txq, int mode)
+void mvPp2TxqShow(struct mv_pp2x *priv, int port, int txq, int mode)
 {
-	struct mvpp2_port *pp_port;
-	struct mvpp2_tx_queue *pp_txq;
-	struct mvpp2_txq_pcpu *txq_pcpu;
+	struct mv_pp2x_port *pp_port;
+	struct mv_pp2x_tx_queue *pp_txq;
+	struct mv_pp2x_txq_pcpu *txq_pcpu;
 	int cpu;
 
-	pp_port = mvpp2_port_struct_get(priv, port);
+	pp_port = mv_pp2x_port_struct_get(priv, port);
 
 	if (pp_port == NULL) {
 		DBG_MSG("port #%d is not initialized\n", port);
 		return;
 	}
 
-	if (mvpp2_max_check(txq, pp_port->num_tx_queues, "logical txq"))
+	if (mv_pp2x_max_check(txq, pp_port->num_tx_queues, "logical txq"))
 		return;
 
 	pp_txq = pp_port->txqs[txq];
@@ -505,10 +505,10 @@ EXPORT_SYMBOL(mvPp2TxqShow);
 
 
 /* Show CPU aggregation TXQ descriptors ring */
-void mvPp2AggrTxqShow(struct mvpp2 *priv, int cpu, int mode)
+void mvPp2AggrTxqShow(struct mv_pp2x *priv, int cpu, int mode)
 {
 
-	struct mvpp2_aggr_tx_queue *aggr_queue = NULL;
+	struct mv_pp2x_aggr_tx_queue *aggr_queue = NULL;
 	int i;
 
 	DBG_MSG("\n[PPv2 AggrTxQ: cpu=%d]\n", cpu);
@@ -528,7 +528,7 @@ void mvPp2AggrTxqShow(struct mvpp2 *priv, int cpu, int mode)
 		aggr_queue->id,
 		aggr_queue->size, aggr_queue->count,
 		aggr_queue->next_desc_to_proc,
-		mvpp2_aggr_desc_num_read(priv, cpu));
+		mv_pp2x_aggr_desc_num_read(priv, cpu));
 
 	if (mode)
 		mvPp2TxQueueDetailedShow(priv, aggr_queue, 1);
@@ -536,51 +536,51 @@ void mvPp2AggrTxqShow(struct mvpp2 *priv, int cpu, int mode)
 }
 EXPORT_SYMBOL(mvPp2AggrTxqShow);
 
-void mvPp2PhysTxqRegs(struct mvpp2 *priv, int txq)
+void mvPp2PhysTxqRegs(struct mv_pp2x *priv, int txq)
 {
-	struct mvpp2_hw *hw = &priv->hw;
+	struct mv_pp2x_hw *hw = &priv->hw;
 
 	DBG_MSG("\n[PPv2 TxQ registers: global txq=%d]\n", txq);
 
-	if (mvpp2_max_check(txq, MVPP2_TXQ_TOTAL_NUM, "global txq"))
+	if (mv_pp2x_max_check(txq, MVPP2_TXQ_TOTAL_NUM, "global txq"))
 		return;
 
-	mvpp2_write(hw, MVPP2_TXQ_NUM_REG, txq);
-	mvpp2_print_reg(hw, MVPP2_TXQ_NUM_REG,
+	mv_pp2x_write(hw, MVPP2_TXQ_NUM_REG, txq);
+	mv_pp2x_print_reg(hw, MVPP2_TXQ_NUM_REG,
 			"MVPP2_TXQ_NUM_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_DESC_ADDR_LOW_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXQ_DESC_ADDR_LOW_REG,
 			"MVPP2_TXQ_DESC_ADDR_LOW_REG");
 	if (priv->pp2_version == PPV22)
-		mvpp2_print_reg(hw, MVPP22_TXQ_DESC_ADDR_HIGH_REG,
+		mv_pp2x_print_reg(hw, MVPP22_TXQ_DESC_ADDR_HIGH_REG,
 			"MVPP22_TXQ_DESC_ADDR_HIGH_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_DESC_SIZE_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXQ_DESC_SIZE_REG,
 			"MVPP2_TXQ_DESC_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_DESC_HWF_SIZE_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXQ_DESC_HWF_SIZE_REG,
 			"MVPP2_TXQ_DESC_HWF_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_INDEX_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXQ_INDEX_REG,
 			"MVPP2_TXQ_INDEX_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_PREF_BUF_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXQ_PREF_BUF_REG,
 			"MVPP2_TXQ_PREF_BUF_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_PENDING_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXQ_PENDING_REG,
 			"MVPP2_TXQ_PENDING_REG");
-	mvpp2_print_reg(hw, MVPP2_TXQ_INT_STATUS_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXQ_INT_STATUS_REG,
 			"MVPP2_TXQ_INT_STATUS_REG");
 	if (priv->pp2_version == PPV21)
-		mvpp2_print_reg(hw, MVPP21_TXQ_SENT_REG(txq),
+		mv_pp2x_print_reg(hw, MVPP21_TXQ_SENT_REG(txq),
 			"MVPP21_TXQ_SENT_REG");
 	else
-		mvpp2_print_reg(hw, MVPP22_TXQ_SENT_REG(txq),
+		mv_pp2x_print_reg(hw, MVPP22_TXQ_SENT_REG(txq),
 			"MVPP22_TXQ_SENT_REG");
 }
 EXPORT_SYMBOL(mvPp2PhysTxqRegs);
 
-void mvPp2PortTxqRegs(struct mvpp2 *priv, int port, int txq)
+void mvPp2PortTxqRegs(struct mv_pp2x *priv, int port, int txq)
 {
-	struct mvpp2_port *pp2_port;
+	struct mv_pp2x_port *pp2_port;
 
-	pp2_port = mvpp2_port_struct_get(priv, port);
+	pp2_port = mv_pp2x_port_struct_get(priv, port);
 
-	if (mvpp2_max_check(txq, pp2_port->num_tx_queues, "port txq"))
+	if (mv_pp2x_max_check(txq, pp2_port->num_tx_queues, "port txq"))
 		return;
 
 	DBG_MSG("\n[PPv2 TxQ registers: port=%d, local txq=%d]\n", port, txq);
@@ -589,80 +589,80 @@ void mvPp2PortTxqRegs(struct mvpp2 *priv, int port, int txq)
 }
 EXPORT_SYMBOL(mvPp2PortTxqRegs);
 
-void mvPp2AggrTxqRegs(struct mvpp2 *priv, int cpu)
+void mvPp2AggrTxqRegs(struct mv_pp2x *priv, int cpu)
 {
-	struct mvpp2_hw *hw = &priv->hw;
+	struct mv_pp2x_hw *hw = &priv->hw;
 
 	DBG_MSG("\n[PP2 Aggr TXQ registers: cpu=%d]\n", cpu);
 
-	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_DESC_ADDR_REG(cpu),
+	mv_pp2x_print_reg(hw, MVPP2_AGGR_TXQ_DESC_ADDR_REG(cpu),
 			"MVPP2_AGGR_TXQ_DESC_ADDR_REG");
-	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_DESC_SIZE_REG(cpu),
+	mv_pp2x_print_reg(hw, MVPP2_AGGR_TXQ_DESC_SIZE_REG(cpu),
 			"MVPP2_AGGR_TXQ_DESC_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_STATUS_REG(cpu),
+	mv_pp2x_print_reg(hw, MVPP2_AGGR_TXQ_STATUS_REG(cpu),
 			"MVPP2_AGGR_TXQ_STATUS_REG");
-	mvpp2_print_reg(hw, MVPP2_AGGR_TXQ_INDEX_REG(cpu),
+	mv_pp2x_print_reg(hw, MVPP2_AGGR_TXQ_INDEX_REG(cpu),
 			"MVPP2_AGGR_TXQ_INDEX_REG");
 }
 EXPORT_SYMBOL(mvPp2AggrTxqRegs);
 
-void mvPp2V1TxqDbgCntrs(struct mvpp2 *priv, int port, int txq)
+void mvPp2V1TxqDbgCntrs(struct mv_pp2x *priv, int port, int txq)
 {
 
-	struct mvpp2_hw *hw = &priv->hw;
+	struct mv_pp2x_hw *hw = &priv->hw;
 
 	DBG_MSG("\n------ [Port #%d txq #%d counters] -----\n", port, txq);
-	mvpp2_write(hw, MVPP2_CNT_IDX_REG, MVPP2_CNT_IDX_TX(port, txq));
-	mvpp2_print_reg(hw, MVPP2_CNT_IDX_REG,
+	mv_pp2x_write(hw, MVPP2_CNT_IDX_REG, MVPP2_CNT_IDX_TX(port, txq));
+	mv_pp2x_print_reg(hw, MVPP2_CNT_IDX_REG,
 			"MVPP2_CNT_IDX_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_DESC_ENQ_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TX_DESC_ENQ_REG,
 			"MVPP2_TX_DESC_ENQ_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_DESC_ENQ_TO_DRAM_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TX_DESC_ENQ_TO_DRAM_REG,
 			"MVPP2_TX_DESC_ENQ_TO_DRAM_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_BUF_ENQ_TO_DRAM_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TX_BUF_ENQ_TO_DRAM_REG,
 			"MVPP2_TX_BUF_ENQ_TO_DRAM_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_DESC_HWF_ENQ_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TX_DESC_HWF_ENQ_REG,
 			"MVPP2_TX_DESC_HWF_ENQ_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_PKT_DQ_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TX_PKT_DQ_REG,
 			"MVPP2_TX_PKT_DQ_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_PKT_FULLQ_DROP_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TX_PKT_FULLQ_DROP_REG,
 			"MVPP2_TX_PKT_FULLQ_DROP_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_PKT_EARLY_DROP_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TX_PKT_EARLY_DROP_REG,
 			"MVPP2_TX_PKT_EARLY_DROP_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_DROP_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TX_PKT_BM_DROP_REG,
 			"MVPP2_TX_PKT_BM_DROP_REG");
-	mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_MC_DROP_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TX_PKT_BM_MC_DROP_REG,
 			"MVPP2_TX_PKT_BM_MC_DROP_REG");
 }
 EXPORT_SYMBOL(mvPp2V1TxqDbgCntrs);
 
-void mvPp2V1DropCntrs(struct mvpp2 *priv, int port)
+void mvPp2V1DropCntrs(struct mv_pp2x *priv, int port)
 {
 	int q;
-	struct mvpp2_hw *hw = &priv->hw;
-	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+	struct mv_pp2x_hw *hw = &priv->hw;
+	struct mv_pp2x_port *pp2_port = mv_pp2x_port_struct_get(priv, port);
 
 	DBG_MSG("\n[global drop counters]\n");
-	mvpp2_print_reg(hw, MVPP2_V1_OVERFLOW_MC_DROP_REG,
+	mv_pp2x_print_reg(hw, MVPP2_V1_OVERFLOW_MC_DROP_REG,
 			"MV_PP2_OVERRUN_DROP_REG");
 
 	DBG_MSG("\n[Port #%d Drop counters]\n", port);
-	mvpp2_print_reg(hw, MV_PP2_OVERRUN_DROP_REG(port),
+	mv_pp2x_print_reg(hw, MV_PP2_OVERRUN_DROP_REG(port),
 			"MV_PP2_OVERRUN_DROP_REG");
-	mvpp2_print_reg(hw, MV_PP2_CLS_DROP_REG(port),
+	mv_pp2x_print_reg(hw, MV_PP2_CLS_DROP_REG(port),
 			"MV_PP2_CLS_DROP_REG");
 
 	for (q = 0; q < pp2_port->num_tx_queues; q++) {
 		DBG_MSG("\n------ [Port #%d txp #%d txq #%d counters] -----\n",
 				port, port, q);
-		mvpp2_write(hw, MVPP2_CNT_IDX_REG, MVPP2_CNT_IDX_TX(port, q));
-		mvpp2_print_reg(hw, MVPP2_TX_PKT_FULLQ_DROP_REG,
+		mv_pp2x_write(hw, MVPP2_CNT_IDX_REG, MVPP2_CNT_IDX_TX(port, q));
+		mv_pp2x_print_reg(hw, MVPP2_TX_PKT_FULLQ_DROP_REG,
 				"MV_PP2_TX_PKT_FULLQ_DROP_REG");
-		mvpp2_print_reg(hw, MVPP2_TX_PKT_EARLY_DROP_REG,
+		mv_pp2x_print_reg(hw, MVPP2_TX_PKT_EARLY_DROP_REG,
 				"MV_PP2_TX_PKT_EARLY_DROP_REG");
-		mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_DROP_REG,
+		mv_pp2x_print_reg(hw, MVPP2_TX_PKT_BM_DROP_REG,
 				"MV_PP2_TX_PKT_BM_DROP_REG");
-		mvpp2_print_reg(hw, MVPP2_TX_PKT_BM_MC_DROP_REG,
+		mv_pp2x_print_reg(hw, MVPP2_TX_PKT_BM_MC_DROP_REG,
 				"MV_PP2_TX_PKT_BM_MC_DROP_REG");
 	}
 
@@ -670,78 +670,78 @@ void mvPp2V1DropCntrs(struct mvpp2 *priv, int port)
 			pp2_port->num_rx_queues); q++) {
 		DBG_MSG("\n------ [Port #%d, rxq #%d counters] -----\n",
 			port, q);
-		mvpp2_write(hw, MVPP2_CNT_IDX_REG, q);
-		mvpp2_print_reg(hw, MVPP2_RX_PKT_FULLQ_DROP_REG,
+		mv_pp2x_write(hw, MVPP2_CNT_IDX_REG, q);
+		mv_pp2x_print_reg(hw, MVPP2_RX_PKT_FULLQ_DROP_REG,
 				"MV_PP2_RX_PKT_FULLQ_DROP_REG");
-		mvpp2_print_reg(hw, MVPP2_RX_PKT_EARLY_DROP_REG,
+		mv_pp2x_print_reg(hw, MVPP2_RX_PKT_EARLY_DROP_REG,
 				"MV_PP2_RX_PKT_EARLY_DROP_REG");
-		mvpp2_print_reg(hw, MVPP2_RX_PKT_BM_DROP_REG,
+		mv_pp2x_print_reg(hw, MVPP2_RX_PKT_BM_DROP_REG,
 				"MV_PP2_RX_PKT_BM_DROP_REG");
 	}
 }
 EXPORT_SYMBOL(mvPp2V1DropCntrs);
 
-void mvPp2TxRegs(struct mvpp2 *priv)
+void mvPp2TxRegs(struct mv_pp2x *priv)
 {
-	struct mvpp2_hw *hw = &priv->hw;
+	struct mv_pp2x_hw *hw = &priv->hw;
 	int i;
 
 	DBG_MSG("\n[TX general registers]\n");
 
-	mvpp2_print_reg(hw, MVPP2_TX_SNOOP_REG, "MVPP2_TX_SNOOP_REG");
+	mv_pp2x_print_reg(hw, MVPP2_TX_SNOOP_REG, "MVPP2_TX_SNOOP_REG");
 	if (priv->pp2_version == PPV21) {
-		mvpp2_print_reg(hw, MVPP21_TX_FIFO_THRESH_REG,
+		mv_pp2x_print_reg(hw, MVPP21_TX_FIFO_THRESH_REG,
 				"MVPP21_TX_FIFO_THRESH_REG");
 	} else {
 		for (i = 0 ; i < MVPP2_MAX_PORTS; i++) {
-			mvpp2_print_reg(hw, MVPP22_TX_FIFO_THRESH_REG(i),
+			mv_pp2x_print_reg(hw, MVPP22_TX_FIFO_THRESH_REG(i),
 					"MVPP22_TX_FIFO_THRESH_REG");
 		}
 	}
-	mvpp2_print_reg(hw, MVPP2_TX_PORT_FLUSH_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TX_PORT_FLUSH_REG,
 			"MVPP2_TX_PORT_FLUSH_REG");
 }
 EXPORT_SYMBOL(mvPp2TxRegs);
 
-void mvPp2TxSchedRegs(struct mvpp2 *priv, int port)
+void mvPp2TxSchedRegs(struct mv_pp2x *priv, int port)
 {
-	struct mvpp2_hw *hw = &priv->hw;
-	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+	struct mv_pp2x_hw *hw = &priv->hw;
+	struct mv_pp2x_port *pp2_port = mv_pp2x_port_struct_get(priv, port);
 	int physTxp, txq;
 
-	physTxp = mvpp2_egress_port(pp2_port);
+	physTxp = mv_pp2x_egress_port(pp2_port);
 
 	DBG_MSG("\n[TXP Scheduler registers: port=%d, physPort=%d]\n",
 			port, physTxp);
 
-	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, physTxp);
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG,
+	mv_pp2x_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, physTxp);
+	mv_pp2x_print_reg(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG,
 			"MV_PP2_TXP_SCHED_PORT_INDEX_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_Q_CMD_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXP_SCHED_Q_CMD_REG,
 			"MV_PP2_TXP_SCHED_Q_CMD_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_CMD_1_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXP_SCHED_CMD_1_REG,
 			"MV_PP2_TXP_SCHED_CMD_1_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG,
 			"MV_PP2_TXP_SCHED_FIXED_PRIO_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_PERIOD_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXP_SCHED_PERIOD_REG,
 			"MV_PP2_TXP_SCHED_PERIOD_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_MTU_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXP_SCHED_MTU_REG,
 			"MV_PP2_TXP_SCHED_MTU_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_REFILL_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXP_SCHED_REFILL_REG,
 			"MV_PP2_TXP_SCHED_REFILL_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_TOKEN_SIZE_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXP_SCHED_TOKEN_SIZE_REG,
 			"MV_PP2_TXP_SCHED_TOKEN_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_TXP_SCHED_TOKEN_CNTR_REG,
+	mv_pp2x_print_reg(hw, MVPP2_TXP_SCHED_TOKEN_CNTR_REG,
 			"MV_PP2_TXP_SCHED_TOKEN_CNTR_REG");
 
 	for (txq = 0; txq < MVPP2_MAX_TXQ; txq++) {
 		DBG_MSG("\n[TxQ Scheduler registers: port=%d, txq=%d]\n",
 			port, txq);
-		mvpp2_print_reg(hw, MVPP2_TXQ_SCHED_REFILL_REG(txq),
+		mv_pp2x_print_reg(hw, MVPP2_TXQ_SCHED_REFILL_REG(txq),
 				"MV_PP2_TXQ_SCHED_REFILL_REG");
-		mvpp2_print_reg(hw, MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq),
+		mv_pp2x_print_reg(hw, MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq),
 				"MV_PP2_TXQ_SCHED_TOKEN_SIZE_REG");
-		mvpp2_print_reg(hw, MVPP2_TXQ_SCHED_TOKEN_CNTR_REG(txq),
+		mv_pp2x_print_reg(hw, MVPP2_TXQ_SCHED_TOKEN_CNTR_REG(txq),
 				"MV_PP2_TXQ_SCHED_TOKEN_CNTR_REG");
 	}
 }
@@ -794,21 +794,21 @@ int mvPp2RateCalc(int rate, unsigned int accuracy,
 /* Set bandwidth limitation for TX port
  *   rate [Kbps]    - steady state TX bandwidth limitation
  */
-int mvPp2TxpRateSet(struct mvpp2 *priv, int port, int rate)
+int mvPp2TxpRateSet(struct mv_pp2x *priv, int port, int rate)
 {
 	u32 regVal;
 	unsigned int tokens, period, txPortNum, accuracy = 0;
 	int status;
-	struct mvpp2_hw *hw = &priv->hw;
-	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+	struct mv_pp2x_hw *hw = &priv->hw;
+	struct mv_pp2x_port *pp2_port = mv_pp2x_port_struct_get(priv, port);
 
 	if (port >= MVPP2_MAX_PORTS)
 		return -1;
 
-	txPortNum = mvpp2_egress_port(pp2_port);
-	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
+	txPortNum = mv_pp2x_egress_port(pp2_port);
+	mv_pp2x_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
 
-	regVal = mvpp2_read(hw, MVPP2_TXP_SCHED_PERIOD_REG);
+	regVal = mv_pp2x_read(hw, MVPP2_TXP_SCHED_PERIOD_REG);
 
 	status = mvPp2RateCalc(rate, accuracy, &period, &tokens);
 	if (status != MV_OK) {
@@ -823,7 +823,7 @@ int mvPp2TxpRateSet(struct mvpp2 *priv, int port, int rate)
 	if (period > MVPP2_TXP_REFILL_PERIOD_MAX)
 		period = MVPP2_TXP_REFILL_PERIOD_MAX;
 
-	regVal = mvpp2_read(hw, MVPP2_TXP_SCHED_REFILL_REG);
+	regVal = mv_pp2x_read(hw, MVPP2_TXP_SCHED_REFILL_REG);
 
 	regVal &= ~MVPP2_TXP_REFILL_TOKENS_ALL_MASK;
 	regVal |= MVPP2_TXP_REFILL_TOKENS_MASK(tokens);
@@ -831,7 +831,7 @@ int mvPp2TxpRateSet(struct mvpp2 *priv, int port, int rate)
 	regVal &= ~MVPP2_TXP_REFILL_PERIOD_ALL_MASK;
 	regVal |= MVPP2_TXP_REFILL_PERIOD_MASK(period);
 
-	mvpp2_write(hw, MVPP2_TXP_SCHED_REFILL_REG, regVal);
+	mv_pp2x_write(hw, MVPP2_TXP_SCHED_REFILL_REG, regVal);
 
 	return 0;
 }
@@ -841,18 +841,18 @@ EXPORT_SYMBOL(mvPp2TxpRateSet);
  *   burst [bytes] - number of bytes to be sent with maximum possible TX rate,
  *                    before TX rate limitation will take place.
  */
-int mvPp2TxpBurstSet(struct mvpp2 *priv, int port, int burst)
+int mvPp2TxpBurstSet(struct mv_pp2x *priv, int port, int burst)
 {
 	u32 size, mtu;
 	int txPortNum;
-	struct mvpp2_hw *hw = &priv->hw;
-	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+	struct mv_pp2x_hw *hw = &priv->hw;
+	struct mv_pp2x_port *pp2_port = mv_pp2x_port_struct_get(priv, port);
 
 	if (port >= MVPP2_MAX_PORTS)
 		return -1;
 
-	txPortNum = mvpp2_egress_port(pp2_port);
-	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
+	txPortNum = mv_pp2x_egress_port(pp2_port);
+	mv_pp2x_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
 
 	/* Calulate Token Bucket Size */
 	size = 8 * burst;
@@ -861,13 +861,13 @@ int mvPp2TxpBurstSet(struct mvpp2 *priv, int port, int burst)
 		size = MVPP2_TXP_TOKEN_SIZE_MAX;
 
 	/* Token bucket size must be larger then MTU */
-	mtu = mvpp2_read(hw, MVPP2_TXP_SCHED_MTU_REG);
+	mtu = mv_pp2x_read(hw, MVPP2_TXP_SCHED_MTU_REG);
 	if (mtu > size) {
 		DBG_MSG("%s Error: Bucket size (%d bytes) < MTU (%d bytes)\n",
 					__func__, (size / 8), (mtu / 8));
 		return -1;
 	}
-	mvpp2_write(hw, MVPP2_TXP_SCHED_TOKEN_SIZE_REG, size);
+	mv_pp2x_write(hw, MVPP2_TXP_SCHED_TOKEN_SIZE_REG, size);
 
 	return 0;
 }
@@ -876,13 +876,13 @@ EXPORT_SYMBOL(mvPp2TxpBurstSet);
 /* Set bandwidth limitation for TXQ
  *   rate  [Kbps]  - steady state TX rate limitation
  */
-int mvPp2TxqRateSet(struct mvpp2 *priv, int port, int txq, int rate)
+int mvPp2TxqRateSet(struct mv_pp2x *priv, int port, int txq, int rate)
 {
 	u32		regVal;
 	unsigned int	txPortNum, period, tokens, accuracy = 0;
 	int	status;
-	struct mvpp2_hw *hw = &priv->hw;
-	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+	struct mv_pp2x_hw *hw = &priv->hw;
+	struct mv_pp2x_port *pp2_port = mv_pp2x_port_struct_get(priv, port);
 
 	if (port >= MVPP2_MAX_PORTS)
 		return -1;
@@ -898,8 +898,8 @@ int mvPp2TxqRateSet(struct mvpp2 *priv, int port, int txq, int rate)
 		return status;
 	}
 
-	txPortNum = mvpp2_egress_port(pp2_port);
-	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
+	txPortNum = mv_pp2x_egress_port(pp2_port);
+	mv_pp2x_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
 
 	if (tokens > MVPP2_TXQ_REFILL_TOKENS_MAX)
 		tokens = MVPP2_TXQ_REFILL_TOKENS_MAX;
@@ -907,7 +907,7 @@ int mvPp2TxqRateSet(struct mvpp2 *priv, int port, int txq, int rate)
 	if (period > MVPP2_TXQ_REFILL_PERIOD_MAX)
 		period = MVPP2_TXQ_REFILL_PERIOD_MAX;
 
-	regVal = mvpp2_read(hw, MVPP2_TXQ_SCHED_REFILL_REG(txq));
+	regVal = mv_pp2x_read(hw, MVPP2_TXQ_SCHED_REFILL_REG(txq));
 
 	regVal &= ~MVPP2_TXQ_REFILL_TOKENS_ALL_MASK;
 	regVal |= MVPP2_TXQ_REFILL_TOKENS_MASK(tokens);
@@ -915,7 +915,7 @@ int mvPp2TxqRateSet(struct mvpp2 *priv, int port, int txq, int rate)
 	regVal &= ~MVPP2_TXQ_REFILL_PERIOD_ALL_MASK;
 	regVal |= MVPP2_TXQ_REFILL_PERIOD_MASK(period);
 
-	mvpp2_write(hw, MVPP2_TXQ_SCHED_REFILL_REG(txq), regVal);
+	mv_pp2x_write(hw, MVPP2_TXQ_SCHED_REFILL_REG(txq), regVal);
 
 	return 0;
 }
@@ -925,12 +925,12 @@ EXPORT_SYMBOL(mvPp2TxqRateSet);
  *   burst [bytes] - number of bytes to be sent with maximum possible TX rate,
  *                    before TX bandwidth limitation will take place.
  */
-int mvPp2TxqBurstSet(struct mvpp2 *priv, int port, int txq, int burst)
+int mvPp2TxqBurstSet(struct mv_pp2x *priv, int port, int txq, int burst)
 {
 	u32  size, mtu;
 	int txPortNum;
-	struct mvpp2_hw *hw = &priv->hw;
-	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+	struct mv_pp2x_hw *hw = &priv->hw;
+	struct mv_pp2x_port *pp2_port = mv_pp2x_port_struct_get(priv, port);
 
 	if (port >= MVPP2_MAX_PORTS)
 		return -1;
@@ -938,8 +938,8 @@ int mvPp2TxqBurstSet(struct mvpp2 *priv, int port, int txq, int burst)
 	if (txq >= MVPP2_MAX_TXQ)
 		return -1;
 
-	txPortNum = mvpp2_egress_port(pp2_port);
-	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
+	txPortNum = mv_pp2x_egress_port(pp2_port);
+	mv_pp2x_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
 
 	/* Calulate Tocket Bucket Size */
 	size = 8 * burst;
@@ -948,7 +948,7 @@ int mvPp2TxqBurstSet(struct mvpp2 *priv, int port, int txq, int burst)
 		size = MVPP2_TXQ_TOKEN_SIZE_MAX;
 
 	/* Tocken bucket size must be larger then MTU */
-	mtu = mvpp2_read(hw, MVPP2_TXP_SCHED_MTU_REG);
+	mtu = mv_pp2x_read(hw, MVPP2_TXP_SCHED_MTU_REG);
 	if (mtu > size) {
 		DBG_MSG(
 			"%s Error: Bucket size (%d bytes) < MTU (%d bytes)\n",
@@ -956,19 +956,19 @@ int mvPp2TxqBurstSet(struct mvpp2 *priv, int port, int txq, int burst)
 		return -1;
 	}
 
-	mvpp2_write(hw, MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq), size);
+	mv_pp2x_write(hw, MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq), size);
 
 	return 0;
 }
 EXPORT_SYMBOL(mvPp2TxqBurstSet);
 
 /* Set TXQ to work in FIX priority mode */
-int mvPp2TxqFixPrioSet(struct mvpp2 *priv, int port, int txq)
+int mvPp2TxqFixPrioSet(struct mv_pp2x *priv, int port, int txq)
 {
 	u32 regVal;
 	int txPortNum;
-	struct mvpp2_hw *hw = &priv->hw;
-	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+	struct mv_pp2x_hw *hw = &priv->hw;
+	struct mv_pp2x_port *pp2_port = mv_pp2x_port_struct_get(priv, port);
 
 	if (port >= MVPP2_MAX_PORTS)
 		return -1;
@@ -976,12 +976,12 @@ int mvPp2TxqFixPrioSet(struct mvpp2 *priv, int port, int txq)
 	if (txq >= MVPP2_MAX_TXQ)
 		return -1;
 
-	txPortNum = mvpp2_egress_port(pp2_port);
-	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
+	txPortNum = mv_pp2x_egress_port(pp2_port);
+	mv_pp2x_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
 
-	regVal = mvpp2_read(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG);
+	regVal = mv_pp2x_read(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG);
 	regVal |= (1 << txq);
-	mvpp2_write(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG, regVal);
+	mv_pp2x_write(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG, regVal);
 
 	return MV_OK;
 }
@@ -989,12 +989,12 @@ EXPORT_SYMBOL(mvPp2TxqFixPrioSet);
 
 /* Set TXQ to work in WRR mode and set relative weight. */
 /*   Weight range [1..N] */
-int mvPp2TxqWrrPrioSet(struct mvpp2 *priv, int port, int txq, int weight)
+int mvPp2TxqWrrPrioSet(struct mv_pp2x *priv, int port, int txq, int weight)
 {
 	u32 regVal, mtu, mtu_aligned, weight_min;
 	int txPortNum;
-	struct mvpp2_hw *hw = &priv->hw;
-	struct mvpp2_port *pp2_port = mvpp2_port_struct_get(priv, port);
+	struct mv_pp2x_hw *hw = &priv->hw;
+	struct mv_pp2x_port *pp2_port = mv_pp2x_port_struct_get(priv, port);
 
 	if (port >= MVPP2_MAX_PORTS)
 		return -1;
@@ -1002,11 +1002,11 @@ int mvPp2TxqWrrPrioSet(struct mvpp2 *priv, int port, int txq, int weight)
 	if (txq >= MVPP2_MAX_TXQ)
 		return -1;
 
-	txPortNum = mvpp2_egress_port(pp2_port);
-	mvpp2_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
+	txPortNum = mv_pp2x_egress_port(pp2_port);
+	mv_pp2x_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, txPortNum);
 
 	/* Weight * 256 bytes * 8 bits must be larger then MTU [bits] */
-	mtu = mvpp2_read(hw, MVPP2_TXP_SCHED_MTU_REG);
+	mtu = mv_pp2x_read(hw, MVPP2_TXP_SCHED_MTU_REG);
 
 	/* WA for wrong Token bucket update: Set MTU value =
 	 * 3*real MTU value, now get read MTU*/
@@ -1022,22 +1022,22 @@ int mvPp2TxqWrrPrioSet(struct mvpp2 *priv, int port, int txq, int weight)
 		return -1;
 	}
 
-	regVal = mvpp2_read(hw, MVPP2_TXQ_SCHED_WRR_REG(txq));
+	regVal = mv_pp2x_read(hw, MVPP2_TXQ_SCHED_WRR_REG(txq));
 
 	regVal &= ~MVPP2_TXQ_WRR_WEIGHT_ALL_MASK;
 	regVal |= MVPP2_TXQ_WRR_WEIGHT_MASK(weight);
-	mvpp2_write(hw, MVPP2_TXQ_SCHED_WRR_REG(txq), regVal);
+	mv_pp2x_write(hw, MVPP2_TXQ_SCHED_WRR_REG(txq), regVal);
 
-	regVal = mvpp2_read(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG);
+	regVal = mv_pp2x_read(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG);
 	regVal &= ~(1 << txq);
-	mvpp2_write(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG, regVal);
+	mv_pp2x_write(hw, MVPP2_TXP_SCHED_FIXED_PRIO_REG, regVal);
 
 	return 0;
 }
 EXPORT_SYMBOL(mvPp2TxqWrrPrioSet);
 
 #if 0
-void mvPp2IsrRegs(struct mvpp2_hw *hw, int port)
+void mvPp2IsrRegs(struct mv_pp2x_hw *hw, int port)
 {
 	int physPort;
 
@@ -1048,48 +1048,48 @@ void mvPp2IsrRegs(struct mvpp2_hw *hw, int port)
 
 	DBG_MSG("\n[PPv2 ISR registers: port=%d - %s]\n",
 		port, MVPP2_IS_PON_PORT(port) ? "PON" : "GMAC");
-	mvpp2_print_reg(MVPP2_ISR_RXQ_GROUP_REG(port),
+	mv_pp2x_print_reg(MVPP2_ISR_RXQ_GROUP_REG(port),
 		"MVPP2_ISR_RXQ_GROUP_REG");
-	mvpp2_print_reg(MVPP2_ISR_ENABLE_REG(port),
+	mv_pp2x_print_reg(MVPP2_ISR_ENABLE_REG(port),
 		"MVPP2_ISR_ENABLE_REG");
-	mvpp2_print_reg(MVPP2_ISR_RX_TX_CAUSE_REG(physPort),
+	mv_pp2x_print_reg(MVPP2_ISR_RX_TX_CAUSE_REG(physPort),
 		"MVPP2_ISR_RX_TX_CAUSE_REG");
-	mvpp2_print_reg(MVPP2_ISR_RX_TX_MASK_REG(physPort),
+	mv_pp2x_print_reg(MVPP2_ISR_RX_TX_MASK_REG(physPort),
 		"MVPP2_ISR_RX_TX_MASK_REG");
 
-	mvpp2_print_reg(MVPP2_ISR_RX_ERR_CAUSE_REG(physPort),
+	mv_pp2x_print_reg(MVPP2_ISR_RX_ERR_CAUSE_REG(physPort),
 		"MVPP2_ISR_RX_ERR_CAUSE_REG");
-	mvpp2_print_reg(MVPP2_ISR_RX_ERR_MASK_REG(physPort),
+	mv_pp2x_print_reg(MVPP2_ISR_RX_ERR_MASK_REG(physPort),
 		"MVPP2_ISR_RX_ERR_MASK_REG");
 
 	if (MVPP2_IS_PON_PORT(port)) {
-		mvpp2_print_reg(MVPP2_ISR_PON_TX_UNDR_CAUSE_REG,
+		mv_pp2x_print_reg(MVPP2_ISR_PON_TX_UNDR_CAUSE_REG,
 			"MVPP2_ISR_PON_TX_UNDR_CAUSE_REG");
-		mvpp2_print_reg(MVPP2_ISR_PON_TX_UNDR_MASK_REG,
+		mv_pp2x_print_reg(MVPP2_ISR_PON_TX_UNDR_MASK_REG,
 			"MVPP2_ISR_PON_TX_UNDR_MASK_REG");
 	} else {
-		mvpp2_print_reg(MVPP2_ISR_TX_ERR_CAUSE_REG(physPort),
+		mv_pp2x_print_reg(MVPP2_ISR_TX_ERR_CAUSE_REG(physPort),
 			"MVPP2_ISR_TX_ERR_CAUSE_REG");
-		mvpp2_print_reg(MVPP2_ISR_TX_ERR_MASK_REG(physPort),
+		mv_pp2x_print_reg(MVPP2_ISR_TX_ERR_MASK_REG(physPort),
 			"MVPP2_ISR_TX_ERR_MASK_REG");
 	}
-	mvpp2_print_reg(MVPP2_ISR_MISC_CAUSE_REG, "MVPP2_ISR_MISC_CAUSE_REG");
-	mvpp2_print_reg(MVPP2_ISR_MISC_MASK_REG, "MVPP2_ISR_MISC_MASK_REG");
+	mv_pp2x_print_reg(MVPP2_ISR_MISC_CAUSE_REG, "MVPP2_ISR_MISC_CAUSE_REG");
+	mv_pp2x_print_reg(MVPP2_ISR_MISC_MASK_REG, "MVPP2_ISR_MISC_MASK_REG");
 }
 
 
 
 
-void mvPp2AddrDecodeRegs(struct mvpp2_hw *hw)
+void mvPp2AddrDecodeRegs(struct mv_pp2x_hw *hw)
 {
 	MV_U32 regValue;
 	int win;
 
 	/* ToDo - print Misc interrupt Cause and Mask registers */
 
-	mvpp2_print_reg(ETH_BASE_ADDR_ENABLE_REG, "ETH_BASE_ADDR_ENABLE_REG");
-	mvpp2_print_reg(ETH_TARGET_DEF_ADDR_REG, "ETH_TARGET_DEF_ADDR_REG");
-	mvpp2_print_reg(ETH_TARGET_DEF_ID_REG, "ETH_TARGET_DEF_ID_REG");
+	mv_pp2x_print_reg(ETH_BASE_ADDR_ENABLE_REG, "ETH_BASE_ADDR_ENABLE_REG");
+	mv_pp2x_print_reg(ETH_TARGET_DEF_ADDR_REG, "ETH_TARGET_DEF_ADDR_REG");
+	mv_pp2x_print_reg(ETH_TARGET_DEF_ID_REG, "ETH_TARGET_DEF_ID_REG");
 
 	regValue = mvPp2RdReg(ETH_BASE_ADDR_ENABLE_REG);
 	for (win = 0; win < ETH_MAX_DECODE_WIN; win++) {
@@ -1097,16 +1097,16 @@ void mvPp2AddrDecodeRegs(struct mvpp2_hw *hw)
 			continue; /* window is disable */
 
 		DBG_MSG("\t win[%d]\n", win);
-		mvpp2_print_reg(ETH_WIN_BASE_REG(win), "\t ETH_WIN_BASE_REG");
-		mvpp2_print_reg(ETH_WIN_SIZE_REG(win), "\t ETH_WIN_SIZE_REG");
+		mv_pp2x_print_reg(ETH_WIN_BASE_REG(win), "\t ETH_WIN_BASE_REG");
+		mv_pp2x_print_reg(ETH_WIN_SIZE_REG(win), "\t ETH_WIN_SIZE_REG");
 		if (win < ETH_MAX_HIGH_ADDR_REMAP_WIN)
-			mvpp2_print_reg(ETH_WIN_REMAP_REG(win),
+			mv_pp2x_print_reg(ETH_WIN_REMAP_REG(win),
 				"\t ETH_WIN_REMAP_REG");
 	}
 }
 
 
-void mvPp2TxSchedRegs(struct mvpp2_hw *hw, int port, int txp)
+void mvPp2TxSchedRegs(struct mv_pp2x_hw *hw, int port, int txp)
 {
 	int physTxp, txq;
 
@@ -1116,111 +1116,111 @@ void mvPp2TxSchedRegs(struct mvpp2_hw *hw, int port, int txp)
 		port, txp, physTxp);
 
 	mvPp2WrReg(MVPP2_TXP_SCHED_PORT_INDEX_REG, physTxp);
-	mvpp2_print_reg(MVPP2_TXP_SCHED_PORT_INDEX_REG,
+	mv_pp2x_print_reg(MVPP2_TXP_SCHED_PORT_INDEX_REG,
 		"MVPP2_TXP_SCHED_PORT_INDEX_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_Q_CMD_REG,
+	mv_pp2x_print_reg(MVPP2_TXP_SCHED_Q_CMD_REG,
 		"MVPP2_TXP_SCHED_Q_CMD_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_CMD_1_REG,
+	mv_pp2x_print_reg(MVPP2_TXP_SCHED_CMD_1_REG,
 		"MVPP2_TXP_SCHED_CMD_1_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_FIXED_PRIO_REG,
+	mv_pp2x_print_reg(MVPP2_TXP_SCHED_FIXED_PRIO_REG,
 		"MVPP2_TXP_SCHED_FIXED_PRIO_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_PERIOD_REG,
+	mv_pp2x_print_reg(MVPP2_TXP_SCHED_PERIOD_REG,
 		"MVPP2_TXP_SCHED_PERIOD_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_MTU_REG,
+	mv_pp2x_print_reg(MVPP2_TXP_SCHED_MTU_REG,
 		"MVPP2_TXP_SCHED_MTU_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_REFILL_REG,
+	mv_pp2x_print_reg(MVPP2_TXP_SCHED_REFILL_REG,
 		"MVPP2_TXP_SCHED_REFILL_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_TOKEN_SIZE_REG,
+	mv_pp2x_print_reg(MVPP2_TXP_SCHED_TOKEN_SIZE_REG,
 		"MVPP2_TXP_SCHED_TOKEN_SIZE_REG");
-	mvpp2_print_reg(MVPP2_TXP_SCHED_TOKEN_CNTR_REG,
+	mv_pp2x_print_reg(MVPP2_TXP_SCHED_TOKEN_CNTR_REG,
 		"MVPP2_TXP_SCHED_TOKEN_CNTR_REG");
 
 	for (txq = 0; txq < MVPP2_MAX_TXQ; txq++) {
 		DBG_MSG(
 			"\n[TxQ Scheduler registers: port=%d, txp=%d, txq=%d]\n",
 			port, txp, txq);
-		mvpp2_print_reg(MVPP2_TXQ_SCHED_REFILL_REG(txq),
+		mv_pp2x_print_reg(MVPP2_TXQ_SCHED_REFILL_REG(txq),
 			"MVPP2_TXQ_SCHED_REFILL_REG");
-		mvpp2_print_reg(MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq),
+		mv_pp2x_print_reg(MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq),
 			"MVPP2_TXQ_SCHED_TOKEN_SIZE_REG");
-		mvpp2_print_reg(MVPP2_TXQ_SCHED_TOKEN_CNTR_REG(txq),
+		mv_pp2x_print_reg(MVPP2_TXQ_SCHED_TOKEN_CNTR_REG(txq),
 			"MVPP2_TXQ_SCHED_TOKEN_CNTR_REG");
 	}
 }
 
-void      mvPp2FwdSwitchRegs(struct mvpp2_hw *hw)
+void      mvPp2FwdSwitchRegs(struct mv_pp2x_hw *hw)
 {
 	DBG_MSG("\n[FWD Switch registers]\n");
 
-	mvpp2_print_reg(MVPP2_FWD_SWITCH_FLOW_ID_REG,
+	mv_pp2x_print_reg(MVPP2_FWD_SWITCH_FLOW_ID_REG,
 		"MVPP2_FWD_SWITCH_FLOW_ID_REG");
-	mvpp2_print_reg(MVPP2_FWD_SWITCH_CTRL_REG,
+	mv_pp2x_print_reg(MVPP2_FWD_SWITCH_CTRL_REG,
 		"MVPP2_FWD_SWITCH_CTRL_REG");
-	mvpp2_print_reg(MVPP2_FWD_SWITCH_STATUS_REG,
+	mv_pp2x_print_reg(MVPP2_FWD_SWITCH_STATUS_REG,
 		"MVPP2_FWD_SWITCH_STATUS_REG");
 }
 
 
-void mvPp2BmPoolRegs(struct mvpp2_hw *hw, int pool)
+void mvPp2BmPoolRegs(struct mv_pp2x_hw *hw, int pool)
 {
 	if (mvPp2MaxCheck(pool, MV_BM_POOLS, "bm_pool"))
 		return;
 
 	DBG_MSG("\n[BM pool registers: pool=%d]\n", pool);
-	mvpp2_print_reg(MV_BM_POOL_BASE_REG(pool),
+	mv_pp2x_print_reg(MV_BM_POOL_BASE_REG(pool),
 		"MV_BM_POOL_BASE_REG");
-	mvpp2_print_reg(MV_BM_POOL_SIZE_REG(pool),
+	mv_pp2x_print_reg(MV_BM_POOL_SIZE_REG(pool),
 		"MV_BM_POOL_SIZE_REG");
-	mvpp2_print_reg(MV_BM_POOL_READ_PTR_REG(pool),
+	mv_pp2x_print_reg(MV_BM_POOL_READ_PTR_REG(pool),
 		"MV_BM_POOL_READ_PTR_REG");
-	mvpp2_print_reg(MV_BM_POOL_PTRS_NUM_REG(pool),
+	mv_pp2x_print_reg(MV_BM_POOL_PTRS_NUM_REG(pool),
 		"MV_BM_POOL_PTRS_NUM_REG");
-	mvpp2_print_reg(MV_BM_BPPI_READ_PTR_REG(pool),
+	mv_pp2x_print_reg(MV_BM_BPPI_READ_PTR_REG(pool),
 		"MV_BM_BPPI_READ_PTR_REG");
-	mvpp2_print_reg(MV_BM_BPPI_PTRS_NUM_REG(pool),
+	mv_pp2x_print_reg(MV_BM_BPPI_PTRS_NUM_REG(pool),
 		"MV_BM_BPPI_PTRS_NUM_REG");
-	mvpp2_print_reg(MV_BM_POOL_CTRL_REG(pool),
+	mv_pp2x_print_reg(MV_BM_POOL_CTRL_REG(pool),
 		"MV_BM_POOL_CTRL_REG");
-	mvpp2_print_reg(MV_BM_INTR_CAUSE_REG(pool),
+	mv_pp2x_print_reg(MV_BM_INTR_CAUSE_REG(pool),
 		"MV_BM_INTR_CAUSE_REG");
-	mvpp2_print_reg(MV_BM_INTR_MASK_REG(pool),
+	mv_pp2x_print_reg(MV_BM_INTR_MASK_REG(pool),
 		"MV_BM_INTR_MASK_REG");
 }
 
-void mvPp2V0DropCntrs(struct mvpp2_hw *hw, int port)
+void mvPp2V0DropCntrs(struct mv_pp2x_hw *hw, int port)
 {
 	int i;
 
 	DBG_MSG("\n[Port #%d Drop counters]\n", port);
-	mvpp2_print_reg(MVPP2_OVERRUN_DROP_REG(MV_PPV2_PORT_PHYS(port)),
+	mv_pp2x_print_reg(MVPP2_OVERRUN_DROP_REG(MV_PPV2_PORT_PHYS(port)),
 		"MVPP2_OVERRUN_DROP_REG");
-	mvpp2_print_reg(MVPP2_CLS_DROP_REG(MV_PPV2_PORT_PHYS(port)),
+	mv_pp2x_print_reg(MVPP2_CLS_DROP_REG(MV_PPV2_PORT_PHYS(port)),
 		"MVPP2_CLS_DROP_REG");
 
 	if (MVPP2_IS_PON_PORT(port)) {
 		for (i = 0; i < mvPp2HalData.maxTcont; i++) {
-			mvpp2_print_reg2(MVPP2_V0_TX_EARLY_DROP_REG(i),
+			mv_pp2x_print_reg2(MVPP2_V0_TX_EARLY_DROP_REG(i),
 				"MVPP2_TX_EARLY_DROP_REG", i);
-			mvpp2_print_reg2(MVPP2_V0_TX_DESC_DROP_REG(i),
+			mv_pp2x_print_reg2(MVPP2_V0_TX_DESC_DROP_REG(i),
 				"MVPP2_TX_DESC_DROP_REG", i);
 		}
 	} else {
 		i = MVPP2_MAX_TCONT + port;
-		mvpp2_print_reg2(MVPP2_V0_TX_EARLY_DROP_REG(i),
+		mv_pp2x_print_reg2(MVPP2_V0_TX_EARLY_DROP_REG(i),
 			"MVPP2_TX_EARLY_DROP_REG", i);
-		mvpp2_print_reg2(MVPP2_V0_TX_DESC_DROP_REG(i),
+		mv_pp2x_print_reg2(MVPP2_V0_TX_DESC_DROP_REG(i),
 			"MVPP2_TX_DESC_DROP_REG", i);
 	}
 	for (i = port * CONFIG_MVPP2_RXQ; i < (port * CONFIG_MVPP2_RXQ +
 			CONFIG_MVPP2_RXQ); i++) {
-		mvpp2_print_reg2(MVPP2_V0_RX_EARLY_DROP_REG(i),
+		mv_pp2x_print_reg2(MVPP2_V0_RX_EARLY_DROP_REG(i),
 			"MVPP2_RX_EARLY_DROP_REG", i);
-		mvpp2_print_reg2(MVPP2_V0_RX_DESC_DROP_REG(i),
+		mv_pp2x_print_reg2(MVPP2_V0_RX_DESC_DROP_REG(i),
 			"MVPP2_RX_DESC_DROP_REG", i);
 	}
 }
 
-void mvPp2V1DropCntrs(struct mvpp2_hw *hw, int port)
+void mvPp2V1DropCntrs(struct mv_pp2x_hw *hw, int port)
 {
 	int txp, phyRxq, q;
 	MVPP2_PORT_CTRL *pPortCtrl = mvPp2PortHndlGet(port);
@@ -1271,49 +1271,49 @@ void mvPp2V1DropCntrs(struct mvpp2_hw *hw, int port)
 
 #endif
 
-void mvPp2V1RxqDbgCntrs(struct mvpp2 *priv, int port, int rxq)
+void mvPp2V1RxqDbgCntrs(struct mv_pp2x *priv, int port, int rxq)
 {
-	struct mvpp2_port *pp_port;
+	struct mv_pp2x_port *pp_port;
 	int phy_rxq;
-	struct mvpp2_hw *hw = &priv->hw;
+	struct mv_pp2x_hw *hw = &priv->hw;
 
-	pp_port = mvpp2_port_struct_get(priv, port);
+	pp_port = mv_pp2x_port_struct_get(priv, port);
 	if (pp_port)
 		phy_rxq = pp_port->first_rxq + rxq;
 	else
 		return;
 
 	DBG_MSG("\n------ [Port #%d, rxq #%d counters] -----\n", port, rxq);
-	mvpp2_write(hw, MVPP2_CNT_IDX_REG, phy_rxq);
-	mvpp2_print_reg(hw, MVPP2_RX_PKT_FULLQ_DROP_REG,
+	mv_pp2x_write(hw, MVPP2_CNT_IDX_REG, phy_rxq);
+	mv_pp2x_print_reg(hw, MVPP2_RX_PKT_FULLQ_DROP_REG,
 			"MV_PP2_RX_PKT_FULLQ_DROP_REG");
-	mvpp2_print_reg(hw, MVPP2_RX_PKT_EARLY_DROP_REG,
+	mv_pp2x_print_reg(hw, MVPP2_RX_PKT_EARLY_DROP_REG,
 			"MVPP2_V1_RX_PKT_EARLY_DROP_REG");
-	mvpp2_print_reg(hw, MVPP2_RX_PKT_BM_DROP_REG,
+	mv_pp2x_print_reg(hw, MVPP2_RX_PKT_BM_DROP_REG,
 			"MVPP2_V1_RX_PKT_BM_DROP_REG");
-	mvpp2_print_reg(hw, MVPP2_RX_DESC_ENQ_REG,
+	mv_pp2x_print_reg(hw, MVPP2_RX_DESC_ENQ_REG,
 			"MVPP2_V1_RX_DESC_ENQ_REG");
 }
 EXPORT_SYMBOL(mvPp2V1RxqDbgCntrs);
 
 
 
-void mvPp2RxFifoRegs(struct mvpp2_hw *hw, int port)
+void mvPp2RxFifoRegs(struct mv_pp2x_hw *hw, int port)
 {
 	DBG_MSG("\n[Port #%d RX Fifo]\n", port);
-	mvpp2_print_reg(hw, MVPP2_RX_DATA_FIFO_SIZE_REG(port),
+	mv_pp2x_print_reg(hw, MVPP2_RX_DATA_FIFO_SIZE_REG(port),
 			"MVPP2_RX_DATA_FIFO_SIZE_REG");
-	mvpp2_print_reg(hw, MVPP2_RX_ATTR_FIFO_SIZE_REG(port),
+	mv_pp2x_print_reg(hw, MVPP2_RX_ATTR_FIFO_SIZE_REG(port),
 			"MVPP2_RX_ATTR_FIFO_SIZE_REG");
 	DBG_MSG("\n[Global RX Fifo regs]\n");
-	mvpp2_print_reg(hw, MVPP2_RX_MIN_PKT_SIZE_REG,
+	mv_pp2x_print_reg(hw, MVPP2_RX_MIN_PKT_SIZE_REG,
 			"MVPP2_RX_MIN_PKT_SIZE_REG");
 }
 EXPORT_SYMBOL(mvPp2RxFifoRegs);
 
 #if 0
 /* Print status of Ethernet port */
-void mvPp2PortStatus(struct mvpp2_hw *hw, int port)
+void mvPp2PortStatus(struct mv_pp2x_hw *hw, int port)
 {
 	int i, txp, txq;
 	MV_ETH_PORT_STATUS	link;
@@ -1415,7 +1415,7 @@ void mvPp2PortStatus(struct mvpp2_hw *hw, int port)
 }
 #endif
 
-static char *mvpp2_prs_l2_info_str(unsigned int l2_info)
+static char *mv_pp2x_prs_l2_info_str(unsigned int l2_info)
 {
 	switch (l2_info << MVPP2_PRS_RI_L2_CAST_OFFS) {
 	case MVPP2_PRS_RI_L2_UCAST:
@@ -1430,7 +1430,7 @@ static char *mvpp2_prs_l2_info_str(unsigned int l2_info)
 	return NULL;
 }
 
-static char *mvpp2_prs_vlan_info_str(unsigned int vlan_info)
+static char *mv_pp2x_prs_vlan_info_str(unsigned int vlan_info)
 {
 	switch (vlan_info << MVPP2_PRS_RI_VLAN_OFFS) {
 	case MVPP2_PRS_RI_VLAN_NONE:
@@ -1447,7 +1447,7 @@ static char *mvpp2_prs_vlan_info_str(unsigned int vlan_info)
 	return NULL;
 }
 
-void mvpp2_rx_desc_print(struct mvpp2 *priv, struct mvpp2_rx_desc *desc)
+void mv_pp2x_rx_desc_print(struct mv_pp2x *priv, struct mv_pp2x_rx_desc *desc)
 {
 	int i;
 	u32 *words = (u32 *) desc;
@@ -1465,12 +1465,12 @@ void mvpp2_rx_desc_print(struct mvpp2 *priv, struct mvpp2_rx_desc *desc)
 			MVPP2_RXD_IP_HLEN_OFFS);
 
 	DBG_MSG("L2=%s, ",
-		mvpp2_prs_l2_info_str((desc->rsrvd_parser &
+		mv_pp2x_prs_l2_info_str((desc->rsrvd_parser &
 			MVPP2_RXD_L2_CAST_MASK) >> MVPP2_RXD_L2_CAST_OFFS));
 
 	DBG_MSG("VLAN=");
 	DBG_MSG("%s, ",
-		mvpp2_prs_vlan_info_str((desc->rsrvd_parser &
+		mv_pp2x_prs_vlan_info_str((desc->rsrvd_parser &
 			MVPP2_RXD_VLAN_INFO_MASK) >> MVPP2_RXD_VLAN_INFO_OFFS));
 
 	DBG_MSG("L3=");
@@ -1524,7 +1524,7 @@ void mvpp2_rx_desc_print(struct mvpp2 *priv, struct mvpp2_rx_desc *desc)
 /* Dump memory in specific format:
  * address: X1X1X1X1 X2X2X2X2 ... X8X8X8X8
  */
-void mvpp2_skb_dump(struct sk_buff *skb, int size, int access)
+void mv_pp2x_skb_dump(struct sk_buff *skb, int size, int access)
 {
 	int i, j;
 	void *addr = skb->head + NET_SKB_PAD;
@@ -1581,59 +1581,59 @@ void mvpp2_skb_dump(struct sk_buff *skb, int size, int access)
 }
 
 /* Wrap the API just for debug */
-int mvpp2_wrap_cos_mode_set(struct mvpp2_port *port,
-		enum mvpp2_cos_classifier cos_mode)
+int mv_pp2x_wrap_cos_mode_set(struct mv_pp2x_port *port,
+		enum mv_pp2x_cos_classifier cos_mode)
 {
-	return mvpp2_cos_classifier_set(port, cos_mode);
+	return mv_pp2x_cos_classifier_set(port, cos_mode);
 }
-EXPORT_SYMBOL(mvpp2_wrap_cos_mode_set);
+EXPORT_SYMBOL(mv_pp2x_wrap_cos_mode_set);
 
-int mvpp2_wrap_cos_mode_get(struct mvpp2_port *port)
+int mv_pp2x_wrap_cos_mode_get(struct mv_pp2x_port *port)
 {
-	return mvpp2_cos_classifier_get(port);
+	return mv_pp2x_cos_classifier_get(port);
 }
-EXPORT_SYMBOL(mvpp2_wrap_cos_mode_get);
+EXPORT_SYMBOL(mv_pp2x_wrap_cos_mode_get);
 
-int mvpp2_wrap_cos_pri_map_set(struct mvpp2_port *port, int cos_pri_map)
+int mv_pp2x_wrap_cos_pri_map_set(struct mv_pp2x_port *port, int cos_pri_map)
 {
-	return mvpp2_cos_pri_map_set(port, cos_pri_map);
+	return mv_pp2x_cos_pri_map_set(port, cos_pri_map);
 }
-EXPORT_SYMBOL(mvpp2_wrap_cos_pri_map_set);
+EXPORT_SYMBOL(mv_pp2x_wrap_cos_pri_map_set);
 
-int mvpp2_wrap_cos_pri_map_get(struct mvpp2_port *port)
+int mv_pp2x_wrap_cos_pri_map_get(struct mv_pp2x_port *port)
 {
-	return mvpp2_cos_pri_map_get(port);
+	return mv_pp2x_cos_pri_map_get(port);
 }
-EXPORT_SYMBOL(mvpp2_wrap_cos_pri_map_get);
+EXPORT_SYMBOL(mv_pp2x_wrap_cos_pri_map_get);
 
-int mvpp2_wrap_cos_dflt_value_set(struct mvpp2_port *port, int cos_value)
+int mv_pp2x_wrap_cos_dflt_value_set(struct mv_pp2x_port *port, int cos_value)
 {
-	return mvpp2_cos_default_value_set(port, cos_value);
+	return mv_pp2x_cos_default_value_set(port, cos_value);
 }
-EXPORT_SYMBOL(mvpp2_wrap_cos_dflt_value_set);
+EXPORT_SYMBOL(mv_pp2x_wrap_cos_dflt_value_set);
 
-int mvpp2_wrap_cos_dflt_value_get(struct mvpp2_port *port)
+int mv_pp2x_wrap_cos_dflt_value_get(struct mv_pp2x_port *port)
 {
-	return mvpp2_cos_default_value_get(port);
+	return mv_pp2x_cos_default_value_get(port);
 }
-EXPORT_SYMBOL(mvpp2_wrap_cos_dflt_value_get);
+EXPORT_SYMBOL(mv_pp2x_wrap_cos_dflt_value_get);
 
-int mvpp22_wrap_rss_mode_set(struct mvpp2_port *port, int rss_mode)
+int mv_pp22_wrap_rss_mode_set(struct mv_pp2x_port *port, int rss_mode)
 {
-	return mvpp22_rss_mode_set(port, rss_mode);
+	return mv_pp22_rss_mode_set(port, rss_mode);
 }
-EXPORT_SYMBOL(mvpp22_wrap_rss_mode_set);
+EXPORT_SYMBOL(mv_pp22_wrap_rss_mode_set);
 
-int mvpp22_wrap_rss_dflt_cpu_set(struct mvpp2_port *port, int default_cpu)
+int mv_pp22_wrap_rss_dflt_cpu_set(struct mv_pp2x_port *port, int default_cpu)
 {
-	return mvpp22_rss_default_cpu_set(port, default_cpu);
+	return mv_pp22_rss_default_cpu_set(port, default_cpu);
 }
-EXPORT_SYMBOL(mvpp22_wrap_rss_dflt_cpu_set);
+EXPORT_SYMBOL(mv_pp22_wrap_rss_dflt_cpu_set);
 
-/* mvpp2_port_bind_cpu_set
+/* mv_pp2x_port_bind_cpu_set
 *  -- Bind the port to cpu when rss disabled.
 */
-int mvpp2_port_bind_cpu_set(struct mvpp2_port *port, u8 bind_cpu)
+int mv_pp2x_port_bind_cpu_set(struct mv_pp2x_port *port, u8 bind_cpu)
 {
 	int ret = 0;
 	u8 bound_cpu_first_rxq;
@@ -1655,22 +1655,22 @@ int mvpp2_port_bind_cpu_set(struct mvpp2_port *port, u8 bind_cpu)
 		port->priv->pp2_cfg.rx_cpu_map &= (~(0xF << (port->id * 4)));
 		port->priv->pp2_cfg.rx_cpu_map |= ((bind_cpu & 0xF) <<
 			(port->id * 4));
-		bound_cpu_first_rxq = mvpp2_bound_cpu_first_rxq_calc(port);
-		ret = mvpp2_cls_c2_rule_set(port, bound_cpu_first_rxq);
+		bound_cpu_first_rxq = mv_pp2x_bound_cpu_first_rxq_calc(port);
+		ret = mv_pp2x_cls_c2_rule_set(port, bound_cpu_first_rxq);
 	}
 
 	return ret;
 }
-EXPORT_SYMBOL(mvpp2_port_bind_cpu_set);
+EXPORT_SYMBOL(mv_pp2x_port_bind_cpu_set);
 
-static void mvpp2_bm_queue_map_dump(struct mvpp2_hw *hw, int queue)
+static void mv_pp2x_bm_queue_map_dump(struct mv_pp2x_hw *hw, int queue)
 {
 	unsigned int regVal, shortQset, longQset;
 
 	DBG_MSG("-------- queue #%d --------\n", queue);
 
-	mvpp2_write(hw, MVPP2_BM_PRIO_IDX_REG, queue);
-	regVal = mvpp2_read(hw, MVPP2_BM_CPU_QSET_REG);
+	mv_pp2x_write(hw, MVPP2_BM_PRIO_IDX_REG, queue);
+	regVal = mv_pp2x_read(hw, MVPP2_BM_CPU_QSET_REG);
 
 	shortQset = ((regVal & (MVPP2_BM_CPU_SHORT_QSET_MASK)) >>
 			MVPP2_BM_CPU_SHORT_QSET_OFFS);
@@ -1679,7 +1679,7 @@ static void mvpp2_bm_queue_map_dump(struct mvpp2_hw *hw, int queue)
 	DBG_MSG("CPU SHORT QSET = 0x%02x\n", shortQset);
 	DBG_MSG("CPU LONG QSET  = 0x%02x\n", longQset);
 
-	regVal = mvpp2_read(hw, MVPP2_BM_HWF_QSET_REG);
+	regVal = mv_pp2x_read(hw, MVPP2_BM_HWF_QSET_REG);
 	shortQset = ((regVal & (MVPP2_BM_HWF_SHORT_QSET_MASK)) >>
 			MVPP2_BM_HWF_SHORT_QSET_OFFS);
 	longQset = ((regVal & (MVPP2_BM_HWF_LONG_QSET_MASK)) >>
@@ -1688,25 +1688,25 @@ static void mvpp2_bm_queue_map_dump(struct mvpp2_hw *hw, int queue)
 	DBG_MSG("HWF LONG QSET  = 0x%02x\n", longQset);
 }
 
-static bool mvpp2_bm_priority_en(struct mvpp2_hw *hw)
+static bool mv_pp2x_bm_priority_en(struct mv_pp2x_hw *hw)
 {
-	return ((mvpp2_read(hw, MVPP2_BM_PRIO_CTRL_REG) == 0) ? false : true);
+	return ((mv_pp2x_read(hw, MVPP2_BM_PRIO_CTRL_REG) == 0) ? false : true);
 }
 
-void mvpp2_bm_queue_map_dump_all(struct mvpp2_hw *hw)
+void mv_pp2x_bm_queue_map_dump_all(struct mv_pp2x_hw *hw)
 {
 	int queue;
 
-	if (!mvpp2_bm_priority_en(hw))
+	if (!mv_pp2x_bm_priority_en(hw))
 		DBG_MSG("Note: The buffers priority algorithms is disabled.\n");
 
 	for (queue = 0; queue <= MVPP2_BM_PRIO_IDX_MAX; queue++)
-		mvpp2_bm_queue_map_dump(hw, queue);
+		mv_pp2x_bm_queue_map_dump(hw, queue);
 }
-EXPORT_SYMBOL(mvpp2_bm_queue_map_dump_all);
+EXPORT_SYMBOL(mv_pp2x_bm_queue_map_dump_all);
 
 
-int mvpp2_cls_c2_qos_prio_set(struct mvpp2_cls_c2_qos_entry *qos, u8 pri)
+int mv_pp2x_cls_c2_qos_prio_set(struct mv_pp2x_cls_c2_qos_entry *qos, u8 pri)
 {
 	if (!qos)
 		return -EINVAL;
@@ -1715,9 +1715,9 @@ int mvpp2_cls_c2_qos_prio_set(struct mvpp2_cls_c2_qos_entry *qos, u8 pri)
 	qos->data |= (((u32)pri) << MVPP2_CLS2_QOS_TBL_PRI_OFF);
 	return 0;
 }
-EXPORT_SYMBOL(mvpp2_cls_c2_qos_prio_set);
+EXPORT_SYMBOL(mv_pp2x_cls_c2_qos_prio_set);
 
-int mvpp2_cls_c2_qos_dscp_set(struct mvpp2_cls_c2_qos_entry *qos, u8 dscp)
+int mv_pp2x_cls_c2_qos_dscp_set(struct mv_pp2x_cls_c2_qos_entry *qos, u8 dscp)
 {
 	if (!qos)
 		return -EINVAL;
@@ -1726,9 +1726,9 @@ int mvpp2_cls_c2_qos_dscp_set(struct mvpp2_cls_c2_qos_entry *qos, u8 dscp)
 	qos->data |= (((u32)dscp) << MVPP2_CLS2_QOS_TBL_DSCP_OFF);
 	return 0;
 }
-EXPORT_SYMBOL(mvpp2_cls_c2_qos_dscp_set);
+EXPORT_SYMBOL(mv_pp2x_cls_c2_qos_dscp_set);
 
-int mvpp2_cls_c2_qos_color_set(struct mvpp2_cls_c2_qos_entry *qos, u8 color)
+int mv_pp2x_cls_c2_qos_color_set(struct mv_pp2x_cls_c2_qos_entry *qos, u8 color)
 {
 	if (!qos)
 		return -EINVAL;
@@ -1737,9 +1737,9 @@ int mvpp2_cls_c2_qos_color_set(struct mvpp2_cls_c2_qos_entry *qos, u8 color)
 	qos->data |= (((u32)color) << MVPP2_CLS2_QOS_TBL_COLOR_OFF);
 	return 0;
 }
-EXPORT_SYMBOL(mvpp2_cls_c2_qos_color_set);
+EXPORT_SYMBOL(mv_pp2x_cls_c2_qos_color_set);
 
-int mvpp2_cls_c2_queue_set(struct mvpp2_cls_c2_entry *c2, int cmd,
+int mv_pp2x_cls_c2_queue_set(struct mv_pp2x_cls_c2_entry *c2, int cmd,
 		int queue, int from)
 {
 	int status = 0;
@@ -1752,14 +1752,14 @@ int mvpp2_cls_c2_queue_set(struct mvpp2_cls_c2_entry *c2, int cmd,
 	qLow = (queue & MVPP2_CLS2_ACT_QOS_ATTR_QL_MASK) >>
 			MVPP2_CLS2_ACT_QOS_ATTR_QL_OFF;
 
-	status |= mvpp2_cls_c2_queue_low_set(c2, cmd, qLow, from);
-	status |= mvpp2_cls_c2_queue_high_set(c2, cmd, qHigh, from);
+	status |= mv_pp2x_cls_c2_queue_low_set(c2, cmd, qLow, from);
+	status |= mv_pp2x_cls_c2_queue_high_set(c2, cmd, qHigh, from);
 
 	return status;
 }
-EXPORT_SYMBOL(mvpp2_cls_c2_queue_set);
+EXPORT_SYMBOL(mv_pp2x_cls_c2_queue_set);
 
-int mvpp2_cls_c2_mtu_set(struct mvpp2_cls_c2_entry *c2, int mtu_inx)
+int mv_pp2x_cls_c2_mtu_set(struct mv_pp2x_cls_c2_entry *c2, int mtu_inx)
 {
 	PTR_VALIDATE(c2);
 	POS_RANGE_VALIDATE(mtu_inx, (1 <<
@@ -1771,17 +1771,17 @@ int mvpp2_cls_c2_mtu_set(struct mvpp2_cls_c2_entry *c2, int mtu_inx)
 
 	return MV_OK;
 }
-EXPORT_SYMBOL(mvpp2_cls_c2_mtu_set);
+EXPORT_SYMBOL(mv_pp2x_cls_c2_mtu_set);
 
-int mvpp2_debug_param_set(u32 param)
+int mv_pp2x_debug_param_set(u32 param)
 {
 	debug_param = param;
 	return 0;
 }
-EXPORT_SYMBOL(mvpp2_debug_param_set);
+EXPORT_SYMBOL(mv_pp2x_debug_param_set);
 
 
-static int mvpp2_prs_hw_tcam_cnt_dump(struct mvpp2_hw *hw,
+static int mv_pp2x_prs_hw_tcam_cnt_dump(struct mv_pp2x_hw *hw,
 		int tid, unsigned int *cnt)
 {
 	unsigned int regVal;
@@ -1789,9 +1789,9 @@ static int mvpp2_prs_hw_tcam_cnt_dump(struct mvpp2_hw *hw,
 	POS_RANGE_VALIDATE(tid, MVPP2_PRS_TCAM_SRAM_SIZE - 1);
 
 	/* write index */
-	mvpp2_write(hw, MVPP2_PRS_TCAM_HIT_IDX_REG, tid);
+	mv_pp2x_write(hw, MVPP2_PRS_TCAM_HIT_IDX_REG, tid);
 
-	regVal = mvpp2_read(hw, MVPP2_PRS_TCAM_HIT_CNT_REG);
+	regVal = mv_pp2x_read(hw, MVPP2_PRS_TCAM_HIT_CNT_REG);
 	regVal &= MVPP2_PRS_TCAM_HIT_CNT_MASK;
 
 	if (cnt)
@@ -1803,7 +1803,7 @@ static int mvpp2_prs_hw_tcam_cnt_dump(struct mvpp2_hw *hw,
 }
 
 
-static int mvpp2_prs_sw_sram_ri_dump(struct mvpp2_prs_entry *pe)
+static int mv_pp2x_prs_sw_sram_ri_dump(struct mv_pp2x_prs_entry *pe)
 {
 	unsigned int data, mask;
 	int i, bitsOffs = 0;
@@ -1811,7 +1811,7 @@ static int mvpp2_prs_sw_sram_ri_dump(struct mvpp2_prs_entry *pe)
 
 	PTR_VALIDATE(pe);
 
-	mvpp2_prs_sw_sram_ri_get(pe, &data, &mask);
+	mv_pp2x_prs_sw_sram_ri_get(pe, &data, &mask);
 	if (mask == 0)
 		return 0;
 
@@ -1831,7 +1831,7 @@ static int mvpp2_prs_sw_sram_ri_dump(struct mvpp2_prs_entry *pe)
 	return 0;
 }
 
-static int mvpp2_prs_sw_sram_ai_dump(struct mvpp2_prs_entry *pe)
+static int mv_pp2x_prs_sw_sram_ai_dump(struct mv_pp2x_prs_entry *pe)
 {
 	int i, bitsOffs = 0;
 	unsigned int data, mask;
@@ -1839,7 +1839,7 @@ static int mvpp2_prs_sw_sram_ai_dump(struct mvpp2_prs_entry *pe)
 
 	PTR_VALIDATE(pe);
 
-	mvpp2_prs_sw_sram_ai_get(pe, &data, &mask);
+	mv_pp2x_prs_sw_sram_ai_get(pe, &data, &mask);
 
 	if (mask == 0)
 		return 0;
@@ -1859,7 +1859,7 @@ static int mvpp2_prs_sw_sram_ai_dump(struct mvpp2_prs_entry *pe)
 }
 
 
-int mvpp2_prs_sw_dump(struct mvpp2_prs_entry *pe)
+int mv_pp2x_prs_sw_dump(struct mv_pp2x_prs_entry *pe)
 {
 	u32 op, type, lu, done, flowid;
 	int	shift, offset, i;
@@ -1891,32 +1891,32 @@ int mvpp2_prs_sw_dump(struct mvpp2_prs_entry *pe)
 
 	DBG_MSG("| ");
 
-	mvpp2_prs_sw_sram_shift_get(pe, &shift);
+	mv_pp2x_prs_sw_sram_shift_get(pe, &shift);
 	DBG_MSG("SH=%d ", shift);
 
-	mvpp2_prs_sw_sram_offset_get(pe, &type, &offset, &op);
+	mv_pp2x_prs_sw_sram_offset_get(pe, &type, &offset, &op);
 	if (offset != 0 || ((op >> MVPP2_PRS_SRAM_OP_SEL_SHIFT_BITS) != 0))
 		DBG_MSG("UDFT=%u UDFO=%d ", type, offset);
 
 	DBG_MSG("op=%u ", op);
 
-	mvpp2_prs_sw_sram_next_lu_get(pe, &lu);
+	mv_pp2x_prs_sw_sram_next_lu_get(pe, &lu);
 	DBG_MSG("LU=%u ", lu);
 
-	mvpp2_prs_sw_sram_lu_done_get(pe, &done);
+	mv_pp2x_prs_sw_sram_lu_done_get(pe, &done);
 	DBG_MSG("%s ", done ? "DONE" : "N_DONE");
 
 	/*flow id generation bit*/
-	mvpp2_prs_sw_sram_flowid_gen_get(pe, &flowid);
+	mv_pp2x_prs_sw_sram_flowid_gen_get(pe, &flowid);
 	DBG_MSG("%s ", flowid ? "FIDG" : "N_FIDG");
 
 	(pe->tcam.word[MVPP2_PRS_TCAM_INV_WORD] & MVPP2_PRS_TCAM_INV_MASK) ?
 		DBG_MSG(" [inv]") : 0;
 
-	if (mvpp2_prs_sw_sram_ri_dump(pe))
+	if (mv_pp2x_prs_sw_sram_ri_dump(pe))
 		return MV_ERROR;
 
-	if (mvpp2_prs_sw_sram_ai_dump(pe))
+	if (mv_pp2x_prs_sw_sram_ai_dump(pe))
 		return MV_ERROR;
 
 	DBG_MSG("\n");
@@ -1924,95 +1924,95 @@ int mvpp2_prs_sw_dump(struct mvpp2_prs_entry *pe)
 	return 0;
 
 }
-EXPORT_SYMBOL(mvpp2_prs_sw_dump);
+EXPORT_SYMBOL(mv_pp2x_prs_sw_dump);
 
-int mvpp2_prs_hw_dump(struct mvpp2_hw *hw)
+int mv_pp2x_prs_hw_dump(struct mv_pp2x_hw *hw)
 {
 	int index;
-	struct mvpp2_prs_entry pe;
+	struct mv_pp2x_prs_entry pe;
 
 
 	DBG_MSG("%s\n", __func__);
 
 	for (index = 0; index < MVPP2_PRS_TCAM_SRAM_SIZE; index++) {
 		pe.index = index;
-		mvpp2_prs_hw_read(hw, &pe);
+		mv_pp2x_prs_hw_read(hw, &pe);
 		if ((pe.tcam.word[MVPP2_PRS_TCAM_INV_WORD] &
 			MVPP2_PRS_TCAM_INV_MASK) ==
 			MVPP2_PRS_TCAM_ENTRY_VALID) {
-			mvpp2_prs_sw_dump(&pe);
-			mvpp2_prs_hw_tcam_cnt_dump(hw, index, NULL);
+			mv_pp2x_prs_sw_dump(&pe);
+			mv_pp2x_prs_hw_tcam_cnt_dump(hw, index, NULL);
 			DBG_MSG("-----------------------------------------\n");
 		}
 	}
 
 	return MV_OK;
 }
-EXPORT_SYMBOL(mvpp2_prs_hw_dump);
+EXPORT_SYMBOL(mv_pp2x_prs_hw_dump);
 
-int mvpp2_prs_hw_regs_dump(struct mvpp2_hw *hw)
+int mv_pp2x_prs_hw_regs_dump(struct mv_pp2x_hw *hw)
 {
 	int i;
 	char reg_name[100];
 
-	mvpp2_print_reg(hw, MVPP2_PRS_INIT_LOOKUP_REG,
+	mv_pp2x_print_reg(hw, MVPP2_PRS_INIT_LOOKUP_REG,
 		"MVPP2_PRS_INIT_LOOKUP_REG");
-	mvpp2_print_reg(hw, MVPP2_PRS_INIT_OFFS_REG(0),
+	mv_pp2x_print_reg(hw, MVPP2_PRS_INIT_OFFS_REG(0),
 		"MVPP2_PRS_INIT_OFFS_0_3_REG");
-	mvpp2_print_reg(hw, MVPP2_PRS_INIT_OFFS_REG(4),
+	mv_pp2x_print_reg(hw, MVPP2_PRS_INIT_OFFS_REG(4),
 		"MVPP2_PRS_INIT_OFFS_4_7_REG");
-	mvpp2_print_reg(hw, MVPP2_PRS_MAX_LOOP_REG(0),
+	mv_pp2x_print_reg(hw, MVPP2_PRS_MAX_LOOP_REG(0),
 		"MVPP2_PRS_MAX_LOOP_0_3_REG");
-	mvpp2_print_reg(hw, MVPP2_PRS_MAX_LOOP_REG(4),
+	mv_pp2x_print_reg(hw, MVPP2_PRS_MAX_LOOP_REG(4),
 		"MVPP2_PRS_MAX_LOOP_4_7_REG");
 
-	/*mvpp2_print_reg(hw, MVPP2_PRS_INTR_CAUSE_REG,
+	/*mv_pp2x_print_reg(hw, MVPP2_PRS_INTR_CAUSE_REG,
 		"MVPP2_PRS_INTR_CAUSE_REG");*/
-	/*mvpp2_print_reg(hw, MVPP2_PRS_INTR_MASK_REG,
+	/*mv_pp2x_print_reg(hw, MVPP2_PRS_INTR_MASK_REG,
 		"MVPP2_PRS_INTR_MASK_REG");*/
-	mvpp2_print_reg(hw, MVPP2_PRS_TCAM_IDX_REG,
+	mv_pp2x_print_reg(hw, MVPP2_PRS_TCAM_IDX_REG,
 		"MVPP2_PRS_TCAM_IDX_REG");
 
 	for (i = 0; i < MVPP2_PRS_TCAM_WORDS; i++) {
 		sprintf(reg_name, "MVPP2_PRS_TCAM_DATA_%d_REG", i);
-		mvpp2_print_reg(hw, MVPP2_PRS_TCAM_DATA_REG(i),
+		mv_pp2x_print_reg(hw, MVPP2_PRS_TCAM_DATA_REG(i),
 			reg_name);
 	}
-	mvpp2_print_reg(hw, MVPP2_PRS_SRAM_IDX_REG,
+	mv_pp2x_print_reg(hw, MVPP2_PRS_SRAM_IDX_REG,
 		"MVPP2_PRS_SRAM_IDX_REG");
 
 	for (i = 0; i < MVPP2_PRS_SRAM_WORDS; i++) {
 		sprintf(reg_name, "MVPP2_PRS_SRAM_DATA_%d_REG", i);
-		mvpp2_print_reg(hw, MVPP2_PRS_SRAM_DATA_REG(i),
+		mv_pp2x_print_reg(hw, MVPP2_PRS_SRAM_DATA_REG(i),
 			reg_name);
 	}
 
-	mvpp2_print_reg(hw, MVPP2_PRS_EXP_REG,
+	mv_pp2x_print_reg(hw, MVPP2_PRS_EXP_REG,
 		"MVPP2_PRS_EXP_REG");
-	mvpp2_print_reg(hw, MVPP2_PRS_TCAM_CTRL_REG,
+	mv_pp2x_print_reg(hw, MVPP2_PRS_TCAM_CTRL_REG,
 		"MVPP2_PRS_TCAM_CTRL_REG");
 
 	return MV_OK;
 }
-EXPORT_SYMBOL(mvpp2_prs_hw_regs_dump);
+EXPORT_SYMBOL(mv_pp2x_prs_hw_regs_dump);
 
 
-int mvpp2_prs_hw_hits_dump(struct mvpp2_hw *hw)
+int mv_pp2x_prs_hw_hits_dump(struct mv_pp2x_hw *hw)
 {
 	int index;
 	unsigned int cnt;
-	struct mvpp2_prs_entry pe;
+	struct mv_pp2x_prs_entry pe;
 
 	for (index = 0; index < MVPP2_PRS_TCAM_SRAM_SIZE; index++) {
 		pe.index = index;
-		mvpp2_prs_hw_read(hw, &pe);
+		mv_pp2x_prs_hw_read(hw, &pe);
 		if ((pe.tcam.word[MVPP2_PRS_TCAM_INV_WORD] &
 			MVPP2_PRS_TCAM_INV_MASK) ==
 			MVPP2_PRS_TCAM_ENTRY_VALID) {
-			mvpp2_prs_hw_tcam_cnt_dump(hw, index, &cnt);
+			mv_pp2x_prs_hw_tcam_cnt_dump(hw, index, &cnt);
 			if (cnt == 0)
 				continue;
-			mvpp2_prs_sw_dump(&pe);
+			mv_pp2x_prs_sw_dump(&pe);
 			DBG_MSG("INDEX: %d       HITS: %d\n", index, cnt);
 			DBG_MSG("-----------------------------------------\n");
 		}
@@ -2020,10 +2020,10 @@ int mvpp2_prs_hw_hits_dump(struct mvpp2_hw *hw)
 
 	return MV_OK;
 }
-EXPORT_SYMBOL(mvpp2_prs_hw_hits_dump);
+EXPORT_SYMBOL(mv_pp2x_prs_hw_hits_dump);
 
 
-int mvPp2ClsC2QosSwDump(struct mvpp2_cls_c2_qos_entry *qos)
+int mvPp2ClsC2QosSwDump(struct mv_pp2x_cls_c2_qos_entry *qos)
 {
 	int int32bit;
 	int status = 0;
@@ -2068,10 +2068,10 @@ int mvPp2ClsC2QosSwDump(struct mvpp2_cls_c2_qos_entry *qos)
 }
 /*----------------------------------------------------------------------*/
 
-int mvpp2_cls_c2_qos_dscp_hw_dump(struct mvpp2_hw *hw)
+int mv_pp2x_cls_c2_qos_dscp_hw_dump(struct mv_pp2x_hw *hw)
 {
 	int tbl_id, tbl_line, int32bit;
-	struct mvpp2_cls_c2_qos_entry qos;
+	struct mv_pp2x_cls_c2_qos_entry qos;
 
 	for (tbl_id = 0; tbl_id < MVPP2_CLS_C2_QOS_DSCP_TBL_NUM; tbl_id++) {
 
@@ -2079,7 +2079,7 @@ int mvpp2_cls_c2_qos_dscp_hw_dump(struct mvpp2_hw *hw)
 		DBG_MSG("LINE	DSCP	COLOR	GEM_ID	QUEUE\n");
 		for (tbl_line = 0; tbl_line < MVPP2_CLS_C2_QOS_DSCP_TBL_SIZE;
 				tbl_line++) {
-			mvpp2_cls_c2_qos_hw_read(hw, tbl_id,
+			mv_pp2x_cls_c2_qos_hw_read(hw, tbl_id,
 				1/*DSCP*/, tbl_line, &qos);
 			DBG_MSG("0x%2.2x\t", qos.tbl_line);
 			mvPp2ClsC2QosDscpGet(&qos, &int32bit);
@@ -2095,15 +2095,15 @@ int mvpp2_cls_c2_qos_dscp_hw_dump(struct mvpp2_hw *hw)
 	}
 	return MV_OK;
 }
-EXPORT_SYMBOL(mvpp2_cls_c2_qos_dscp_hw_dump);
+EXPORT_SYMBOL(mv_pp2x_cls_c2_qos_dscp_hw_dump);
 
 /*----------------------------------------------------------------------*/
 
-int mvpp2_cls_c2_qos_prio_hw_dump(struct mvpp2_hw *hw)
+int mv_pp2x_cls_c2_qos_prio_hw_dump(struct mv_pp2x_hw *hw)
 {
 	int tbl_id, tbl_line, int32bit;
 
-	struct mvpp2_cls_c2_qos_entry qos;
+	struct mv_pp2x_cls_c2_qos_entry qos;
 
 	for (tbl_id = 0; tbl_id < MVPP2_CLS_C2_QOS_PRIO_TBL_NUM; tbl_id++) {
 
@@ -2112,7 +2112,7 @@ int mvpp2_cls_c2_qos_prio_hw_dump(struct mvpp2_hw *hw)
 
 		for (tbl_line = 0; tbl_line < MVPP2_CLS_C2_QOS_PRIO_TBL_SIZE;
 				tbl_line++) {
-			mvpp2_cls_c2_qos_hw_read(hw, tbl_id,
+			mv_pp2x_cls_c2_qos_hw_read(hw, tbl_id,
 				0/*PRIO*/, tbl_line, &qos);
 			DBG_MSG("0x%2.2x\t", qos.tbl_line);
 			mvPp2ClsC2QosPrioGet(&qos, &int32bit);
@@ -2128,18 +2128,18 @@ int mvpp2_cls_c2_qos_prio_hw_dump(struct mvpp2_hw *hw)
 	}
 	return MV_OK;
 }
-EXPORT_SYMBOL(mvpp2_cls_c2_qos_prio_hw_dump);
+EXPORT_SYMBOL(mv_pp2x_cls_c2_qos_prio_hw_dump);
 
 
 /*----------------------------------------------------------------------*/
 
-int mvpp2_cls_c2_sw_dump(struct mvpp2_cls_c2_entry *c2)
+int mv_pp2x_cls_c2_sw_dump(struct mv_pp2x_cls_c2_entry *c2)
 {
 	int id, sel, type, gemid, low_q, high_q, color, int32bit;
 
 	PTR_VALIDATE(c2);
 
-	mvpp2_cls_c2_sw_words_dump(c2);
+	mv_pp2x_cls_c2_sw_words_dump(c2);
 	DBG_MSG("\n");
 
 	/*------------------------------*/
@@ -2335,27 +2335,27 @@ int mvpp2_cls_c2_sw_dump(struct mvpp2_cls_c2_entry *c2)
 }
 
 /*----------------------------------------------------------------------*/
-int	mvpp2_cls_c2_hw_dump(struct mvpp2_hw *hw)
+int	mv_pp2x_cls_c2_hw_dump(struct mv_pp2x_hw *hw)
 {
 	int index;
 	unsigned cnt;
 
-	struct mvpp2_cls_c2_entry c2;
+	struct mv_pp2x_cls_c2_entry c2;
 
 	memset(&c2, 0, sizeof(c2));
 
 	for (index = 0; index < MVPP2_CLS_C2_TCAM_SIZE; index++) {
-		mvpp2_cls_c2_hw_read(hw, index, &c2);
+		mv_pp2x_cls_c2_hw_read(hw, index, &c2);
 		if (c2.inv == 0) {
-			mvpp2_cls_c2_sw_dump(&c2);
-			mvpp2_cls_c2_hit_cntr_read(hw, index, &cnt);
+			mv_pp2x_cls_c2_sw_dump(&c2);
+			mv_pp2x_cls_c2_hit_cntr_read(hw, index, &cnt);
 			DBG_MSG("HITS: %d\n", cnt);
 			DBG_MSG("-----------------------------------------\n");
 		}
 	}
 	return MV_OK;
 }
-EXPORT_SYMBOL(mvpp2_cls_c2_hw_dump);
+EXPORT_SYMBOL(mv_pp2x_cls_c2_hw_dump);
 
 /*----------------------------------------------------------------------*/
 

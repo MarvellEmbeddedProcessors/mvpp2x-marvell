@@ -65,77 +65,77 @@
 #define MV_ABS(number)  (((int)(number) < 0) ? -(int)(number) : (int)(number))
 
 
-void mvpp2_print_reg(struct mvpp2_hw *hw, unsigned int reg_addr,
+void mv_pp2x_print_reg(struct mv_pp2x_hw *hw, unsigned int reg_addr,
 		char *reg_name);
-void mvpp2_print_reg2(struct mvpp2_hw *hw, unsigned int reg_addr,
+void mv_pp2x_print_reg2(struct mv_pp2x_hw *hw, unsigned int reg_addr,
 		char *reg_name, unsigned int index);
 
 
-void mvpp2_bm_pool_regs(struct mvpp2_hw *hw, int pool);
-void mvpp2_bm_pool_drop_count(struct mvpp2_hw *hw, int pool);
-void mvpp2_pool_status(struct mvpp2 *priv, int log_pool_num);
-void mv_pp2_pool_stats_print(struct mvpp2 *priv, int log_pool_num);
+void mv_pp2x_bm_pool_regs(struct mv_pp2x_hw *hw, int pool);
+void mv_pp2x_bm_pool_drop_count(struct mv_pp2x_hw *hw, int pool);
+void mv_pp2x_pool_status(struct mv_pp2x *priv, int log_pool_num);
+void mv_pp2_pool_stats_print(struct mv_pp2x *priv, int log_pool_num);
 
 
-void mvPp2RxDmaRegsPrint(struct mvpp2 *priv, bool print_all,
+void mvPp2RxDmaRegsPrint(struct mv_pp2x *priv, bool print_all,
 		int start, int stop);
-void mvPp2RxqShow(struct mvpp2 *priv, int port, int rxq, int mode);
-void mvPp2PhysRxqRegs(struct mvpp2 *pp2, int rxq);
-void mvPp2PortRxqRegs(struct mvpp2 *pp2, int port, int rxq);
-void mvpp22_isr_rx_group_regs(struct mvpp2 *priv, int port, bool print_all);
+void mvPp2RxqShow(struct mv_pp2x *priv, int port, int rxq, int mode);
+void mvPp2PhysRxqRegs(struct mv_pp2x *pp2, int rxq);
+void mvPp2PortRxqRegs(struct mv_pp2x *pp2, int port, int rxq);
+void mv_pp22_isr_rx_group_regs(struct mv_pp2x *priv, int port, bool print_all);
 
-void mvPp2V1RxqDbgCntrs(struct mvpp2 *priv, int port, int rxq);
-void mvPp2RxFifoRegs(struct mvpp2_hw *hw, int port);
+void mvPp2V1RxqDbgCntrs(struct mv_pp2x *priv, int port, int rxq);
+void mvPp2RxFifoRegs(struct mv_pp2x_hw *hw, int port);
 
-void mvpp2_rx_desc_print(struct mvpp2 *priv, struct mvpp2_rx_desc *desc);
+void mv_pp2x_rx_desc_print(struct mv_pp2x *priv, struct mv_pp2x_rx_desc *desc);
 
-void mvpp2_skb_dump(struct sk_buff *skb, int size, int access);
-void mvPp2TxqShow(struct mvpp2 *priv, int port, int txq, int mode);
-void mvPp2AggrTxqShow(struct mvpp2 *priv, int cpu, int mode);
-void mvPp2PhysTxqRegs(struct mvpp2 *priv, int txq);
-void mvPp2PortTxqRegs(struct mvpp2 *priv, int port, int txq);
-void mvPp2AggrTxqRegs(struct mvpp2 *priv, int cpu);
-void mvPp2V1TxqDbgCntrs(struct mvpp2 *priv, int port, int txq);
-void mvPp2V1DropCntrs(struct mvpp2 *priv, int port);
-void mvPp2TxRegs(struct mvpp2 *priv);
-void mvPp2TxSchedRegs(struct mvpp2 *priv, int port);
-int mvPp2TxpRateSet(struct mvpp2 *priv, int port, int rate);
-int mvPp2TxpBurstSet(struct mvpp2 *priv, int port, int burst);
-int mvPp2TxqRateSet(struct mvpp2 *priv, int port, int txq, int rate);
-int mvPp2TxqBurstSet(struct mvpp2 *priv, int port, int txq, int burst);
-int mvPp2TxqFixPrioSet(struct mvpp2 *priv, int port, int txq);
-int mvPp2TxqWrrPrioSet(struct mvpp2 *priv, int port, int txq, int weight);
+void mv_pp2x_skb_dump(struct sk_buff *skb, int size, int access);
+void mvPp2TxqShow(struct mv_pp2x *priv, int port, int txq, int mode);
+void mvPp2AggrTxqShow(struct mv_pp2x *priv, int cpu, int mode);
+void mvPp2PhysTxqRegs(struct mv_pp2x *priv, int txq);
+void mvPp2PortTxqRegs(struct mv_pp2x *priv, int port, int txq);
+void mvPp2AggrTxqRegs(struct mv_pp2x *priv, int cpu);
+void mvPp2V1TxqDbgCntrs(struct mv_pp2x *priv, int port, int txq);
+void mvPp2V1DropCntrs(struct mv_pp2x *priv, int port);
+void mvPp2TxRegs(struct mv_pp2x *priv);
+void mvPp2TxSchedRegs(struct mv_pp2x *priv, int port);
+int mvPp2TxpRateSet(struct mv_pp2x *priv, int port, int rate);
+int mvPp2TxpBurstSet(struct mv_pp2x *priv, int port, int burst);
+int mvPp2TxqRateSet(struct mv_pp2x *priv, int port, int txq, int rate);
+int mvPp2TxqBurstSet(struct mv_pp2x *priv, int port, int txq, int burst);
+int mvPp2TxqFixPrioSet(struct mv_pp2x *priv, int port, int txq);
+int mvPp2TxqWrrPrioSet(struct mv_pp2x *priv, int port, int txq, int weight);
 
-int mvpp2_wrap_cos_mode_set(struct mvpp2_port *port,
-		enum mvpp2_cos_classifier cos_mode);
-int mvpp2_wrap_cos_mode_get(struct mvpp2_port *port);
-int mvpp2_wrap_cos_pri_map_set(struct mvpp2_port *port, int cos_pri_map);
-int mvpp2_wrap_cos_pri_map_get(struct mvpp2_port *port);
-int mvpp2_wrap_cos_dflt_value_set(struct mvpp2_port *port, int cos_value);
-int mvpp2_wrap_cos_dflt_value_get(struct mvpp2_port *port);
-int mvpp22_wrap_rss_mode_set(struct mvpp2_port *port, int rss_mode);
-int mvpp22_wrap_rss_dflt_cpu_set(struct mvpp2_port *port, int default_cpu);
-int mvpp2_port_bind_cpu_set(struct mvpp2_port *port, u8 bind_cpu);
-int mvpp2_debug_param_set(u32 param);
+int mv_pp2x_wrap_cos_mode_set(struct mv_pp2x_port *port,
+		enum mv_pp2x_cos_classifier cos_mode);
+int mv_pp2x_wrap_cos_mode_get(struct mv_pp2x_port *port);
+int mv_pp2x_wrap_cos_pri_map_set(struct mv_pp2x_port *port, int cos_pri_map);
+int mv_pp2x_wrap_cos_pri_map_get(struct mv_pp2x_port *port);
+int mv_pp2x_wrap_cos_dflt_value_set(struct mv_pp2x_port *port, int cos_value);
+int mv_pp2x_wrap_cos_dflt_value_get(struct mv_pp2x_port *port);
+int mv_pp22_wrap_rss_mode_set(struct mv_pp2x_port *port, int rss_mode);
+int mv_pp22_wrap_rss_dflt_cpu_set(struct mv_pp2x_port *port, int default_cpu);
+int mv_pp2x_port_bind_cpu_set(struct mv_pp2x_port *port, u8 bind_cpu);
+int mv_pp2x_debug_param_set(u32 param);
 
-void mvpp2_bm_queue_map_dump_all(struct mvpp2_hw *hw);
+void mv_pp2x_bm_queue_map_dump_all(struct mv_pp2x_hw *hw);
 
-int mvpp2_cls_c2_qos_prio_set(struct mvpp2_cls_c2_qos_entry *qos, u8 pri);
-int mvpp2_cls_c2_qos_dscp_set(struct mvpp2_cls_c2_qos_entry *qos, u8 dscp);
-int mvpp2_cls_c2_qos_color_set(struct mvpp2_cls_c2_qos_entry *qos, u8 color);
-int mvpp2_cls_c2_queue_set(struct mvpp2_cls_c2_entry *c2, int cmd,
+int mv_pp2x_cls_c2_qos_prio_set(struct mv_pp2x_cls_c2_qos_entry *qos, u8 pri);
+int mv_pp2x_cls_c2_qos_dscp_set(struct mv_pp2x_cls_c2_qos_entry *qos, u8 dscp);
+int mv_pp2x_cls_c2_qos_color_set(struct mv_pp2x_cls_c2_qos_entry *qos, u8 color);
+int mv_pp2x_cls_c2_queue_set(struct mv_pp2x_cls_c2_entry *c2, int cmd,
 		int queue, int from);
-int mvpp2_cls_c2_mtu_set(struct mvpp2_cls_c2_entry *c2, int mtu_inx);
+int mv_pp2x_cls_c2_mtu_set(struct mv_pp2x_cls_c2_entry *c2, int mtu_inx);
 
-int mvpp2_prs_sw_dump(struct mvpp2_prs_entry *pe);
-int mvpp2_prs_hw_dump(struct mvpp2_hw *hw);
-int mvpp2_prs_hw_regs_dump(struct mvpp2_hw *hw);
-int mvpp2_prs_hw_hits_dump(struct mvpp2_hw *hw);
+int mv_pp2x_prs_sw_dump(struct mv_pp2x_prs_entry *pe);
+int mv_pp2x_prs_hw_dump(struct mv_pp2x_hw *hw);
+int mv_pp2x_prs_hw_regs_dump(struct mv_pp2x_hw *hw);
+int mv_pp2x_prs_hw_hits_dump(struct mv_pp2x_hw *hw);
 
-int mvpp2_cls_c2_sw_dump(struct mvpp2_cls_c2_entry *c2);
-int mvpp2_cls_c2_hw_dump(struct mvpp2_hw *hw);
-int mvpp2_cls_c2_qos_dscp_hw_dump(struct mvpp2_hw *hw);
-int mvpp2_cls_c2_qos_prio_hw_dump(struct mvpp2_hw *hw);
+int mv_pp2x_cls_c2_sw_dump(struct mv_pp2x_cls_c2_entry *c2);
+int mv_pp2x_cls_c2_hw_dump(struct mv_pp2x_hw *hw);
+int mv_pp2x_cls_c2_qos_dscp_hw_dump(struct mv_pp2x_hw *hw);
+int mv_pp2x_cls_c2_qos_prio_hw_dump(struct mv_pp2x_hw *hw);
 
 
 

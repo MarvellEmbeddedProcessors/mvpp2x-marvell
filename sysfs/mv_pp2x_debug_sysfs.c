@@ -40,8 +40,8 @@ static ssize_t mv_debug_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name] [cpu]     >  bind_cpu - Bind the interface to dedicated CPU\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "     NOTE: bind_cpu only valid when rss is disabled\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
-	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset val >mvpp2_reg_write    - Write mvpp2 register.\n");
-	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset     >mvpp2_reg_read     - Read mvpp2 register.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset val >mv_pp2x_reg_write    - Write mvpp2 register.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset     >mv_pp2x_reg_read     - Read mvpp2 register.\n");
 
 	return off;
 }
@@ -68,7 +68,7 @@ static ssize_t mv_debug_store(struct device *dev,
 	unsigned int    b;
 	char		if_name[10];
 	struct net_device *netdev;
-	struct mvpp2_port *port;
+	struct mv_pp2x_port *port;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -86,10 +86,10 @@ static ssize_t mv_debug_store(struct device *dev,
 	port = netdev_priv(netdev);
 
 	if (!strcmp(name, "bind_cpu")) {
-		mvpp2_port_bind_cpu_set(port, b);
+		mv_pp2x_port_bind_cpu_set(port, b);
 	}
 	else if (!strcmp(name, "debug_param")) {
-		mvpp2_debug_param_set(b);
+		mv_pp2x_debug_param_set(b);
 	}
 	else {
 		err = 1;
@@ -117,13 +117,13 @@ static ssize_t mv_debug_store_unsigned(struct device *dev,
 
 	local_irq_save(flags);
 
-	if (!strcmp(name, "mvpp2_reg_read")) {
-		val = mvpp2_read(sysfs_cur_hw, a);
-		printk("mvpp2_read(0x%x)=0x%x\n", a, val);
-	} else if (!strcmp(name, "mvpp2_reg_write")) {
-		mvpp2_write(sysfs_cur_hw, a, b);
-		val = mvpp2_read(sysfs_cur_hw, a);
-		printk("mvpp2_write_read(0x%x)=0x%x\n", a, val);
+	if (!strcmp(name, "mv_pp2x_reg_read")) {
+		val = mv_pp2x_read(sysfs_cur_hw, a);
+		printk("mv_pp2x_read(0x%x)=0x%x\n", a, val);
+	} else if (!strcmp(name, "mv_pp2x_reg_write")) {
+		mv_pp2x_write(sysfs_cur_hw, a, b);
+		val = mv_pp2x_read(sysfs_cur_hw, a);
+		printk("mv_pp2x_write_read(0x%x)=0x%x\n", a, val);
 	} else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
@@ -139,15 +139,15 @@ static ssize_t mv_debug_store_unsigned(struct device *dev,
 static DEVICE_ATTR(help,	S_IRUSR, mv_debug_show, NULL);
 static DEVICE_ATTR(bind_cpu,	S_IWUSR, NULL, mv_debug_store);
 static DEVICE_ATTR(debug_param,	S_IWUSR, NULL, mv_debug_store);
-static DEVICE_ATTR(mvpp2_reg_read,	S_IWUSR, NULL, mv_debug_store_unsigned);
-static DEVICE_ATTR(mvpp2_reg_write,	S_IWUSR, NULL, mv_debug_store_unsigned);
+static DEVICE_ATTR(mv_pp2x_reg_read,	S_IWUSR, NULL, mv_debug_store_unsigned);
+static DEVICE_ATTR(mv_pp2x_reg_write,	S_IWUSR, NULL, mv_debug_store_unsigned);
 
 static struct attribute *debug_attrs[] = {
 	&dev_attr_help.attr,
 	&dev_attr_bind_cpu.attr,
 	&dev_attr_debug_param.attr,
-	&dev_attr_mvpp2_reg_read.attr,
-	&dev_attr_mvpp2_reg_write.attr,
+	&dev_attr_mv_pp2x_reg_read.attr,
+	&dev_attr_mv_pp2x_reg_write.attr,
 	NULL
 };
 

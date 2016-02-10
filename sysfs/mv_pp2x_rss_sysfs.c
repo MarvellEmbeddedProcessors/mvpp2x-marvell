@@ -59,7 +59,7 @@ static ssize_t mv_rss_show(struct device *dev,
 		return -EPERM;
 
 	if (!strcmp(name, "rss_hw_dump"))
-		mvpp22_rss_hw_dump(sysfs_cur_hw);
+		mv_pp22_rss_hw_dump(sysfs_cur_hw);
 	else
 		off += mv_rss_help(buf);
 
@@ -74,7 +74,7 @@ static ssize_t mv_rss_store(struct device *dev,
 	unsigned int    b;
 	char		if_name[10];
 	struct net_device *netdev;
-	struct mvpp2_port *port;
+	struct mv_pp2x_port *port;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -92,9 +92,9 @@ static ssize_t mv_rss_store(struct device *dev,
 	port = netdev_priv(netdev);
 
 	if (!strcmp(name, "rss_mode")) {
-		mvpp22_wrap_rss_mode_set(port, b);
+		mv_pp22_wrap_rss_mode_set(port, b);
 	} else if (!strcmp(name, "rss_dflt_cpu")) {
-		mvpp22_wrap_rss_dflt_cpu_set(port, b);
+		mv_pp22_wrap_rss_dflt_cpu_set(port, b);
 	} else {
 		err = 1;
 		printk("%s: illegal operation <%s>\n", __func__, attr->attr.name);
