@@ -4573,10 +4573,12 @@ static int mv_pp2x_platform_data_get(struct platform_device *pdev,
 
 #endif
 	return 0;
+#if 0
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 err_pp_clk:
 	clk_disable_unprepare(hw->pp_clk);
 	return err;
+#endif
 #endif
 }
 static int mv_pp2x_probe(struct platform_device *pdev)
