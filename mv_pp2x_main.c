@@ -3430,8 +3430,7 @@ static int mv_pp2_init_emac_data(struct mv_pp2x_port *port,
 		port->mac_data.force_link = false;
 
 		phy_mode = of_get_phy_mode(emac_node);
-		if (id == 0)
-			phy_mode = PHY_INTERFACE_MODE_KR;
+
 		pr_debug("gop_mac(%d), phy_mode(%d) (%s)\n", id,  phy_mode,
 			phy_modes(phy_mode));
 
@@ -3468,6 +3467,7 @@ static int mv_pp2_init_emac_data(struct mv_pp2x_port *port,
 		}
 		port->mac_data.phy_mode = phy_mode;
 	}
+	pr_debug("gop_mac(%d), phy_speed(%d)\n", id,  port->mac_data.speed);
 
 
 	phy_node = of_parse_phandle(emac_node, "phy", 0);
@@ -3477,6 +3477,10 @@ static int mv_pp2_init_emac_data(struct mv_pp2x_port *port,
 			&port->mac_data.phy_addr))
 			pr_err("%s: NO PHY address on emac %d\n", __func__,
 				port->mac_data.gop_index);
+
+		pr_debug("gop_mac(%d), phy_reg(%d)\n", id,  port->mac_data.phy_addr);
+	} else {
+		pr_debug("No PHY NODE on emac %d\n", id);
 	}
 return 0;
 }
@@ -3625,6 +3629,10 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 	if (dt_mac_addr && is_valid_ether_addr(dt_mac_addr)) {
 		mac_from = "device tree";
 		ether_addr_copy(dev->dev_addr, dt_mac_addr);
+		pr_debug("gop_index(%d), mac_addr %x:%x:%x:%x:%x:%x",
+			port->mac_data.gop_index, dev->dev_addr[0],
+			dev->dev_addr[1], dev->dev_addr[2], dev->dev_addr[3],
+			dev->dev_addr[4], dev->dev_addr[5]);
 	} else {
 		if (priv->pp2_version == PPV21)
 			mv_pp21_get_mac_address(port, hw_mac_addr);
@@ -4206,10 +4214,6 @@ static struct mv_pp2x_platform_data pp22_pdata = {
 
 static const struct of_device_id mv_pp2x_match_tbl[] = {
 		{
-			.compatible = "marvell,armada-375-pp2",
-			.data = &pp21_pdata,
-		},
-		{
 			.compatible = "marvell,mv-pp22",
 			.data = &pp22_pdata,
 		},
@@ -4320,8 +4324,10 @@ void mv_pp2x_pp2_port_print(struct mv_pp2x_port *port)
 
 	for (i = 0; i < port->num_qvector; i++) {
 		DBG_MSG("\t qvector_index(%d)\n", i);
+#if !defined(CONFIG_MV_PP2_POLLING)
 		DBG_MSG("\t\t irq(%d)\n",
 			port->q_vector[i].irq);
+#endif
 		DBG_MSG("\t\t qv_type(%d)\n",
 			port->q_vector[i].qv_type);
 		DBG_MSG("\t\t sw_thread_id	(%d)\n",
@@ -4342,8 +4348,9 @@ void mv_pp2x_pp2_port_print(struct mv_pp2x_port *port)
 	DBG_MSG("\t GOP force_link(%d) autoneg(%d) duplex(%d) speed(%d)\n",
 		port->mac_data.force_link, port->mac_data.autoneg,
 		port->mac_data.duplex, port->mac_data.speed);
-	DBG_MSG("\t GOP link_irq(%d) phy_mode(%d)\n", port->mac_data.link_irq,
-		port->mac_data.phy_mode);
+#if !defined(CONFIG_MV_PP2_POLLING)
+	DBG_MSG("\t GOP link_irq(%d) \n", port->mac_data.link_irq);
+#endif
 	DBG_MSG("\t GOP phy_dev(%p) phy_node(%p)\n", port->mac_data.phy_dev,
 		port->mac_data.phy_node);
 
@@ -4603,6 +4610,7 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 		return err;
 	}
 	MVPP2_PRINT_2LINE();
+
 
 	hw = &priv->hw;
 	priv->pp2_version = priv->pp2xdata->pp2x_ver;
@@ -5015,6 +5023,6 @@ module_init(mpp2_module_init);
 module_exit(mpp2_module_exit);
 
 
-MODULE_DESCRIPTION("Marvell PPv2 Ethernet Driver - www.marvell.com");
-MODULE_AUTHOR("Marcin Wojtas <mw@semihalf.com>");
+MODULE_DESCRIPTION("Marvell PPv2x Ethernet Driver - www.marvell.com");
+MODULE_AUTHOR("Marvell");
 MODULE_LICENSE("GPL v2");

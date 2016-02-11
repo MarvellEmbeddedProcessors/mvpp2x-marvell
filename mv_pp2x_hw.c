@@ -53,7 +53,7 @@ void mv_pp2x_write(struct mv_pp2x_hw *hw, u32 offset, u32 data)
 			break;
 	}
 	if (i == MVPP2_REG_BUF_SIZE) {
-		pr_notice("NEW REG: mv_pp2x_write(%p)\n", reg_ptr);
+		pr_debug("NEW REG: mv_pp2x_write(%p)\n", reg_ptr);
 		last_used[next_write] = reg_ptr;
 		next_write++;
 		next_write = next_write%MVPP2_REG_BUF_SIZE;
@@ -85,7 +85,7 @@ u32 mv_pp2x_read(struct mv_pp2x_hw *hw, u32 offset)
 			break;
 	}
 	if (i == MVPP2_REG_BUF_SIZE) {
-		pr_notice("NEW REG: mv_pp2x_read(%p)\n", reg_ptr);
+		pr_debug("NEW REG: mv_pp2x_read(%p)\n", reg_ptr);
 		last_used[next_write] = reg_ptr;
 		next_write++;
 		next_write = next_write%MVPP2_REG_BUF_SIZE;
