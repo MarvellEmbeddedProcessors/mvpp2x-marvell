@@ -4214,6 +4214,10 @@ static struct mv_pp2x_platform_data pp22_pdata = {
 
 static const struct of_device_id mv_pp2x_match_tbl[] = {
 		{
+			.compatible = "marvell,armada-375-pp2",
+			.data = &pp21_pdata,
+		},
+		{
 			.compatible = "marvell,mv-pp22",
 			.data = &pp22_pdata,
 		},
