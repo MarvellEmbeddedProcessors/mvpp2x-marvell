@@ -155,12 +155,12 @@ void mv_pp2_pool_stats_print(struct mv_pp2x *priv, int log_pool_num)
 		return;
 	}
 
-#if DEBUG
+#if MVPP2_DEBUG
 	DBG_MSG("skb_alloc_oom    = %u\n", bm_pool->stats.skb_alloc_oom);
 	DBG_MSG("skb_alloc_ok     = %u\n", bm_pool->stats.skb_alloc_ok);
 	DBG_MSG("bm_put           = %u\n", bm_pool->stats.bm_put);
 	memset(&bm_pool->stats, 0, sizeof(bm_pool->stats));
-#endif /* DEBUG */
+#endif /* MVPP2_DEBUG */
 }
 EXPORT_SYMBOL(mv_pp2_pool_stats_print);
 
@@ -336,7 +336,7 @@ void mv_pp22_isr_rx_group_regs(struct mv_pp2x *priv, int port, bool print_all)
 
 	pp_port = mv_pp2x_port_struct_get(priv, port);
 	if (!pp_port) {
-		pr_crit("Input Error\n %s", __func__);
+		DBG_MSG("Input Error\n %s", __func__);
 		return;
 	}
 

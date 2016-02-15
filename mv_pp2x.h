@@ -70,20 +70,19 @@
 #define DEBUG	0
 #define VERBOSE	0
 #endif /*DEBUG||CONFIG_MVPP2_DEBUG*/
-
 #endif /*REDEFINE_DEBUG_ONCE*/
 
 #if VERBOSE
 #define DBG_MSG(fmt, args...)	pr_crit(PFX fmt, ## args)
 #else
-#if DEBUG
-#define DBG_MSG(fmt, args...)	pr_debug(PFX fmt, ## args)
+#ifdef MVPP2_DEBUG
+#define DBG_MSG(fmt, args...)	printk(fmt, ## args)
 #else
-#define DBG_MSG(fmt, args...)	while (0) printk(fmt, ## args)
-#endif /*DEBUG*/
+#define DBG_MSG(fmt, args...)	pr_debug(PFX fmt, ## args)
+#endif /*MVPP2_DEBUG*/
 #endif /*VERBOSE*/
 
-#if DEBUG
+#if MVPP2_DEBUG
 #define STAT_DBG(c) c
 #else
 #define STAT_DBG(c)

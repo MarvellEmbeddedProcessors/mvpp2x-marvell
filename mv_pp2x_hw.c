@@ -61,7 +61,7 @@ EXPORT_SYMBOL(mv_pp2x_range_validate);
 
 void mv_pp2x_write(struct mv_pp2x_hw *hw, u32 offset, u32 data)
 {
-#if DEBUG && !defined(CONFIG_MV_PP2_PALLADIUM)
+#if MVPP2_DEBUG && !defined(CONFIG_MV_PP2_PALLADIUM)
 	static void *last_used[20] = {0};
 	static int next_write;
 	int i;
@@ -89,7 +89,7 @@ EXPORT_SYMBOL(mv_pp2x_write);
 
 u32 mv_pp2x_read(struct mv_pp2x_hw *hw, u32 offset)
 {
-#if DEBUG && !defined(CONFIG_MV_PP2_PALLADIUM)
+#if MVPP2_DEBUG && !defined(CONFIG_MV_PP2_PALLADIUM)
 	static void *last_used[20] = {0};
 	static int next_write;
 	int i;
@@ -98,7 +98,7 @@ u32 mv_pp2x_read(struct mv_pp2x_hw *hw, u32 offset)
 	u32 val;
 
 	val = readl(reg_ptr);
-#if DEBUG && !defined(CONFIG_MV_PP2_PALLADIUM)
+#if MVPP2_DEBUG && !defined(CONFIG_MV_PP2_PALLADIUM)
 	for (i = 0; i < MVPP2_REG_BUF_SIZE; i++) {
 		if (last_used[i] == reg_ptr)
 			break;

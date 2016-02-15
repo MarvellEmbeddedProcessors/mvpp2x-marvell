@@ -2173,7 +2173,7 @@ struct mv_pp2x_c2_shadow {
 };
 
 /* BM specific defines */
-#ifdef DEBUG
+#ifdef MVPP2_DEBUG
 struct mv_pp2x_bm_pool_stats {
 	u32 skb_alloc_oom;
 	u32 skb_alloc_ok;
@@ -2209,7 +2209,7 @@ struct mv_pp2x_bm_pool {
 	atomic_t in_use;
 	int in_use_thresh;
 	/* Stats info */
-#ifdef DEBUG
+#ifdef MVPP2_DEBUG
 	struct mv_pp2x_bm_pool_stats stats;
 #endif
 };

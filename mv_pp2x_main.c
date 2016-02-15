@@ -427,7 +427,7 @@ static struct sk_buff *mv_pp2x_skb_alloc(struct mv_pp2x_port *port,
 	phys_addr = dma_map_single(port->dev->dev.parent, skb->head,
 				   MVPP2_RX_BUF_SIZE(bm_pool->pkt_size),
 				   DMA_FROM_DEVICE);
-#if DEBUG
+#if MVPP2_DEBUG
 	pr_crit_once("dev_ptr:%p, dev_name:%s, sizeof(dma_addr_t):%ld",
 		     port->dev->dev.parent, port->dev->dev.parent->init_name,
 		     sizeof(dma_addr_t));
