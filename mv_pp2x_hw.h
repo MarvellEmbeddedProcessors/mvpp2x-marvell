@@ -16,7 +16,6 @@
 * ***************************************************************************
 */
 
-
 #ifndef _MVPP2_HW_H_
 #define _MVPP2_HW_H_
 
@@ -57,29 +56,28 @@ static inline u32 mv_pp2x_read(struct mv_pp2x_hw *hw, u32 offset)
 }
 #endif
 static inline void mv_pp22_thread_write(struct mv_pp2x_hw *hw, u32 sw_thread,
-	u32 offset, u32 data)
+					     u32 offset, u32 data)
 {
 	writel(data, hw->base + sw_thread*MVPP2_ADDR_SPACE_SIZE + offset);
 }
 
 static inline u32 mv_pp22_thread_read(struct mv_pp2x_hw *hw, u32 sw_thread,
-	u32 offset)
+					    u32 offset)
 {
 	return readl(hw->base + sw_thread*MVPP2_ADDR_SPACE_SIZE + offset);
 }
 
-
 static inline void mv_pp21_isr_rx_group_write(struct mv_pp2x_hw *hw, int port,
-		int num_rx_queues)
+						    int num_rx_queues)
 {
 	mv_pp2x_write(hw, MVPP21_ISR_RXQ_GROUP_REG(port), num_rx_queues);
 }
 
-
 static inline void mv_pp22_isr_rx_group_write(struct mv_pp2x_hw *hw, int port,
-		int sub_group, int start_queue, int num_rx_queues)
+						    int sub_group,
+						    int start_queue,
+						    int num_rx_queues)
 {
-
 	int val;
 
 	val = (port << MVPP22_ISR_RXQ_GROUP_INDEX_GROUP_OFFSET) | sub_group;
@@ -89,7 +87,6 @@ static inline void mv_pp22_isr_rx_group_write(struct mv_pp2x_hw *hw, int port,
 	mv_pp2x_write(hw, MVPP22_ISR_RXQ_SUB_GROUP_CONFIG_REG, val);
 
 }
-
 
 /* Get number of physical egress port */
 static inline int mv_pp2x_egress_port(struct mv_pp2x_port *port)
@@ -103,41 +100,40 @@ static inline int mv_pp2x_txq_phys(int port, int txq)
 	return (MVPP2_MAX_TCONT + port) * MVPP2_MAX_TXQ + txq;
 }
 
-
 /* Rx descriptors helper methods */
 
 /* Get number of Rx descriptors occupied by received packets */
 static inline int mv_pp2x_rxq_received(struct mv_pp2x_port *port, int rxq_id)
 {
-	u32 val = mv_pp2x_read(&(port->priv->hw), MVPP2_RXQ_STATUS_REG(rxq_id));
+	u32 val = mv_pp2x_read(&port->priv->hw, MVPP2_RXQ_STATUS_REG(rxq_id));
 
 	return val & MVPP2_RXQ_OCCUPIED_MASK;
 }
 
-
 /* Get number of Rx descriptors occupied by received packets */
 static inline int mv_pp2x_rxq_free(struct mv_pp2x_port *port, int rxq_id)
 {
-	u32 val = mv_pp2x_read(&(port->priv->hw), MVPP2_RXQ_STATUS_REG(rxq_id));
+	u32 val = mv_pp2x_read(&port->priv->hw, MVPP2_RXQ_STATUS_REG(rxq_id));
 
 	return (val & (MVPP2_RXQ_NON_OCCUPIED_MASK >>
 		MVPP2_RXQ_NON_OCCUPIED_OFFSET));
 }
 
-
 /* Update Rx queue status with the number of occupied and available
  * Rx descriptor slots.
  */
 static inline void mv_pp2x_rxq_status_update(struct mv_pp2x_port *port,
-				int rxq_id, int used_count, int free_count)
+						    int rxq_id,
+						    int used_count,
+						    int free_count)
 {
 	/* Decrement the number of used descriptors and increment count
 	 * increment the number of free descriptors.
 	 */
 	u32 val = used_count | (free_count << MVPP2_RXQ_NUM_NEW_OFFSET);
 
-	mv_pp2x_write(&(port->priv->hw),
-		MVPP2_RXQ_STATUS_UPDATE_REG(rxq_id), val);
+	mv_pp2x_write(&port->priv->hw,
+		      MVPP2_RXQ_STATUS_UPDATE_REG(rxq_id), val);
 }
 
 /* Get pointer to next RX descriptor to be processed by SW */
@@ -170,7 +166,7 @@ static inline void mv_pp2x_interrupts_unmask(void *arg)
 		val |= MVPP2_CAUSE_TXQ_OCCUP_DESC_ALL_MASK;
 
 	mv_pp2x_write(&(port->priv->hw),
-		MVPP2_ISR_RX_TX_MASK_REG(port->id), val);
+		      MVPP2_ISR_RX_TX_MASK_REG(port->id), val);
 }
 
 static inline void mv_pp2x_shared_thread_interrupts_mask(
@@ -185,8 +181,9 @@ static inline void mv_pp2x_shared_thread_interrupts_mask(
 	for (i = 0; i < port->num_qvector; i++) {
 		if (q_vec[i].qv_type == MVPP2_SHARED)
 			mv_pp22_thread_write(&port->priv->hw,
-				q_vec[i].sw_thread_id,
-				MVPP2_ISR_RX_TX_MASK_REG(port->id), 0);
+					     q_vec[i].sw_thread_id,
+					    MVPP2_ISR_RX_TX_MASK_REG(port->id),
+					    0);
 	}
 }
 
@@ -203,12 +200,11 @@ static inline void mv_pp2x_shared_thread_interrupts_unmask(
 	for (i = 0; i < port->num_qvector; i++) {
 		if (q_vec[i].qv_type == MVPP2_SHARED)
 			mv_pp22_thread_write(&port->priv->hw,
-				q_vec[i].sw_thread_id,
-				MVPP2_ISR_RX_TX_MASK_REG(port->id),
-				MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK);
+					     q_vec[i].sw_thread_id,
+					    MVPP2_ISR_RX_TX_MASK_REG(port->id),
+					  MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK);
 	}
 }
-
 
 static inline struct mv_pp2x_rx_queue *mv_pp2x_get_rx_queue(
 		struct mv_pp2x_port *port, u32 cause)
@@ -226,15 +222,15 @@ static inline struct mv_pp2x_tx_queue *mv_pp2x_get_tx_queue(
 	return port->txqs[tx_queue];
 }
 
-
 static inline struct sk_buff *mv_pp2x_bm_virt_addr_get(struct mv_pp2x_hw *hw,
-						u32 pool)
+							      u32 pool)
 {
 	uintptr_t val = 0;
 
 	mv_pp2x_read(hw, MVPP2_BM_PHY_ALLOC_REG(pool));
 /*TODO: Validate this is  correct CONFIG_XXX for (sk_buff *),
- * it is a kmem_cache address (YuvalC).*/
+ * it is a kmem_cache address (YuvalC).
+ */
 #ifdef CONFIG_PHYS_ADDR_T_64BIT
 	val = mv_pp2x_read(hw, MVPP22_BM_PHY_VIRT_HIGH_ALLOC_REG);
 	val &= MVPP22_BM_VIRT_HIGH_ALLOC_MASK;
@@ -244,17 +240,18 @@ static inline struct sk_buff *mv_pp2x_bm_virt_addr_get(struct mv_pp2x_hw *hw,
 	return((struct sk_buff *)val);
 }
 
-
 static inline void mv_pp2x_bm_hw_pool_create(struct mv_pp2x_hw *hw,
-			u32 pool, dma_addr_t pool_addr, int size)
+						      u32 pool,
+						      dma_addr_t pool_addr,
+						      int size)
 {
 	u32 val;
 
 	mv_pp2x_write(hw, MVPP2_BM_POOL_BASE_ADDR_REG(pool),
-		lower_32_bits(pool_addr));
+		      lower_32_bits(pool_addr));
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 	mv_pp2x_write(hw, MVPP22_BM_POOL_BASE_ADDR_HIGH_REG,
-	(upper_32_bits(pool_addr) & MVPP22_ADDR_HIGH_MASK));
+		      (upper_32_bits(pool_addr) & MVPP22_ADDR_HIGH_MASK));
 #endif
 	mv_pp2x_write(hw, MVPP2_BM_POOL_SIZE_REG(pool), size);
 
@@ -263,15 +260,15 @@ static inline void mv_pp2x_bm_hw_pool_create(struct mv_pp2x_hw *hw,
 	mv_pp2x_write(hw, MVPP2_BM_POOL_CTRL_REG(pool), val);
 }
 
-
-
 /* Release buffer to BM */
 static inline void mv_pp2x_bm_pool_put(struct mv_pp2x_hw *hw, u32 pool,
-		dma_addr_t buf_phys_addr, struct sk_buff *buf_virt_addr)
+					      dma_addr_t buf_phys_addr,
+					      struct sk_buff *buf_virt_addr)
 {
 
 /*TODO: Validate this is  correct CONFIG_XXX for (sk_buff *),
- * it is a kmem_cache address (YuvalC).*/
+ * it is a kmem_cache address (YuvalC).
+ */
 #ifdef CONFIG_64BIT /*CONFIG_PHYS_ADDR_T_64BIT*/
 	u32 val = 0;
 
@@ -286,26 +283,29 @@ static inline void mv_pp2x_bm_pool_put(struct mv_pp2x_hw *hw, u32 pool,
 #endif
 
 	mv_pp2x_write(hw, MVPP2_BM_VIRT_RLS_REG,
-		lower_32_bits((uintptr_t)buf_virt_addr));
+		      lower_32_bits((uintptr_t)buf_virt_addr));
 	mv_pp2x_write(hw, MVPP2_BM_PHY_RLS_REG(pool),
-		lower_32_bits(buf_phys_addr));
+		      lower_32_bits(buf_phys_addr));
 
 }
 
 /* Release multicast buffer */
 static inline void mv_pp2x_bm_pool_mc_put(struct mv_pp2x_port *port, int pool,
-		u32 buf_phys_addr, u32 buf_virt_addr, int mc_id)
+						   u32 buf_phys_addr,
+						   u32 buf_virt_addr,
+						   int mc_id)
 {
 	u32 val = 0;
 
 	val |= (mc_id & MVPP21_BM_MC_ID_MASK);
 	mv_pp2x_write(&(port->priv->hw), MVPP21_BM_MC_RLS_REG, val);
 	/*TODO : YuvalC, this is just workaround to compile.
-	 * Need to handle mv_pp2x_buff_hdr_rx().*/
+	 * Need to handle mv_pp2x_buff_hdr_rx().
+	 */
 	mv_pp2x_bm_pool_put(&(port->priv->hw), pool,
-			  (dma_addr_t)(buf_phys_addr |
-			  MVPP2_BM_PHY_RLS_MC_BUFF_MASK),
-			  (struct sk_buff *)(u64)(buf_virt_addr));
+			    (dma_addr_t)(buf_phys_addr |
+			    MVPP2_BM_PHY_RLS_MC_BUFF_MASK),
+			    (struct sk_buff *)(u64)(buf_virt_addr));
 }
 
 static inline void mv_pp2x_port_interrupts_enable(struct mv_pp2x_port *port)
@@ -317,7 +317,7 @@ static inline void mv_pp2x_port_interrupts_enable(struct mv_pp2x_port *port)
 		sw_thread_mask |= q_vec[i].sw_thread_mask;
 #if !defined(CONFIG_MV_PP2_POLLING)
 	mv_pp2x_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
-		    MVPP2_ISR_ENABLE_INTERRUPT(sw_thread_mask));
+		      MVPP2_ISR_ENABLE_INTERRUPT(sw_thread_mask));
 #endif
 }
 
@@ -330,7 +330,7 @@ static inline void mv_pp2x_port_interrupts_disable(struct mv_pp2x_port *port)
 		sw_thread_mask |= q_vec[i].sw_thread_mask;
 
 	mv_pp2x_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
-		    MVPP2_ISR_DISABLE_INTERRUPT(sw_thread_mask));
+		      MVPP2_ISR_DISABLE_INTERRUPT(sw_thread_mask));
 }
 
 
@@ -340,7 +340,7 @@ static inline void mv_pp2x_qvector_interrupt_enable(struct queue_vector *q_vec)
 	struct mv_pp2x_port *port = q_vec->parent;
 
 	mv_pp2x_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
-		    MVPP2_ISR_ENABLE_INTERRUPT(q_vec->sw_thread_mask));
+		      MVPP2_ISR_ENABLE_INTERRUPT(q_vec->sw_thread_mask));
 #endif
 }
 
@@ -349,25 +349,25 @@ static inline void mv_pp2x_qvector_interrupt_disable(struct queue_vector *q_vec)
 	struct mv_pp2x_port *port = q_vec->parent;
 
 	mv_pp2x_write(&port->priv->hw, MVPP2_ISR_ENABLE_REG(port->id),
-		    MVPP2_ISR_DISABLE_INTERRUPT(q_vec->sw_thread_mask));
+		      MVPP2_ISR_DISABLE_INTERRUPT(q_vec->sw_thread_mask));
 
 }
 
 static inline int mv_pp2x_txq_sent_desc_proc(struct mv_pp2x_port *port,
-					   struct mv_pp2x_tx_queue *txq)
+						  struct mv_pp2x_tx_queue *txq)
 {
 	u32 val;
 
 	/* Reading status reg resets transmitted descriptor counter */
 	if (port->priv->pp2_version == PPV21) {
 		val = mv_pp2x_read(&(port->priv->hw),
-			MVPP21_TXQ_SENT_REG(txq->id));
+				   MVPP21_TXQ_SENT_REG(txq->id));
 		return (val & MVPP21_TRANSMITTED_COUNT_MASK) >>
 			MVPP21_TRANSMITTED_COUNT_OFFSET;
 		}
 	else {
 		val = mv_pp2x_read(&(port->priv->hw),
-			MVPP22_TXQ_SENT_REG(txq->id));
+				   MVPP22_TXQ_SENT_REG(txq->id));
 		pr_crit("MVPP22_TXQ_SENT_REG txq(%d), val(%d)\n", txq->id, val);
 		return (val & MVPP22_TRANSMITTED_COUNT_MASK) >>
 			MVPP22_TRANSMITTED_COUNT_OFFSET;
@@ -394,10 +394,10 @@ static inline void mv_pp2x_txq_sent_counter_clear(void *arg)
 
 		if (port->priv->pp2_version == PPV21)
 			mv_pp2x_read(&(port->priv->hw),
-				MVPP21_TXQ_SENT_REG(id));
+				     MVPP21_TXQ_SENT_REG(id));
 		else
 			mv_pp2x_read(&(port->priv->hw),
-				MVPP22_TXQ_SENT_REG(id));
+				     MVPP22_TXQ_SENT_REG(id));
 	}
 }
 
@@ -468,13 +468,14 @@ static inline dma_addr_t mv_pp2x_txdesc_phys_addr_get(
 
 
 static inline void mv_pp21_txdesc_phys_addr_set(dma_addr_t phys_addr,
-	struct mv_pp2x_tx_desc *tx_desc) {
+	struct mv_pp2x_tx_desc *tx_desc)
+{
 	tx_desc->u.pp21.buf_phys_addr = phys_addr;
 }
 
 static inline void mv_pp22_txdesc_phys_addr_set(dma_addr_t phys_addr,
-	struct mv_pp2x_tx_desc *tx_desc) {
-
+	struct mv_pp2x_tx_desc *tx_desc)
+{
 	u64 *buf_phys_addr_p = &tx_desc->u.pp22.buf_phys_addr_hw_cmd2;
 
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
@@ -485,9 +486,9 @@ static inline void mv_pp22_txdesc_phys_addr_set(dma_addr_t phys_addr,
 	*((u8 *)buf_phys_addr_p + sizeof(dma_addr_t)) = 0; /*5th byte*/
 
 	/*pr_crit("phys_addr=%x, buf_phys_addr_hw_cmd2=%d\n",
-	* phys_addr, tx_desc->u.pp22.buf_phys_addr_hw_cmd2);*/
+	* phys_addr, tx_desc->u.pp22.buf_phys_addr_hw_cmd2);
+	*/
 #endif
-
 }
 
 static inline void mv_pp2x_txdesc_phys_addr_set(enum mvppv2_version pp2_ver,
@@ -499,15 +500,18 @@ static inline void mv_pp2x_txdesc_phys_addr_set(enum mvppv2_version pp2_ver,
 		mv_pp22_txdesc_phys_addr_set(phys_addr, tx_desc);
 }
 
+int mv_pp2x_ptr_validate(const void *ptr);
+int mv_pp2x_range_validate(int value, int min, int max);
+
 int mv_pp2x_prs_hw_read(struct mv_pp2x_hw *hw, struct mv_pp2x_prs_entry *pe);
 
 int mv_pp2x_prs_default_init(struct platform_device *pdev,
 				  struct mv_pp2x_hw *hw);
 void mv_pp2x_prs_mac_promisc_set(struct mv_pp2x_hw *hw, int port, bool add);
 void mv_pp2x_prs_mac_multi_set(struct mv_pp2x_hw *hw, int port, int index,
-				    bool add);
+				      bool add);
 int mv_pp2x_prs_mac_da_accept(struct mv_pp2x_hw *hw, int port,
-				   const u8 *da, bool add);
+				      const u8 *da, bool add);
 int mv_pp2x_prs_def_flow(struct mv_pp2x_port *port);
 int mv_pp2x_prs_flow_set(struct mv_pp2x_port *port);
 void mv_pp2x_prs_mcast_del_all(struct mv_pp2x_hw *hw, int port);
@@ -521,11 +525,11 @@ void mv_pp2x_cls_port_config(struct mv_pp2x_port *port);
 void mv_pp2x_cls_config(struct mv_pp2x_hw *hw);
 void mv_pp2x_cls_oversize_rxq_set(struct mv_pp2x_port *port);
 void mv_pp2x_cls_lookup_read(struct mv_pp2x_hw *hw, int lkpid, int way,
-		struct mv_pp2x_cls_lookup_entry *le);
+				   struct mv_pp2x_cls_lookup_entry *le);
 void mv_pp2x_cls_flow_tbl_temp_copy(struct mv_pp2x_hw *hw, int lkpid,
-		int *temp_flow_idx);
+					    int *temp_flow_idx);
 void mv_pp2x_cls_lkp_flow_set(struct mv_pp2x_hw *hw, int lkpid, int way,
-		int flow_idx);
+				    int flow_idx);
 void mv_pp2x_cls_flow_port_add(struct mv_pp2x_hw *hw, int index, int port_id);
 void mv_pp2x_cls_flow_port_del(struct mv_pp2x_hw *hw, int index, int port_id);
 
@@ -534,23 +538,26 @@ void mv_pp2x_tx_done_time_coal_set(struct mv_pp2x_port *port, u32 usec);
 void mv_pp21_gmac_max_rx_size_set(struct mv_pp2x_port *port);
 
 int mv_pp2x_txq_pend_desc_num_get(struct mv_pp2x_port *port,
-				       struct mv_pp2x_tx_queue *txq);
+					    struct mv_pp2x_tx_queue *txq);
 u32 mv_pp2x_txq_desc_csum(int l3_offs, int l3_proto,
-			       int ip_hdr_len, int l4_proto);
+				  int ip_hdr_len, int l4_proto);
 struct mv_pp2x_tx_desc *mv_pp2x_txq_next_desc_get(
 		struct mv_pp2x_aggr_tx_queue *aggr_txq);
 int mv_pp2x_txq_alloc_reserved_desc(struct mv_pp2x *priv,
-		 struct mv_pp2x_tx_queue *txq, int num);
+					    struct mv_pp2x_tx_queue *txq,
+					    int num);
 void mv_pp2x_aggr_txq_pend_desc_add(struct mv_pp2x_port *port, int pending);
 int mv_pp2x_aggr_desc_num_read(struct mv_pp2x *priv, int cpu);
 int mv_pp2x_aggr_desc_num_check(struct mv_pp2x *priv,
-		     struct mv_pp2x_aggr_tx_queue *aggr_txq, int num);
+					struct mv_pp2x_aggr_tx_queue *aggr_txq,
+					int num);
 void mv_pp2x_rxq_offset_set(struct mv_pp2x_port *port,
 				 int prxq, int offset);
 void mv_pp2x_bm_pool_bufsize_set(struct mv_pp2x_hw *hw,
-		      struct mv_pp2x_bm_pool *bm_pool, int buf_size);
+					 struct mv_pp2x_bm_pool *bm_pool,
+					 int buf_size);
 void mv_pp2x_pool_refill(struct mv_pp2x *priv, u32 pool,
-		      dma_addr_t phys_addr, struct sk_buff *cookie);
+			    dma_addr_t phys_addr, struct sk_buff *cookie);
 
 void mv_pp21_rxq_long_pool_set(struct mv_pp2x_hw *hw,
 				     int prxq, int long_pool);
@@ -562,7 +569,6 @@ void mv_pp22_rxq_long_pool_set(struct mv_pp2x_hw *hw,
 void mv_pp22_rxq_short_pool_set(struct mv_pp2x_hw *hw,
 				     int prxq, int short_pool);
 
-
 void mv_pp21_port_mii_set(struct mv_pp2x_port *port);
 void mv_pp21_port_fc_adv_enable(struct mv_pp2x_port *port);
 void mv_pp21_port_enable(struct mv_pp2x_port *port);
@@ -573,61 +579,67 @@ void mv_pp2x_ingress_disable(struct mv_pp2x_port *port);
 void mv_pp2x_egress_enable(struct mv_pp2x_port *port);
 void mv_pp2x_egress_disable(struct mv_pp2x_port *port);
 
-
 void mv_pp21_port_periodic_xon_disable(struct mv_pp2x_port *port);
 void mv_pp21_port_loopback_set(struct mv_pp2x_port *port);
 void mv_pp21_port_reset(struct mv_pp2x_port *port);
 
 void mv_pp2x_rx_pkts_coal_set(struct mv_pp2x_port *port,
-				   struct mv_pp2x_rx_queue *rxq, u32 pkts);
+				    struct mv_pp2x_rx_queue *rxq, u32 pkts);
 void mv_pp2x_rx_time_coal_set(struct mv_pp2x_port *port,
 				   struct mv_pp2x_rx_queue *rxq, u32 usec);
 void mv_pp2x_tx_done_pkts_coal_set(void *arg);
 void mv_pp2x_cause_error(struct net_device *dev, int cause);
 void mv_pp2x_rx_error(struct mv_pp2x_port *port,
-			   struct mv_pp2x_rx_desc *rx_desc);
+			  struct mv_pp2x_rx_desc *rx_desc);
 void mv_pp2x_rx_csum(struct mv_pp2x_port *port, u32 status,
-			  struct sk_buff *skb);
+			   struct sk_buff *skb);
 void mv_pp21_get_mac_address(struct mv_pp2x_port *port, unsigned char *addr);
 
 int mv_pp2x_c2_init(struct platform_device *pdev, struct mv_pp2x_hw *hw);
 
 int mv_pp2x_prs_sw_sram_shift_set(struct mv_pp2x_prs_entry *pe, int shift,
-					unsigned int op);
+					  unsigned int op);
 int mv_pp2x_prs_sw_sram_shift_get(struct mv_pp2x_prs_entry *pe, int *shift);
 int mv_pp2x_prs_sw_sram_next_lu_get(struct mv_pp2x_prs_entry *pe,
-					unsigned int *lu);
+					     unsigned int *lu);
 int mv_pp2x_prs_sram_bit_get(struct mv_pp2x_prs_entry *pe, int bitNum,
-				unsigned int *bit);
+				   unsigned int *bit);
 int mv_pp2x_prs_sw_sram_lu_done_get(struct mv_pp2x_prs_entry *pe,
-					unsigned int *bit);
+					      unsigned int *bit);
 int mv_pp2x_prs_sw_sram_flowid_gen_get(struct mv_pp2x_prs_entry *pe,
-					unsigned int *bit);
+						 unsigned int *bit);
 int mv_pp2x_prs_sw_sram_ri_get(struct mv_pp2x_prs_entry *pe,
-				unsigned int *bits, unsigned int *enable);
+				       unsigned int *bits,
+				       unsigned int *enable);
 int mv_pp2x_prs_sw_sram_ai_get(struct mv_pp2x_prs_entry *pe,
-				unsigned int *bits, unsigned int *enable);
+				       unsigned int *bits,
+				       unsigned int *enable);
 int mv_pp2x_prs_sw_sram_offset_set(struct mv_pp2x_prs_entry *pe,
-			unsigned int type, int offset, unsigned int op);
+					   unsigned int type,
+					   int offset, unsigned int op);
 int mv_pp2x_prs_sw_sram_offset_get(struct mv_pp2x_prs_entry *pe,
-		unsigned int *type, int *offset, unsigned int *op);
+					   unsigned int *type,
+					   int *offset, unsigned int *op);
 void mv_pp2x_prs_hw_port_init(struct mv_pp2x_hw *hw, int port,
-				int lu_first, int lu_max, int offset);
+				    int lu_first, int lu_max, int offset);
 void mv_pp2x_prs_sw_clear(struct mv_pp2x_prs_entry *pe);
 void mv_pp2x_prs_hw_inv(struct mv_pp2x_hw *hw, int index);
 void mv_pp2x_prs_tcam_lu_set(struct mv_pp2x_prs_entry *pe, unsigned int lu);
 void mv_pp2x_prs_tcam_port_set(struct mv_pp2x_prs_entry *pe,
-				unsigned int port, bool add);
+				      unsigned int port, bool add);
 void mv_pp2x_prs_tcam_port_map_set(struct mv_pp2x_prs_entry *pe,
-				unsigned int ports);
+					    unsigned int ports);
 void mv_pp2x_prs_tcam_data_byte_set(struct mv_pp2x_prs_entry *pe,
-		unsigned int offs, unsigned char byte, unsigned char enable);
+					    unsigned int offs,
+					    unsigned char byte,
+					    unsigned char enable);
 void mv_pp2x_prs_tcam_ai_update(struct mv_pp2x_prs_entry *pe,
-				unsigned int bits, unsigned int enable);
+					unsigned int bits,
+					unsigned int enable);
 void mv_pp2x_prs_sram_ri_update(struct mv_pp2x_prs_entry *pe,
-				unsigned int bits, unsigned int mask);
+					unsigned int bits, unsigned int mask);
 void mv_pp2x_prs_sram_ai_update(struct mv_pp2x_prs_entry *pe,
-				unsigned int bits, unsigned int mask);
+					unsigned int bits, unsigned int mask);
 void mv_pp2x_prs_sram_next_lu_set(struct mv_pp2x_prs_entry *pe,
 					unsigned int lu);
 void mv_pp2x_prs_sw_sram_lu_done_set(struct mv_pp2x_prs_entry *pe);
@@ -636,9 +648,9 @@ void mv_pp2x_prs_sw_sram_flowid_set(struct mv_pp2x_prs_entry *pe);
 void mv_pp2x_prs_sw_sram_flowid_clear(struct mv_pp2x_prs_entry *pe);
 int mv_pp2x_prs_hw_write(struct mv_pp2x_hw *hw, struct mv_pp2x_prs_entry *pe);
 int mv_pp2x_cls_hw_lkp_read(struct mv_pp2x_hw *hw, int lkpid, int way,
-					struct mv_pp2x_cls_lookup_entry *fe);
+				   struct mv_pp2x_cls_lookup_entry *fe);
 int mv_pp2x_cls_hw_lkp_write(struct mv_pp2x_hw *hw, int lkpid, int way,
-				struct mv_pp2x_cls_lookup_entry *fe);
+				   struct mv_pp2x_cls_lookup_entry *fe);
 int mv_pp2x_cls_lkp_port_way_set(struct mv_pp2x_hw *hw, int port, int way);
 int mv_pp2x_cls_hw_lkp_print(struct mv_pp2x_hw *hw, int lkpid, int way);
 int mv_pp2x_cls_sw_lkp_rxq_get(struct mv_pp2x_cls_lookup_entry *lkp, int *rxq);
@@ -646,61 +658,62 @@ int mv_pp2x_cls_sw_lkp_rxq_set(struct mv_pp2x_cls_lookup_entry *fe, int rxq);
 int mv_pp2x_cls_sw_lkp_en_get(struct mv_pp2x_cls_lookup_entry *lkp, int *en);
 int mv_pp2x_cls_sw_lkp_en_set(struct mv_pp2x_cls_lookup_entry *lkp, int en);
 int mv_pp2x_cls_sw_lkp_flow_get(struct mv_pp2x_cls_lookup_entry *lkp,
-				int *flow_idx);
+				       int *flow_idx);
 int mv_pp2x_cls_sw_lkp_flow_set(struct mv_pp2x_cls_lookup_entry *lkp,
-				int flow_idx);
+				       int flow_idx);
 int mv_pp2x_cls_sw_lkp_mod_get(struct mv_pp2x_cls_lookup_entry *lkp,
-				int *mod_base);
+				       int *mod_base);
 int mv_pp2x_cls_sw_lkp_mod_set(struct mv_pp2x_cls_lookup_entry *lkp,
-				int mod_base);
+				       int mod_base);
 int mv_pp2x_cls_hw_flow_read(struct mv_pp2x_hw *hw, int index,
-				struct mv_pp2x_cls_flow_entry *fe);
+				    struct mv_pp2x_cls_flow_entry *fe);
 int mv_pp2x_cls_sw_flow_dump(struct mv_pp2x_cls_flow_entry *fe);
 int mv_pp2x_cls_hw_regs_dump(struct mv_pp2x_hw *hw);
 int mv_pp2x_cls_hw_lkp_hit_get(struct mv_pp2x_hw *hw, int lkpid, int way,
-				unsigned int *cnt);
+				     unsigned int *cnt);
 int mv_pp2x_cls_hw_flow_dump(struct mv_pp2x_hw *hw);
 int mv_pp2x_cls_hw_flow_hits_dump(struct mv_pp2x_hw *hw);
 void mv_pp2x_cls_flow_write(struct mv_pp2x_hw *hw,
-				struct mv_pp2x_cls_flow_entry *fe);
+				 struct mv_pp2x_cls_flow_entry *fe);
 int mv_pp2x_cls_sw_flow_port_set(struct mv_pp2x_cls_flow_entry *fe,
-				int type, int portid);
+					int type, int portid);
 int mv_pp2x_cls_sw_flow_hek_num_set(struct mv_pp2x_cls_flow_entry *fe,
-				int num_of_fields);
+					      int num_of_fields);
 int mv_pp2x_cls_sw_flow_hek_set(struct mv_pp2x_cls_flow_entry *fe,
-				int field_index, int field_id);
+					int field_index, int field_id);
 int mv_pp2x_cls_sw_flow_portid_select(struct mv_pp2x_cls_flow_entry *fe,
-				int from);
+					     int from);
 int mv_pp2x_cls_sw_flow_pppoe_set(struct mv_pp2x_cls_flow_entry *fe, int mode);
 int mv_pp2x_cls_sw_flow_vlan_set(struct mv_pp2x_cls_flow_entry *fe, int mode);
 int mv_pp2x_cls_sw_flow_macme_set(struct mv_pp2x_cls_flow_entry *fe, int mode);
 int mv_pp2x_cls_sw_flow_udf7_set(struct mv_pp2x_cls_flow_entry *fe, int mode);
 int mv_pp2x_cls_sw_flow_seq_ctrl_set(struct mv_pp2x_cls_flow_entry *fe,
-		int mode);
+					    int mode);
 int mv_pp2x_cls_sw_flow_engine_set(struct mv_pp2x_cls_flow_entry *fe,
-				int engine, int is_last);
+					   int engine, int is_last);
 int mv_pp2x_cls_sw_flow_extra_set(struct mv_pp2x_cls_flow_entry *fe,
-				int type, int prio);
+					 int type, int prio);
 int mv_pp2x_cls_hw_lkp_hits_dump(struct mv_pp2x_hw *hw);
 int mv_pp2x_cls_sw_lkp_dump(struct mv_pp2x_cls_lookup_entry *lkp);
 int mv_pp2x_cls_hw_lkp_dump(struct mv_pp2x_hw *hw);
 int mv_pp2x_cls_hw_udf_set(struct mv_pp2x_hw *hw, int udf_no, int offs_id,
-				int offs_bits, int size_bits);
+				 int offs_bits, int size_bits);
 int mv_pp2x_cls_c2_qos_hw_read(struct mv_pp2x_hw *hw, int tbl_id, int tbl_sel,
-			int tbl_line, struct mv_pp2x_cls_c2_qos_entry *qos);
+					int tbl_line,
+					struct mv_pp2x_cls_c2_qos_entry *qos);
 int mv_pp2x_cls_c2_qos_hw_write(struct mv_pp2x_hw *hw,
-				struct mv_pp2x_cls_c2_qos_entry *qos);
+					struct mv_pp2x_cls_c2_qos_entry *qos);
 int mvPp2ClsC2QosPrioGet(struct mv_pp2x_cls_c2_qos_entry *qos, int *prio);
 int mvPp2ClsC2QosDscpGet(struct mv_pp2x_cls_c2_qos_entry *qos, int *dscp);
 int mvPp2ClsC2QosColorGet(struct mv_pp2x_cls_c2_qos_entry *qos, int *color);
 int mvPp2ClsC2QosGpidGet(struct mv_pp2x_cls_c2_qos_entry *qos, int *gpid);
 int mvPp2ClsC2QosQueueGet(struct mv_pp2x_cls_c2_qos_entry *qos, int *queue);
 int mv_pp2x_cls_c2_qos_tbl_set(struct mv_pp2x_cls_c2_entry *c2, int tbl_id,
-				int tbl_sel);
+				     int tbl_sel);
 int mv_pp2x_cls_c2_hw_write(struct mv_pp2x_hw *hw, int index,
-				struct mv_pp2x_cls_c2_entry *c2);
+				  struct mv_pp2x_cls_c2_entry *c2);
 int mv_pp2x_cls_c2_hw_read(struct mv_pp2x_hw *hw, int index,
-				struct mv_pp2x_cls_c2_entry *c2);
+				  struct mv_pp2x_cls_c2_entry *c2);
 int mv_pp2x_cls_c2_sw_words_dump(struct mv_pp2x_cls_c2_entry *c2);
 int mv_pp2x_cls_c2_hit_cntr_clear_all(struct mv_pp2x_hw *hw);
 int mv_pp2x_cls_c2_hit_cntr_read(struct mv_pp2x_hw *hw, int index, u32 *cntr);
@@ -709,32 +722,34 @@ int mv_pp2x_cls_c2_regs_dump(struct mv_pp2x_hw *hw);
 int mv_pp2x_cls_c2_rule_set(struct mv_pp2x_port *port, u8 start_queue);
 u8 mv_pp2x_cls_c2_rule_queue_get(struct mv_pp2x_hw *hw, u32 rule_idx);
 void mv_pp2x_cls_c2_rule_queue_set(struct mv_pp2x_hw *hw, u32 rule_idx,
-		u8 queue);
+					   u8 queue);
 u8 mv_pp2x_cls_c2_pbit_tbl_queue_get(struct mv_pp2x_hw *hw, u8 tbl_id,
-					u8 tbl_line);
+					     u8 tbl_line);
 void mv_pp2x_cls_c2_pbit_tbl_queue_set(struct mv_pp2x_hw *hw, u8 tbl_id,
-					u8 tbl_line, u8 queue);
+					      u8 tbl_line, u8 queue);
 int mv_pp2x_cls_c2_hw_inv(struct mv_pp2x_hw *hw, int index);
 void mv_pp2x_cls_c2_hw_inv_all(struct mv_pp2x_hw *hw);
 int mv_pp2x_cls_c2_tcam_byte_set(struct mv_pp2x_cls_c2_entry *c2,
-		unsigned int offs, unsigned char byte, unsigned char enable);
+					unsigned int offs,
+					unsigned char byte,
+					unsigned char enable);
 int mv_pp2x_cls_c2_qos_queue_set(struct mv_pp2x_cls_c2_qos_entry *qos,
-		u8 queue);
+					 u8 queue);
 int mv_pp2x_cls_c2_color_set(struct mv_pp2x_cls_c2_entry *c2, int cmd,
-		int from);
+				   int from);
 int mv_pp2x_cls_c2_prio_set(struct mv_pp2x_cls_c2_entry *c2, int cmd,
-				int prio, int from);
+				 int prio, int from);
 int mv_pp2x_cls_c2_dscp_set(struct mv_pp2x_cls_c2_entry *c2, int cmd,
-				int dscp, int from);
+				  int dscp, int from);
 int mv_pp2x_cls_c2_queue_low_set(struct mv_pp2x_cls_c2_entry *c2, int cmd,
-				int queue, int from);
+					 int queue, int from);
 int mv_pp2x_cls_c2_queue_high_set(struct mv_pp2x_cls_c2_entry *c2, int cmd,
-				int queue, int from);
+					  int queue, int from);
 int mv_pp2x_cls_c2_forward_set(struct mv_pp2x_cls_c2_entry *c2, int cmd);
 int mv_pp2x_cls_c2_rss_set(struct mv_pp2x_cls_c2_entry *c2, int cmd,
-		int rss_en);
+				 int rss_en);
 int mv_pp2x_cls_c2_flow_id_en(struct mv_pp2x_cls_c2_entry *c2,
-		int flowid_en);
+				    int flowid_en);
 
 int mv_pp22_rss_tbl_entry_set(struct mv_pp2x_hw *hw,
 				struct mv_pp22_rss_entry *rss);

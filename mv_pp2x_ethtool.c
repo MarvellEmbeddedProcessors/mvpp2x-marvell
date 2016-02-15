@@ -16,7 +16,6 @@
 * ***************************************************************************
 */
 
-
 #include <linux/kernel.h>
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
@@ -39,12 +38,9 @@
 #include <net/ip.h>
 #include <net/ipv6.h>
 
-
 #include "mv_pp2x.h"
 #include "mv_pp2x_hw.h"
 #include "mv_gop110_hw.h"
-
-
 
 /* Ethtool methods */
 
@@ -85,14 +81,9 @@
 
 #endif
 
-#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
-extern void *mv_pp2_vfpga_address;
-#endif
-
-
 /* Get settings (phy address, speed) for ethtools */
 static int mv_pp2x_ethtool_get_settings(struct net_device *dev,
-				      struct ethtool_cmd *cmd)
+					struct ethtool_cmd *cmd)
 {
 	struct mv_pp2x_port *port = netdev_priv(dev);
 
@@ -100,9 +91,12 @@ static int mv_pp2x_ethtool_get_settings(struct net_device *dev,
 	int val;
 	void *addr;
 	int port_id = port->id;
+	void *mv_pp2_vfpga_address;
 
 	pr_emerg("\n\n\n\nmv_pp2x_ethtool_get_drvinfo(%d):dev->name=%s port->id=%d\n",
-		__LINE__, dev->name, port->id);
+		 __LINE__, dev->name, port->id);
+
+	mv_pp2_vfpga_address = mv_pp2_vfpga_address_get();
 
 	addr = mv_pp2_vfpga_address + 0x100000 + 0x1000 + (port_id * 0x400) +
 			ETH_MIB_GOOD_FRAMES_SENT;
@@ -226,24 +220,23 @@ static int mv_pp2x_ethtool_get_settings(struct net_device *dev,
 
 	val = readl(port->base + 0x10);
 	pr_emerg("print_reg(%d):port_id=%d: [0x%p] = 0x%x\n", __LINE__,
-			port_id, port->base + 0x10, val);
+		 port_id, port->base + 0x10, val);
 	return 0;
 #else
 	struct mv_port_link_status	status;
 	phy_interface_t			phy_mode;
-
 
 	mv_gop110_mib_counters_show(&port->priv->hw.gop,
 		port->mac_data.gop_index);
 
 	/* No Phy device mngmt */
 	if (!port->mac_data.phy_dev) {
-
 		/*for force link port, RXAUI port and link-down ports,
-		 * follow old strategy*/
+		 * follow old strategy
+		 */
 
 		mv_gop110_port_link_status(&port->priv->hw.gop,
-			&port->mac_data, &status);
+					   &port->mac_data, &status);
 
 		if (status.linkup == true) {
 			switch (status.speed) {
@@ -273,7 +266,7 @@ static int mv_pp2x_ethtool_get_settings(struct net_device *dev,
 
 		phy_mode = port->mac_data.phy_mode;
 		if ((phy_mode == PHY_INTERFACE_MODE_XAUI) ||
-			(phy_mode == PHY_INTERFACE_MODE_RXAUI)) {
+		    (phy_mode == PHY_INTERFACE_MODE_RXAUI)) {
 			cmd->autoneg = AUTONEG_DISABLE;
 			cmd->supported = (SUPPORTED_10000baseT_Full |
 				SUPPORTED_FIBRE);
@@ -293,11 +286,12 @@ static int mv_pp2x_ethtool_get_settings(struct net_device *dev,
 
 			/* check if speed and duplex are AN */
 			if (status.speed == MV_PORT_SPEED_AN &&
-				status.duplex == MV_PORT_DUPLEX_AN) {
+			    status.duplex == MV_PORT_DUPLEX_AN) {
 				cmd->lp_advertising = cmd->advertising = 0;
 				cmd->autoneg = AUTONEG_ENABLE;
-			} else
+			} else {
 				cmd->autoneg = AUTONEG_DISABLE;
+			}
 		}
 
 		return 0;
@@ -307,10 +301,9 @@ static int mv_pp2x_ethtool_get_settings(struct net_device *dev,
 #endif
 }
 
-
 /* Set settings (phy address, speed) for ethtools */
 static int mv_pp2x_ethtool_set_settings(struct net_device *dev,
-				      struct ethtool_cmd *cmd)
+					struct ethtool_cmd *cmd)
 {
 	struct mv_pp2x_port *port = netdev_priv(dev);
 
@@ -325,7 +318,7 @@ static int mv_pp2x_ethtool_set_settings(struct net_device *dev,
 
 /* Set interrupt coalescing for ethtools */
 static int mv_pp2x_ethtool_set_coalesce(struct net_device *dev,
-				      struct ethtool_coalesce *c)
+					struct ethtool_coalesce *c)
 {
 	struct mv_pp2x_port *port = netdev_priv(dev);
 	int queue;
@@ -354,7 +347,7 @@ static int mv_pp2x_ethtool_set_coalesce(struct net_device *dev,
 
 /* get coalescing for ethtools */
 static int mv_pp2x_ethtool_get_coalesce(struct net_device *dev,
-				      struct ethtool_coalesce *c)
+					struct ethtool_coalesce *c)
 {
 	struct mv_pp2x_port *port = netdev_priv(dev);
 
@@ -367,7 +360,7 @@ static int mv_pp2x_ethtool_get_coalesce(struct net_device *dev,
 }
 
 static void mv_pp2x_ethtool_get_drvinfo(struct net_device *dev,
-				      struct ethtool_drvinfo *drvinfo)
+					struct ethtool_drvinfo *drvinfo)
 {
 	strlcpy(drvinfo->driver, MVPP2_DRIVER_NAME,
 		sizeof(drvinfo->driver));
@@ -378,7 +371,7 @@ static void mv_pp2x_ethtool_get_drvinfo(struct net_device *dev,
 }
 
 static void mv_pp2x_ethtool_get_ringparam(struct net_device *dev,
-					struct ethtool_ringparam *ring)
+					  struct ethtool_ringparam *ring)
 {
 	struct mv_pp2x_port *port = netdev_priv(dev);
 
@@ -389,7 +382,7 @@ static void mv_pp2x_ethtool_get_ringparam(struct net_device *dev,
 }
 
 static int mv_pp2x_ethtool_set_ringparam(struct net_device *dev,
-				       struct ethtool_ringparam *ring)
+					 struct ethtool_ringparam *ring)
 {
 	struct mv_pp2x_port *port = netdev_priv(dev);
 	u16 prev_rx_ring_size = port->rx_ring_size;
@@ -453,48 +446,9 @@ static u32 mv_pp2x_ethtool_get_rxfh_indir_size(struct net_device *dev)
 	return ARRAY_SIZE(port->priv->rx_indir_table);
 }
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(3, 16, 0)
-static int mv_pp2x_ethtool_get_rxfh_indir(struct net_device *dev, u32 *indir)
-{
-	size_t copy_size;
-	struct mv_pp2x_port *port = netdev_priv(dev);
-
-	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
-		return -EOPNOTSUPP;
-
-	copy_size = ARRAY_SIZE(port->priv->rx_indir_table);
-
-	memcpy(indir, port->priv->rx_indir_table,
-	       copy_size * sizeof(u32));
-
-	return 0;
-}
-
-static int mv_pp2x_ethtool_set_rxfh_indir(struct net_device *dev,
-		const u32 *indir)
-{
-	int i;
-	int err;
-	struct mv_pp2x_port *port = netdev_priv(dev);
-
-	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
-		return -EOPNOTSUPP;
-
-	for (i = 0; i < ARRAY_SIZE(port->priv->rx_indir_table); i++)
-		port->priv->rx_indir_table[i] = indir[i];
-
-	err = mv_pp22_rss_rxfh_indir_set(port);
-	if (err) {
-		netdev_err(dev, "fail to change rxfh indir table");
-		return err;
-	}
-
-	return 0;
-}
-#endif
-
 static int mv_pp2x_ethtool_get_rxnfc(struct net_device *dev,
-		struct ethtool_rxnfc *info, u32 *rules)
+				     struct ethtool_rxnfc *info,
+				     u32 *rules)
 {
 	struct mv_pp2x_port *port = netdev_priv(dev);
 
@@ -519,16 +473,10 @@ static const struct ethtool_ops mv_pp2x_eth_tool_ops = {
 	.set_ringparam		= mv_pp2x_ethtool_set_ringparam,
 	/* For rxfh relevant command, only support LK-3.18 */
 	.get_rxfh_indir_size	= mv_pp2x_ethtool_get_rxfh_indir_size,
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(3, 16, 0)
-	.get_rxfh_indir		= mv_pp2x_ethtool_get_rxfh_indir,
-	.set_rxfh_indir		= mv_pp2x_ethtool_set_rxfh_indir,
-#endif
 	.get_rxnfc		= mv_pp2x_ethtool_get_rxnfc,
 };
-
 
 void mv_pp2x_set_ethtool_ops(struct net_device *netdev)
 {
 	netdev->ethtool_ops = &mv_pp2x_eth_tool_ops;
 }
-

@@ -16,7 +16,6 @@
 * ***************************************************************************
 */
 
-
 #ifndef _MVPP2_HW_TYPE_H_
 #define _MVPP2_HW_TYPE_H_
 
@@ -24,13 +23,10 @@
 #include <linux/skbuff.h>
 #include <linux/bitops.h>
 
-
-
 #define CREATE_MASK(pos, len)		GENMASK((pos)+(len)-1, (pos))
 #define CREATE_MASK_ULL(pos, len)	GENMASK_ULL((pos)+(len)-1, (pos))
 
 #define AUTO_MASK(reg_name)	CREATE_MASK(reg_name##_OFFS, reg_name##_SIZE)
-
 
 /*All PPV22 Addresses are 40-bit */
 #define MVPP22_ADDR_HIGH_SIZE			8
@@ -44,10 +40,8 @@
 /*AXI_CONTEXT*/
 /*Top Regfile*/
 
-
 #define MVPP21_DESC_ADDR_SHIFT		0 /*Applies to RXQ, AGGR_TXQ*/
 #define MVPP22_DESC_ADDR_SHIFT		(9-1) /*Applies to RXQ, AGGR_TXQ*/
-
 
 /* RX Fifo Registers */
 #define MVPP2_RX_DATA_FIFO_SIZE_REG(port)	(0x00 + 4 * (port))
@@ -81,8 +75,6 @@
 #define MVPP22_RXQ_POOL_LONG_MASK		0xf000000
 #define MVPP22_RXQ_LLC_DEP_HDR_SIZE		0xf000
 #define MVPP22_RXQ_LLC_DEP_ENABLE		BIT(16)
-
-
 
 #define MVPP21_ETH_RX_HWQ_REG(txq)		(0xc00 + 4 * (txq))
 #define MVPP21_ETH_RX_HWQ_POOL_SHORT_OFFS	0
@@ -128,7 +120,6 @@
 
 #define MVPP22_AXI_ATTR_SNOOP_CNTRL_BIT		BIT(16)
 
-
 /* Parser Registers */
 #define MVPP2_PRS_INIT_LOOKUP_REG		0x1000
 #define MVPP2_PRS_PORT_LU_MAX			0xf
@@ -148,7 +139,6 @@
 #define MVPP2_PRS_TCAM_INV_MASK			BIT(31)
 #define MVPP2_PRS_SRAM_IDX_REG			0x1200
 #define MVPP2_PRS_SRAM_DATA_REG(idx)		(0x1204 + (idx) * 4)
-
 
 #define MVPP2_PRS_EXP_REG			0x1214
 #define MVPP2_PRS_EXP_MISS			0
@@ -280,10 +270,9 @@
 /*----------------------------------------------------------------------*/
 
 #define MVPP2_CLS_MTU_BASE_REG			0x1900
-/*
-  in PPv2.1 (feature MAS 3.7) num indicate an mtu reg index
-  in PPv2.0 num (<=31) indicate eport number , 0-15 pon txq,  16-23 ethernet
-*/
+/*  in PPv2.1 (feature MAS 3.7) num indicate an mtu reg index
+ * in PPv2.0 num (<=31) indicate eport number , 0-15 pon txq,  16-23 ethernet
+ */
 #define MVPP2_CLS_MTU_REG(num)			(MVPP2_CLS_MTU_BASE_REG + \
 						((num) * 4))
 #define MVPP2_CLS_MTU_OFFS			0
@@ -311,7 +300,6 @@
 				(MVPP2_CLS_SEQ_SIZE_BITS * (index)))
 #define MVPP2_CLS_SEQ_SIZE_VAL(index, val)	((val) << ((index) * \
 						MVPP2_CLS_SEQ_SIZE_BITS))
-
 
 /*PPv2.1 new register MAS 3.18*/
 #define MVPP2_CLS_PCTRL_BASE_REG		0x1880
@@ -343,7 +331,6 @@
 /* TX counters index */
 #define MVPP2_CNT_IDX_TX(port, txq)		(((16+port) << 3) | (txq))
 
-
 #define MVPP2_TX_DESC_ENQ_REG			0x7100
 #define MVPP2_TX_DESC_ENQ_TO_DRAM_REG		0x7104
 #define MVPP2_TX_BUF_ENQ_TO_DRAM_REG		0x7108
@@ -362,20 +349,15 @@
 #define MVPP2_BM_DROP_CNTR_REG(pool)		(0x7300 + 4 * (pool))
 #define MVPP2_BM_MC_DROP_CNTR_REG(pool)		(0x7340 + 4 * (pool))
 
-
 #define MVPP2_PLCR_GREEN_CNTR_REG(plcr)		(0x7400 + 4 * (plcr))
 #define MVPP2_PLCR_YELLOW_CNTR_REG(plcr)	(0x7500 + 4 * (plcr))
 #define MVPP2_PLCR_RED_CNTR_REG(plcr)		(0x7600 + 4 * (plcr))
-
-
 
 #define MVPP2_CLS_LKP_TBL_HIT_REG		0x7700
 #define MVPP2_CLS_FLOW_TBL_HIT_REG		0x7704
 #define MVPP2_CLS4_TBL_HIT_REG			0x7708
 
 #define MVPP2_V1_OVERFLOW_MC_DROP_REG		0x770c
-
-
 
 /* Classifier C2 Engine Registers */
 #define MVPP2_CLS2_TCAM_IDX_REG			0x1B00
@@ -622,13 +604,13 @@
 #define MVPP2_CLS3_STATE_SC_STATE_BITS		2
 #define MVPP2_CLS3_STATE_SC_STATE_MASK		(((1 << \
 	MVPP2_CLS3_STATE_SC_STATE_BITS) - 1) << MVPP2_CLS3_STATE_SC_STATE)
-/*
-SCAN STATUS
-0 - scan compleat
-1 -	hit counter clear
-3 - scan wait
-4 - scan in progress
-*/
+
+/* SCAN STATUS
+ * 0 - scan compleat
+ * 1 -	hit counter clear
+ * 3 - scan wait
+ * 4 - scan in progress
+ */
 
 #define MVPP2_CLS3_STATE_NO_OF_SC_RES		20
 #define MVPP2_CLS3_STATE_NO_OF_SC_RES_BITS	9
@@ -740,9 +722,6 @@ SCAN STATUS
 #define MVPP22_RXQ_DESC_ADDR_SHIFT		MVPP22_DESC_ADDR_SHIFT
 #define MVPP22_RXQ_DESC_ADDR_MASK		0xfffffffe
 
-
-
-
 #define MVPP2_RXQ_DESC_SIZE_REG			0x2048
 #define MVPP2_RXQ_DESC_SIZE_MASK		0x3ff0
 #define MVPP2_RXQ_STATUS_UPDATE_REG(rxq)	(0x3000 + 4 * (rxq))
@@ -821,7 +800,6 @@ SCAN STATUS
 #define MVPP22_ISR_RXQ_GROUP_INDEX_GROUP_MASK   0x380
 #define MVPP22_ISR_RXQ_GROUP_INDEX_GROUP_OFFSET 7
 
-
 #define MVPP22_ISR_RXQ_GROUP_INDEX_SUBGROUP_MASK 0xf
 #define MVPP22_ISR_RXQ_GROUP_INDEX_GROUP_MASK   0x380
 
@@ -829,10 +807,6 @@ SCAN STATUS
 #define MVPP22_ISR_RXQ_SUB_GROUP_STARTQ_MASK	0x1f
 #define MVPP22_ISR_RXQ_SUB_GROUP_SIZE_MASK	0xf00
 #define MVPP22_ISR_RXQ_SUB_GROUP_SIZE_OFFSET	8
-
-
-
-
 
 #define MVPP2_ISR_ENABLE_REG(port)		(0x5420 + 4 * (port))
 #define MVPP2_ISR_ENABLE_INTERRUPT(mask)	((mask) & 0xffff)
@@ -849,13 +823,11 @@ SCAN STATUS
 #define MVPP2_CAUSE_RX_EXCEPTION_SUM_MASK	BIT(30)
 #define MVPP2_CAUSE_MISC_SUM_MASK		BIT(31)
 
-
 #define MVPP2_ISR_RX_TX_MASK_REG(port)		(0x54a0 + 4 * (port))
 #define MVPP2_ISR_PON_RX_TX_MASK_REG		0x54bc
 #define MVPP2_PON_CAUSE_RXQ_OCCUP_DESC_ALL_MASK	0xffff
 #define MVPP2_PON_CAUSE_TXP_OCCUP_DESC_ALL_MASK	0x3fc00000
 #define MVPP2_PON_CAUSE_MISC_SUM_MASK		BIT(31)
-
 
 #define MV_PP21_ISR_RX_ERR_CAUSE_REG(port)	(0x5500 + 4 * (port))
 #define MV_PP21_ISR_RX_ERR_CAUSE_NONOCC_MASK	0xffff
@@ -867,17 +839,14 @@ SCAN STATUS
 #define MV_PP22_ISR_RX_ERR_CAUSE_DESC_RES_MASK	0xff0000
 #define MV_PP22_ISR_RX_ERR_MASK_REG(port)	(0x5520 + 4 * (port))
 
-
 #define MV_PP2_ISR_TX_ERR_CAUSE_REG(eth_port)	(0x5540 + 4 * (eth_port))
 #define MV_PP2_ISR_TX_ERR_MASK_REG(eth_port)	(0x5560 + 4 * (eth_port))
-
 
 #define MVPP2_ISR_MISC_CAUSE_REG		0x55b0
 #define MVPP2_ISR_MISC_MASK_REG			0x55b4
 
 #define MVPP22_ISR_NO_BUF_CAUSE_REG		0x55b8
 #define MVPP22_ISR_NO_BUF_MASK_REG		0x55bc
-
 
 /* Buffer Manager registers */
 #define MVPP2_BM_POOL_BASE_ADDR_REG(pool)	(0x6000 + ((pool) * 4))
@@ -903,7 +872,6 @@ SCAN STATUS
 #define MVPP2_BM_POOL_SIZE_OFFSET		MVPP21_BM_POOL_SIZE_OFFSET
 #undef  MVPP22_BM_POOL_SIZE_MASK
 #undef	MVPP22_BM_POOL_SIZE_OFFSET
-
 
 #define MVPP22_BM_POOL_READ_PTR_REG		MVPP2_BM_POOL_READ_PTR_REG
 #define MVPP22_BM_POOL_GET_READ_PTR_MASK	0xfff8
@@ -942,7 +910,6 @@ SCAN STATUS
 #define MVPP22_BM_POOL_BASE_ADDR_HIGH_REG	0x6310
 #define MVPP22_BM_POOL_BASE_ADDR_HIGH_MASK	0xff
 
-
 #define MVPP2_BM_PHY_ALLOC_REG(pool)		(0x6400 + ((pool) * 4))
 #define MVPP2_BM_PHY_ALLOC_GRNTD_MASK		BIT(0)
 #define MVPP2_BM_VIRT_ALLOC_REG			0x6440
@@ -951,8 +918,6 @@ SCAN STATUS
 #define MVPP22_BM_PHY_HIGH_ALLOC_OFFSET		0
 #define MVPP22_BM_VIRT_HIGH_ALLOC_OFFSET	8
 #define MVPP22_BM_VIRT_HIGH_ALLOC_MASK		0xff00
-
-
 
 #define MVPP2_BM_PHY_RLS_REG(pool)		(0x6480 + ((pool) * 4))
 #define MVPP2_BM_PHY_RLS_MC_BUFF_MASK		BIT(0)
@@ -969,7 +934,6 @@ SCAN STATUS
 
 #define MVPP22_BM_PHY_HIGH_RLS_OFFSET		0
 #define MVPP22_BM_VIRT_HIGH_RLS_OFFST		8
-
 
 #define MVPP22_BM_MC_RLS_REG			0x64d4 /* Not a mixup */
 #define MVPP22_BM_MC_ID_MASK			0xfff
@@ -1076,8 +1040,6 @@ SCAN STATUS
 #define MVPP22_TX_FIFO_SIZE_REG(eth_tx_port)	(0x8860 + ((eth_tx_port) << 2))
 #define MVPP22_TX_FIFO_SIZE_MASK		0xf
 
-
-
 #define MVPP2_TX_PORT_FLUSH_REG			0x8810
 #define MVPP2_TX_PORT_FLUSH_MASK(port)		(1 << (port))
 
@@ -1098,8 +1060,6 @@ SCAN STATUS
 
 #define MVPP22_TX_PORT_SHORT_HDR_REG		0x8ac0
 #define MVPP22_TX_PORT_SHORT_HDR_MASK		0x7f
-
-
 
 /* LMS registers */
 #define MVPP2_SRC_ADDR_MIDDLE			0x24
@@ -1146,7 +1106,6 @@ SCAN STATUS
 					MVPP2_GMAC_TX_FIFO_MIN_TH_ALL_MASK)
 
 #define MVPP2_CAUSE_TXQ_SENT_DESC_ALL_MASK	0xff
-
 
 /* The two bytes Marvell header. Either contains a special value used
  * by Marvell switches when a specific hardware mode is enabled (not
@@ -1214,7 +1173,6 @@ SCAN STATUS
 					MVPP2_DESC_Q_ALIGN)
 #define MVPP2_DESCQ_MEM_ALIGN(mem)	(ALIGN(mem, MVPP2_DESC_Q_ALIGN))
 
-
 /* Descriptor alignment mask */
 #define MVPP2_TX_DESC_ALIGN		(MVPP2_DESC_ALIGNED_SIZE - 1)
 
@@ -1244,7 +1202,6 @@ SCAN STATUS
 /* Port flags */
 #define MVPP2_F_LOOPBACK		BIT(0)
 #define MVPP2_F_IFCAP_NETMAP    BIT(1)
-
 
 /* Marvell tag types */
 enum mv_pp2x_tag_type {
@@ -1283,8 +1240,6 @@ enum mv_pp2x_tag_type {
 #define MVPP2_PRS_TCAM_PROTO_MASK_L	0x3f
 #define MVPP2_PRS_DBL_VLANS_MAX		100
 
-
-
 /* Tcam structure:
  * - lookup ID - 4 bits
  * - port ID - 1 byte
@@ -1301,6 +1256,7 @@ enum mv_pp2x_tag_type {
 #define MVPP2_PRS_TCAM_EN_OFFS(offs)		((offs) + 2)
 #define MVPP2_PRS_TCAM_INV_WORD			5
 #define MVPP2_PRS_TCAM_INV_MASK			BIT(31)
+
 /* Tcam entries ID */
 #if !defined(CONFIG_MV_PP2_PALLADIUM)
 #define MVPP2_PE_DROP_ALL		0
@@ -1463,8 +1419,6 @@ enum mv_pp2x_tag_type {
 #define MVPP2_PRS_SRAM_BIT_TO_BYTE(_bit_)	HW_BYTE_OFFS((_bit_) / 8)
 #define MVPP2_PRS_SRAM_SHIFT_MASK		((1 << \
 					MVPP2_PRS_SRAM_SHIFT_BITS) - 1)
-
-
 
 /* DSA/EDSA type */
 #define MVPP2_PRS_TAGGED		true
@@ -1672,8 +1626,9 @@ enum mv_pp2x_prs_flow {
 	MVPP2_PRS_FL_NON_IP_UNTAG,
 	MVPP2_PRS_FL_NON_IP_TAG,
 	MVPP2_PRS_FL_LAST,
-	MVPP2_PRS_FL_TCAM_NUM = 52, /* The parser TCAM lines needed to
-					*generate flow ID */
+	MVPP2_PRS_FL_TCAM_NUM = 52,	/* The parser TCAM lines needed to
+					*generate flow ID
+					*/
 };
 
 enum mv_pp2x_cls_engine_num {
@@ -1735,8 +1690,6 @@ struct mv_pp2x_prs_flow_id {
 
 #define MVPP2_CLS_LKP_TBL_SIZE		64
 
-
-
 /* BM cookie (32 bits) definition */
 #define MVPP2_BM_COOKIE_POOL_OFFS	8
 #define MVPP2_BM_COOKIE_CPU_OFFS	24
@@ -1749,16 +1702,12 @@ struct mv_pp2x_prs_flow_id {
 #define MVPP2_BM_LONG_PKT_SIZE		MVPP2_RX_MAX_PKT_SIZE(2048)
 #define MVPP2_BM_JUMBO_PKT_SIZE		9600 /*FIXME: What is max. size ? */
 
-
-
 enum mv_pp2x_bm_pool_log_num {
 	MVPP2_BM_SWF_SHORT_POOL,
 	MVPP2_BM_SWF_LONG_POOL,
 	MVPP2_BM_SWF_JUMBO_POOL,
 	MVPP2_BM_SWF_POOL_OUT_OF_RANGE
 };
-
-
 
 /* The mv_pp2x_tx_desc and mv_pp2x_rx_desc structures describe the
  * layout of the transmit and reception DMA descriptors, and their
@@ -1897,19 +1846,6 @@ struct mv_pp2x_tx_desc {
 	union pp2x_specific_tx_desc u;
 };
 
-#if 0
-struct1 mv_pp2x_tx_desc {
-	u32 command;		/* Options used by HW for packet transmitting*/
-	u8  packet_offset;	/* the offset from the buffer beginning	*/
-	u8  phys_txq;		/* destination queue ID			*/
-	u16 data_size;		/* data size of transmitted packet in bytes */
-	u32 buf_phys_addr;	/* physical addr of transmitted buffer	*/
-	u32 buf_cookie;		/* cookie for access to TX buffer in tx path */
-	u32 reserved1[3];	/* hw_cmd (for future use, BM, PON, PNC) */
-	u32 reserved2;		/* reserved (for future use)		*/
-};
-#endif
-
 struct pp21_specific_rx_desc {
 	u32 buf_phys_addr;	/* physical address of the buffer */
 	u32 buf_cookie;	/* cookie for access to RX buffer in rx path */
@@ -1943,23 +1879,6 @@ struct mv_pp2x_rx_desc {
 	u16 data_size;		/* size of received packet in bytes	*/
 	union pp2x_specific_rx_desc u;
 };
-
-#if 0
-struct mv_pp2x_rx_desc {
-	u32 status;		/* info about received packet		*/
-	u16 reserved1;		/* parser_info (for future use, PnC)	*/
-	u16 data_size;		/* size of received packet in bytes	*/
-	u32 buf_phys_addr;	/* physical address of the buffer	*/
-	u32 buf_cookie;		/* cookie for access to RX buffer in rx path*/
-	u16 reserved2;		/* gem_port_id (for future use, PON)	*/
-	u16 reserved3;		/* csum_l4 (for future use, PnC)	*/
-	u8  reserved4;		/* bm_qset (for future use, BM)		*/
-	u8  reserved5;
-	u16 reserved6;		/* classify_info (for future use, PnC)	*/
-	u32 reserved7;		/* flow_id (for future use, PnC) */
-	u32 reserved8;
-};
-#endif
 
 union mv_pp2x_prs_tcam_entry {
 	u32 word[MVPP2_PRS_TCAM_WORDS];
@@ -2014,7 +1933,8 @@ struct mv_pp2x_cls_flow_info {
 	/* The flow table entry index of RSS rule */
 	u32 flow_entry_rss1;
 	/* The flow table entry index of RSS rule for UDP packet to
-	 * update hash mode */
+	 * update hash mode
+	 */
 	u32 flow_entry_rss2;
 };
 

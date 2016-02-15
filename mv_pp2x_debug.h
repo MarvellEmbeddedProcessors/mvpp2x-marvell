@@ -16,7 +16,6 @@
 * ***************************************************************************
 */
 
-
 #ifndef _MVPP2_DEBUG_H_
 #define _MVPP2_DEBUG_H_
 
@@ -29,48 +28,47 @@
 #define MV_WRR_WEIGHT_UNIT				(256)
 
 /* Macro for alignment up. For example, MV_ALIGN_UP(0x0330, 0x20) = 0x0340   */
-#define MV_ALIGN_UP(number, align)                                          \
-(((number) & ((align) - 1)) ? (((number) + (align)) & ~((align)-1)) : (number))
+#define MV_ALIGN_UP(number, align) (((number) & ((align) - 1)) ? \
+				    (((number) + (align)) & ~((align) - 1)) : \
+				    (number))
 
 /* Macro for alignment down. For example, MV_ALIGN_UP(0x0330, 0x20) = 0x0320 */
-#define MV_ALIGN_DOWN(number, align) ((number) & ~((align)-1))
+#define MV_ALIGN_DOWN(number, align) ((number) & ~((align) - 1))
 /* CPU architecture dependent 32, 16, 8 bit read/write IO addresses */
 #define MV_MEMIO32_WRITE(addr, data)    \
-	((*((volatile unsigned int *)(addr))) = ((unsigned int)(data)))
+	((*((unsigned int *)(addr))) = ((unsigned int)(data)))
 
 #define MV_MEMIO32_READ(addr)           \
-	((*((volatile unsigned int *)(addr))))
+	((*((unsigned int *)(addr))))
 
 #define MV_MEMIO16_WRITE(addr, data)    \
-	((*((volatile unsigned short *)(addr))) = ((unsigned short)(data)))
+	((*((unsigned short *)(addr))) = ((unsigned short)(data)))
 
 #define MV_MEMIO16_READ(addr)           \
-	((*((volatile unsigned short *)(addr))))
+	((*((unsigned short *)(addr))))
 
 #define MV_MEMIO8_WRITE(addr, data)     \
-	((*((volatile unsigned char *)(addr))) = ((unsigned char)(data)))
+	((*((unsigned char *)(addr))) = ((unsigned char)(data)))
 
 #define MV_MEMIO8_READ(addr)            \
-	((*((volatile unsigned char *)(addr))))
+	((*((unsigned char *)(addr))))
 
 /* This macro returns absolute value                                        */
 #define MV_ABS(number)  (((int)(number) < 0) ? -(int)(number) : (int)(number))
 
 
 void mv_pp2x_print_reg(struct mv_pp2x_hw *hw, unsigned int reg_addr,
-		char *reg_name);
+			   char *reg_name);
 void mv_pp2x_print_reg2(struct mv_pp2x_hw *hw, unsigned int reg_addr,
-		char *reg_name, unsigned int index);
-
+			     char *reg_name, unsigned int index);
 
 void mv_pp2x_bm_pool_regs(struct mv_pp2x_hw *hw, int pool);
 void mv_pp2x_bm_pool_drop_count(struct mv_pp2x_hw *hw, int pool);
 void mv_pp2x_pool_status(struct mv_pp2x *priv, int log_pool_num);
 void mv_pp2_pool_stats_print(struct mv_pp2x *priv, int log_pool_num);
 
-
 void mvPp2RxDmaRegsPrint(struct mv_pp2x *priv, bool print_all,
-		int start, int stop);
+			 int start, int stop);
 void mvPp2RxqShow(struct mv_pp2x *priv, int port, int rxq, int mode);
 void mvPp2PhysRxqRegs(struct mv_pp2x *pp2, int rxq);
 void mvPp2PortRxqRegs(struct mv_pp2x *pp2, int port, int rxq);
@@ -99,7 +97,7 @@ int mvPp2TxqFixPrioSet(struct mv_pp2x *priv, int port, int txq);
 int mvPp2TxqWrrPrioSet(struct mv_pp2x *priv, int port, int txq, int weight);
 
 int mv_pp2x_wrap_cos_mode_set(struct mv_pp2x_port *port,
-		enum mv_pp2x_cos_classifier cos_mode);
+			      enum mv_pp2x_cos_classifier cos_mode);
 int mv_pp2x_wrap_cos_mode_get(struct mv_pp2x_port *port);
 int mv_pp2x_wrap_cos_pri_map_set(struct mv_pp2x_port *port, int cos_pri_map);
 int mv_pp2x_wrap_cos_pri_map_get(struct mv_pp2x_port *port);
@@ -114,9 +112,10 @@ void mv_pp2x_bm_queue_map_dump_all(struct mv_pp2x_hw *hw);
 
 int mv_pp2x_cls_c2_qos_prio_set(struct mv_pp2x_cls_c2_qos_entry *qos, u8 pri);
 int mv_pp2x_cls_c2_qos_dscp_set(struct mv_pp2x_cls_c2_qos_entry *qos, u8 dscp);
-int mv_pp2x_cls_c2_qos_color_set(struct mv_pp2x_cls_c2_qos_entry *qos, u8 color);
+int mv_pp2x_cls_c2_qos_color_set(struct mv_pp2x_cls_c2_qos_entry *qos,
+				 u8 color);
 int mv_pp2x_cls_c2_queue_set(struct mv_pp2x_cls_c2_entry *c2, int cmd,
-		int queue, int from);
+			     int queue, int from);
 int mv_pp2x_cls_c2_mtu_set(struct mv_pp2x_cls_c2_entry *c2, int mtu_inx);
 
 int mv_pp2x_prs_sw_dump(struct mv_pp2x_prs_entry *pe);

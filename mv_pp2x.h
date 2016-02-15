@@ -16,7 +16,6 @@
 * ***************************************************************************
 */
 
-
 #ifndef _MVPP2_H_
 #define _MVPP2_H_
 #ifdef ARMADA_390
@@ -27,13 +26,8 @@
 #include <linux/string.h>
 #include <linux/log2.h>
 
-
 #include "mv_pp2x_hw_type.h"
 #include "mv_gop110_hw_type.h"
-
-
-
-
 
 #define MVPP2_DRIVER_NAME "mvpp2"
 #define MVPP2_DRIVER_VERSION "1.0"
@@ -56,16 +50,14 @@
 #define FPGA	0
 #endif
 
-
 #if defined(CONFIG_MV_PP2_PALLADIUM)
 /*These are the indexes of
  * MVPP2_PRS_FL_IP4_UNTAG_NO_OPV4_OPTIONS/MVPP2_PRS_FL_NON_IP_UNTAG
- * in mv_pp2x_prs_flow_id_array[] */
+ * in mv_pp2x_prs_flow_id_array[]
+ */
 #define MVPP2_PRS_FL_IP4_UNTAG_NO_OPV4_OPTIONS	40
 #define MVPP2_PRS_FL_NON_IP_UNTAG_INDEX		50
 #endif
-
-
 
 #ifndef REDEFINE_DEBUG_ONCE
 
@@ -81,12 +73,11 @@
 
 #endif /*REDEFINE_DEBUG_ONCE*/
 
-
 #if VERBOSE
-#define DBG_MSG(fmt, args...)	printk(KERN_CRIT PFX fmt, ## args)
+#define DBG_MSG(fmt, args...)	pr_crit(PFX fmt, ## args)
 #else
 #if DEBUG
-#define DBG_MSG(fmt, args...)	printk(KERN_DEBUG PFX fmt, ## args)
+#define DBG_MSG(fmt, args...)	pr_debug(PFX fmt, ## args)
 #else
 #define DBG_MSG(fmt, args...)	(while (0) printk(fmt, ## args))
 #endif /*DEBUG*/
@@ -106,7 +97,6 @@
 
 #define MV_ETH_SKB_SHINFO_SIZE	SKB_DATA_ALIGN(sizeof(struct skb_shared_info))
 
-
 /* START - Taken from mvPp2Commn.h, need to order TODO */
 /*--------------------------------------------------------------------*/
 /*			PP2 COMMON DEFINETIONS			      */
@@ -116,39 +106,6 @@
 #define MV_OK			(0)
 
 #define WAY_MAX			1
-
-
-
-
-
-#define RANGE_VALIDATE(_VALUE_, _MIN_, _MAX_) {\
-	if (((_VALUE_) > (_MAX_)) || ((_VALUE_) < (_MIN_))) {\
-		DBG_MSG("%s: value 0x%X (%d) is out of range [0x%X , 0x%X].\n",\
-			__func__, (_VALUE_), (_VALUE_), (_MIN_), (_MAX_));\
-		return MV_ERROR;\
-	} \
-}
-
-
-#define BIT_RANGE_VALIDATE(_VALUE_) RANGE_VALIDATE(_VALUE_, 0, 1)
-
-#define POS_RANGE_VALIDATE(_VALUE_, _MAX_) \
-	RANGE_VALIDATE(_VALUE_, 0, _MAX_)
-
-
-#define PTR_VALIDATE(_ptr_) {\
-	if (_ptr_ == NULL) {\
-		DBG_MSG("%s: null pointer.\n", __func__);\
-		return MV_ERROR;\
-	} \
-}
-
-#define RET_VALIDATE(_ret_) {\
-	if (_ret_ != MV_OK) {\
-		DBG_MSG("%s: function call fail.\n", __func__);\
-		return MV_ERROR;\
-	} \
-}
 
 /*--------------------------------------------------------------------*/
 /*			PP2 COMMON DEFINETIONS			      */
@@ -166,13 +123,12 @@
 /*			PNC COMMON DEFINETIONS			      */
 /*--------------------------------------------------------------------*/
 
-/*
- HW_BYTE_OFFS
- return HW byte offset in 4 bytes register
- _offs_: native offset (LE)
- LE example: HW_BYTE_OFFS(1) = 1
- BE example: HW_BYTE_OFFS(1) = 2
-*/
+/* HW_BYTE_OFFS
+ * return HW byte offset in 4 bytes register
+ * _offs_: native offset (LE)
+ * LE example: HW_BYTE_OFFS(1) = 1
+ * BE example: HW_BYTE_OFFS(1) = 2
+ */
 #define SRAM_BIT_TO_BYTE(_bit_) HW_BYTE_OFFS((_bit_) / 8)
 
 #if defined(__LITTLE_ENDIAN)
@@ -185,15 +141,14 @@
 	((_offs_) % 2)) * 2 + ((_offs_) % 2))
 #define TCAM_DATA_MASK_OFFS_LE(_offs_) (((_offs_) * 2) - ((_offs_) % 2)  + 2)
 
-/*
- TCAM_DATA_BYTE/MASK
- tcam data devide into 4 bytes registers
- each register include 2 bytes of data and 2 bytes of mask
- the next macros calc data/mask offset in 4 bytes register
- _offs_: native offset (LE) in data bytes array
- relevant only for TCAM data bytes
- used by PRS and CLS2
-*/
+/* TCAM_DATA_BYTE/MASK
+ * tcam data devide into 4 bytes registers
+ * each register include 2 bytes of data and 2 bytes of mask
+ * the next macros calc data/mask offset in 4 bytes register
+ * _offs_: native offset (LE) in data bytes array
+ * relevant only for TCAM data bytes
+ * used by PRS and CLS2
+ */
 #define TCAM_DATA_BYTE(_offs_) (HW_BYTE_OFFS(TCAM_DATA_BYTE_OFFS_LE(_offs_)))
 #define TCAM_DATA_MASK(_offs_) (HW_BYTE_OFFS(TCAM_DATA_MASK_OFFS_LE(_offs_)))
 
@@ -216,8 +171,6 @@
 #define MVPP2_PRINT_VAR_NAME(var, name) \
 	pr_crit("%s(%d): %s=0x%lx\n", __FILENAME__, __LINE__, name, var)
 
-
-
 /* Descriptor ring Macros */
 #define MVPP2_QUEUE_NEXT_DESC(q, index) \
 	(((index) < (q)->last_desc) ? ((index) + 1) : 0)
@@ -230,7 +183,6 @@
 #define MVPP2_MAX_CPUS		4
 #define MVPP2_MAX_SHARED	1
 
-
 /* Coalescing */
 #define MVPP2_TXDONE_COAL_PKTS		15
 #define MVPP2_TXDONE_HRTIMER_PERIOD_NS	1000000UL
@@ -241,9 +193,9 @@
 
 /* BM constants */
 #define MVPP2_BM_POOLS_NUM		16
-#define MVPP2_BM_POOL_SIZE_MAX		(16*1024 - MVPP2_BM_POOL_PTR_ALIGN/4)
+#define MVPP2_BM_POOL_SIZE_MAX		(16 * 1024 - \
+					MVPP2_BM_POOL_PTR_ALIGN / 4)
 #define MVPP2_BM_POOL_PTR_ALIGN		128
-
 
 #ifdef CONFIG_MV_PP2_PALLADIUM
 #define MVPP2_BM_SHORT_BUF_NUM		256
@@ -256,7 +208,6 @@
 #endif
 
 #define MVPP2_ALL_BUFS			0
-
 
 #define RX_TOTAL_SIZE(buf_size)		((buf_size) + MV_ETH_SKB_SHINFO_SIZE)
 #define RX_TRUE_SIZE(total_size)	roundup_pow_of_two(total_size)
@@ -274,9 +225,10 @@ enum mv_pp2x_queue_vector_type {
 
 enum mv_pp2x_queue_distribution_mode {
 	/* All queues are shared.
-	PPv2.1 – this is the only supported mode.
-	PPv2.2 – Requires (N+1) interrupts. All rx_queues are
-	configured on the additional interrupt. */
+	 * PPv2.1: this is the only supported mode.
+	 * PPv2.2: Requires (N+1) interrupts. All rx_queues are
+	 * configured on the additional interrupt.
+	 */
 	MVPP2_QDIST_SINGLE_MODE,
 	MVPP2_QDIST_MULTI_MODE	/* PPv2.2 only requires N interrupts */
 };
@@ -290,14 +242,13 @@ enum mv_pp2x_cos_classifier {
 };
 
 enum mv_pp2x_rss_nf_udp_mode {
-	MVPP2_RSS_NF_UDP_2T, /* non-frag UDP packet hash value
-				*is calculated based on 2T */
-	MVPP2_RSS_NF_UDP_5T /* non-frag UDP packet hash value
-				*is calculated based on 5T */
-
+	MVPP2_RSS_NF_UDP_2T,	/* non-frag UDP packet hash value
+				* is calculated based on 2T
+				*/
+	MVPP2_RSS_NF_UDP_5T	/* non-frag UDP packet hash value
+				*is calculated based on 5T
+				*/
 };
-
-
 
 struct mv_mac_data {
 	u8			gop_index;
@@ -320,15 +271,11 @@ struct mv_mac_data {
 #define MV_EMAC_F_INIT_BIT	1
 #define MV_EMAC_F_SGMII2_5_BIT	2
 
-
 #define MV_EMAC_F_LINK_UP	(1 << MV_EMAC_F_LINK_UP_BIT)
 #define MV_EMAC_F_INIT		(1 << MV_EMAC_F_INIT_BIT)
 #define MV_EMAC_F_SGMII2_5	(1 << MV_EMAC_F_SGMII2_5_BIT)
 
-
 #define MVPP2_NO_LINK_IRQ	0
-
-
 
 /* Per-CPU Tx queue control */
 struct mv_pp2x_txq_pcpu {
@@ -358,7 +305,6 @@ struct mv_pp2x_txq_pcpu {
 	int txq_get_index;
 };
 
-
 struct mv_pp2x_tx_queue {
 	/* Physical number of this Tx queue */
 	u8 id;
@@ -375,7 +321,8 @@ struct mv_pp2x_tx_queue {
 	u32 pkts_coal;
 
 	/* Virtual pointer to address of the Tx DMA descriptors
-	* memory_allocation */
+	* memory_allocation
+	*/
 	void *desc_mem;
 
 	/* Virtual address of thex Tx DMA descriptors array */
@@ -391,7 +338,6 @@ struct mv_pp2x_tx_queue {
 	int next_desc_to_proc;
 };
 
-
 struct mv_pp2x_aggr_tx_queue {
 	/* Physical number of this Tx queue */
 	u8 id;
@@ -403,7 +349,8 @@ struct mv_pp2x_aggr_tx_queue {
 	int count;
 
 	/* Virtual pointer to address of the Aggr_Tx DMA descriptors
-	* memory_allocation */
+	* memory_allocation
+	*/
 	void *desc_mem;
 
 	/* Virtual pointer to address of the Aggr_Tx DMA descriptors array */
@@ -419,7 +366,6 @@ struct mv_pp2x_aggr_tx_queue {
 	int next_desc_to_proc;
 };
 
-
 struct mv_pp2x_rx_queue {
 	/* RX queue number, in the range 0-31 for physical RXQs */
 	u8 id;
@@ -434,7 +380,8 @@ struct mv_pp2x_rx_queue {
 	u32 time_coal;
 
 	/* Virtual pointer to address of the Rx DMA descriptors
-	* memory_allocation */
+	* memory_allocation
+	*/
 	void *desc_mem;
 
 	/* Virtual address of the RX DMA descriptors array */
@@ -453,7 +400,6 @@ struct mv_pp2x_rx_queue {
 	int port;
 
 };
-
 
 struct avanta_lp_gop_hw {
 	void __iomem *lms_base;
@@ -489,8 +435,9 @@ struct gop_hw {
 struct mv_pp2x_hw {
 
 	/* Shared registers' base addresses */
-	void __iomem *base;/* PPV22 base_address as received in */
-				/*devm_ioremap_resource().*/
+	void __iomem *base;	/* PPV22 base_address as received in
+				 *devm_ioremap_resource().
+				 */
 	void __iomem *lms_base;
 	void __iomem *cpu_base[MVPP2_MAX_CPUS];
 
@@ -499,7 +446,8 @@ struct mv_pp2x_hw {
 	 * PPv2.2 - cpu_base[x] = base +
 	 * cpu_index[smp_processor_id]*MV_PP2_SPACE_64K,
 	 * for non-participating CPU it is NULL.
-	 * PPv2.1 cpu_base[x] = base */
+	 * PPv2.1 cpu_base[x] = base
+	 */
 	/* Common clocks */
 	struct clk *pp_clk;
 	struct clk *gop_clk;
@@ -516,12 +464,13 @@ struct mv_pp2x_hw {
 };
 
 struct mv_pp2x_cos {
-	u8 cos_classifier;    /* CoS based on VLAN or DSCP */
-	u8 num_cos_queues;     /* number of queue to do CoS */
-	u8 default_cos;       /* Default CoS value for non-IP or non-VLAN */
+	u8 cos_classifier;	/* CoS based on VLAN or DSCP */
+	u8 num_cos_queues;	/* number of queue to do CoS */
+	u8 default_cos;		/* Default CoS value for non-IP or non-VLAN */
 	u8 reserved;
-	u32 pri_map;          /* 32 bits, each nibble maps a cos_value(0~7)
-				* to a queue.*/
+	u32 pri_map;		/* 32 bits, each nibble maps a cos_value(0~7)
+				* to a queue.
+				*/
 };
 
 struct mv_pp2x_rss {
@@ -537,22 +486,27 @@ struct mv_pp2x_param_config {
 	bool jumbo_pool; /* pp2 always supports 2 pools :
 			 * short=MV_DEF_256, long=MV_DEF_2K.
 			 * Param defines option to have additional pool,
-			 * jumbo=MV_DEF_10K.*/
+			 * jumbo=MV_DEF_10K.
+			 */
 	u8 first_sw_thread; /* The index of the first PPv2.2
-			* sub-address space for this NET_INSTANCE.*/
+			* sub-address space for this NET_INSTANCE.
+			*/
 	u8 first_log_rxq; /* The first cos rx queue used in the port */
 	u8 cell_index; /* The cell_index of the PPv22
-			* (could be 0,1, set according to dtsi) */
+			* (could be 0,1, set according to dtsi)
+			*/
 	enum mv_pp2x_queue_distribution_mode queue_mode;
 	u32 rx_cpu_map; /* The CPU that port bind, each port has a nibble
-			* indexed by port_id, nibble value is CPU id*/
+			* indexed by port_id, nibble value is CPU id
+			*/
 };
 
 /* Shared Packet Processor resources */
 struct mv_pp2x {
 	enum mvppv2_version pp2_version; /* Redundant, consider to delete.
 					* (prevents extra pointer lookup from
-					* mv_pp2x_platform_data) */
+					* mv_pp2x_platform_data)
+					*/
 	struct	mv_pp2x_hw hw;
 	struct mv_pp2x_platform_data *pp2xdata;
 
@@ -574,7 +528,8 @@ struct mv_pp2x {
 	struct mv_pp2x_bm_pool *bm_pools;
 
 	/* RX flow hash indir'n table, in pp22, the table contains the
-	* CPU idx according to weight */
+	* CPU idx according to weight
+	*/
 	u32 rx_indir_table[MVPP22_RSS_TBL_LINE_NUM];
 };
 
@@ -601,15 +556,16 @@ struct queue_vector {
 	struct napi_struct napi;
 	enum mv_pp2x_queue_vector_type qv_type;
 	u16 sw_thread_id; /* address_space index used to
-			* retrieve interrupt_cause */
+			* retrieve interrupt_cause
+			*/
 	u16 sw_thread_mask; /* Mask for Interrupt PORT_ENABLE Register */
 	u8 first_rx_queue; /* Relative to port */
 	u8 num_rx_queues;
 	u32 pending_cause_rx; /* mask in absolute port_queues, not relative as
-			* in Ethernet Occupied Interrupt Cause (EthOccIC)) */
+			* in Ethernet Occupied Interrupt Cause (EthOccIC))
+			*/
 	struct mv_pp2x_port *parent;
 };
-
 
 struct mv_pp2x_port {
 	u8 id;
@@ -621,7 +577,6 @@ struct mv_pp2x_port {
 
 	struct mv_mac_data mac_data;
 	struct tasklet_struct	link_change_tasklet;
-
 
 	/* Per-port registers' base address */
 	void __iomem *base;
@@ -639,8 +594,8 @@ struct mv_pp2x_port {
 	struct net_device *dev;
 
 	int pkt_size; /* pkt_size determines which is pool_long:
-			* jumbo_pool or regular long_pool. */
-
+			* jumbo_pool or regular long_pool.
+			*/
 
 	/* Per-CPU port control */
 	struct mv_pp2x_port_pcpu __percpu *pcpu;
@@ -655,20 +610,20 @@ struct mv_pp2x_port {
 
 
 	struct mv_pp2x_bm_pool *pool_long; /* Pointer to the pool_id
-					* (long or jumbo) */
+					* (long or jumbo)
+					*/
 	struct mv_pp2x_bm_pool *pool_short; /* Pointer to the short pool_id */
-
 
 	u32 num_qvector;
 	/* q_vector is the parameter that will be passed to
-	 * mv_pp2_isr(int irq, void *dev_id=q_vector)  */
+	 * mv_pp2_isr(int irq, void *dev_id=q_vector)
+	 */
 	struct queue_vector q_vector[MVPP2_MAX_CPUS+MVPP2_MAX_SHARED];
 };
 
 struct pp2x_hw_params {
 	u8 desc_queue_addr_shift;
 };
-
 
 struct mv_pp2x_platform_data {
 	enum mvppv2_version pp2x_ver;
@@ -716,11 +671,11 @@ static inline u8 mv_pp2x_cosval_queue_map(struct mv_pp2x_port *port,
 	int cos_width, cos_mask;
 
 	cos_width = ilog2(roundup_pow_of_two(
-		port->priv->pp2_cfg.cos_cfg.num_cos_queues));
+			  port->priv->pp2_cfg.cos_cfg.num_cos_queues));
 	cos_mask  = (1 << cos_width) - 1;
 
 	return((port->priv->pp2_cfg.cos_cfg.pri_map >>
-		(cos_value * 4)) & cos_mask);
+	       (cos_value * 4)) & cos_mask);
 }
 
 static inline u8 mv_pp2x_bound_cpu_first_rxq_calc(struct mv_pp2x_port *port)
@@ -729,7 +684,7 @@ static inline u8 mv_pp2x_bound_cpu_first_rxq_calc(struct mv_pp2x_port *port)
 	u8 cos_width, bind_cpu;
 
 	cos_width = ilog2(roundup_pow_of_two(
-		port->priv->pp2_cfg.cos_cfg.num_cos_queues));
+			  port->priv->pp2_cfg.cos_cfg.num_cos_queues));
 	bind_cpu = (port->priv->pp2_cfg.rx_cpu_map >> (4 * port->id)) & 0xF;
 
 	return(port->first_rxq + (bind_cpu << cos_width));
@@ -784,36 +739,35 @@ static inline void mv_pp22_tx_desc_swap(struct mv_pp2x_tx_desc *tx_desc)
 	cpu_to_le64s(&tx_desc->u.pp22.buf_cookie_bm_qset_hw_cmd3);
 }
 
-
 struct mv_pp2x_pool_attributes {
 	char description[32];
 	int pkt_size;
 	int buf_num;
 };
 
-
 extern struct mv_pp2x_pool_attributes mv_pp2x_pools[];
+
+#if defined(CONFIG_NETMAP) || defined(CONFIG_NETMAP_MODULE)
+void *mv_pp2x_vfpga_address_get(void);
+#endif
+
 void mv_pp2x_bm_bufs_free(struct mv_pp2x *priv,
-		struct mv_pp2x_bm_pool *bm_pool, int buf_num);
+			  struct mv_pp2x_bm_pool *bm_pool, int buf_num);
 int mv_pp2x_bm_bufs_add(struct mv_pp2x_port *port,
-		struct mv_pp2x_bm_pool *bm_pool, int buf_num);
+			struct mv_pp2x_bm_pool *bm_pool, int buf_num);
 int mv_pp2x_open(struct net_device *dev);
 int mv_pp2x_check_ringparam_valid(struct net_device *dev,
-		struct ethtool_ringparam *ring);
+				  struct ethtool_ringparam *ring);
 void mv_pp2x_start_dev(struct mv_pp2x_port *port);
 void mv_pp2x_stop_dev(struct mv_pp2x_port *port);
 void mv_pp2x_cleanup_rxqs(struct mv_pp2x_port *port);
 int mv_pp2x_setup_rxqs(struct mv_pp2x_port *port);
 int mv_pp2x_setup_txqs(struct mv_pp2x_port *port);
 void mv_pp2x_cleanup_txqs(struct mv_pp2x_port *port);
-
-
 void mv_pp2x_set_ethtool_ops(struct net_device *netdev);
-
 int mv_pp22_rss_rxfh_indir_set(struct mv_pp2x_port *port);
-
 int mv_pp2x_cos_classifier_set(struct mv_pp2x_port *port,
-		enum mv_pp2x_cos_classifier cos_mode);
+			       enum mv_pp2x_cos_classifier cos_mode);
 int mv_pp2x_cos_classifier_get(struct mv_pp2x_port *port);
 int mv_pp2x_cos_pri_map_set(struct mv_pp2x_port *port, int cos_pri_map);
 int mv_pp2x_cos_pri_map_get(struct mv_pp2x_port *port);

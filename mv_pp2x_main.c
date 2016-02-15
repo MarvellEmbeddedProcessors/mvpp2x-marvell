@@ -46,8 +46,6 @@
 #include <asm/cacheflush.h>
 #include <linux/dma-mapping.h>
 
-
-
 #ifdef CONFIG_MV_PP2_FPGA
 #include <linux/pci.h>
 #endif
@@ -63,7 +61,6 @@
 #define MVPP2_SKB_TEST_SIZE 64
 #define MVPP2_ADDRESS 0xf2000000
 #define CPN110_ADDRESS_SPACE_SIZE (16*1024*1024)
-
 
 /* Declaractions */
 u8 mv_pp2x_num_cos_queues = 4;
@@ -82,9 +79,7 @@ static u8 first_bm_pool;
 static u8 first_addr_space;
 static u8 first_log_rxq_queue;
 
-
 u32 debug_param;
-
 
 #if defined(CONFIG_MV_PP2_POLLING)
 #ifdef CONFIG_MV_PP2_PALLADIUM
@@ -148,7 +143,6 @@ module_param(debug_param, uint, S_IRUGO);
 MODULE_PARM_DESC(debug_param,
 	"Ad-hoc parameter, which can be used for various debug operations.");
 
-
 /*TODO:  Below module_params will not go to ML. Created for testing. */
 
 module_param(port_cpu_bind_map, uint, S_IRUGO);
@@ -164,14 +158,10 @@ MODULE_PARM_DESC(first_addr_space, "First used PPV22 address space (0-8)");
 module_param(first_log_rxq_queue, byte, S_IRUGO);
 MODULE_PARM_DESC(first_log_rxq_queue, "First logical rx_queue (0-31)");
 
-
-
 /* Number of RXQs used by single port */
 static int mv_pp2x_rxq_number;
 /* Number of TXQs used by single port */
 static int mv_pp2x_txq_number;
-
-
 
 struct mv_pp2x_pool_attributes mv_pp2x_pools[] = {
 	{
@@ -191,8 +181,12 @@ struct mv_pp2x_pool_attributes mv_pp2x_pools[] = {
 	}
 };
 
-
-
+#if defined(CONFIG_NETMAP) || defined(CONFIG_NETMAP_MODULE)
+void *mv_pp2x_vfpga_address_get(void)
+{
+	return mv_pp2_vfpga_address;
+}
+#endif
 
 static void mv_pp2x_txq_inc_get(struct mv_pp2x_txq_pcpu *txq_pcpu)
 {
@@ -248,7 +242,6 @@ static inline int mv_pp2x_pool_buf_num_get(
 	return mv_pp2x_pools[log_id].buf_num;
 }
 
-
 static inline const char *
 	mv_pp2x_pool_description_get(
 		enum mv_pp2x_bm_pool_log_num  log_id)
@@ -256,15 +249,13 @@ static inline const char *
 	return mv_pp2x_pools[log_id].description;
 }
 
-
-
-
 /* Buffer Manager configuration routines */
 
 /* Create pool */
 static int mv_pp2x_bm_pool_create(struct platform_device *pdev,
-				struct mv_pp2x_hw *hw,
-				struct mv_pp2x_bm_pool *bm_pool, int size)
+					 struct mv_pp2x_hw *hw,
+					 struct mv_pp2x_bm_pool *bm_pool,
+					 int size)
 {
 	int size_bytes;
 
@@ -297,27 +288,27 @@ static int mv_pp2x_bm_pool_create(struct platform_device *pdev,
 	bm_pool->pkt_size = mv_pp2x_pool_pkt_size_get(bm_pool->log_id);
 	bm_pool->buf_num = 0;
 	mv_pp2x_bm_pool_bufsize_set(hw, bm_pool,
-		MVPP2_RX_BUF_SIZE(bm_pool->pkt_size));
+				    MVPP2_RX_BUF_SIZE(bm_pool->pkt_size));
 	atomic_set(&bm_pool->in_use, 0);
 
 	return 0;
 }
 
 void mv_pp2x_bm_bufs_free(struct mv_pp2x *priv, struct mv_pp2x_bm_pool *bm_pool,
-			int buf_num)
+				int buf_num)
 {
 	int i;
 
 	if (buf_num > bm_pool->buf_num) {
 		WARN(1, "Pool does not have so many bufs pool(%d) bufs(%d)\n",
-			bm_pool->id, buf_num);
+		     bm_pool->id, buf_num);
 		buf_num = bm_pool->buf_num;
 
 	}
 	for (i = 0; i < buf_num; i++) {
 		struct sk_buff *vaddr;
 
-		/* Get buffer virtual adress (indirect access) */
+		/* Get buffer virtual address (indirect access) */
 		vaddr = mv_pp2x_bm_virt_addr_get(&priv->hw, bm_pool->id);
 		if (!vaddr)
 			break;
@@ -337,8 +328,8 @@ void mv_pp2x_bm_bufs_free(struct mv_pp2x *priv, struct mv_pp2x_bm_pool *bm_pool,
 
 /* Cleanup pool */
 static int mv_pp2x_bm_pool_destroy(struct platform_device *pdev,
-				 struct mv_pp2x *priv,
-				 struct mv_pp2x_bm_pool *bm_pool)
+					  struct mv_pp2x *priv,
+					  struct mv_pp2x_bm_pool *bm_pool)
 {
 	u32 val;
 	int size_bytes;
@@ -346,8 +337,8 @@ static int mv_pp2x_bm_pool_destroy(struct platform_device *pdev,
 	mv_pp2x_bm_bufs_free(priv, bm_pool, bm_pool->buf_num);
 	if (bm_pool->buf_num) {
 		WARN(1, "cannot free all buffers in pool %d, buf_num left %d\n",
-			bm_pool->id,
-			bm_pool->buf_num);
+		     bm_pool->id,
+		     bm_pool->buf_num);
 		return 0;
 	}
 
@@ -363,7 +354,8 @@ static int mv_pp2x_bm_pool_destroy(struct platform_device *pdev,
 }
 
 static int mv_pp2x_bm_pools_init(struct platform_device *pdev,
-		       struct mv_pp2x *priv, u8 first_pool, u8 num_pools)
+				       struct mv_pp2x *priv,
+				       u8 first_pool, u8 num_pools)
 {
 	int i, err, size;
 	struct mv_pp2x_bm_pool *bm_pool;
@@ -395,7 +387,7 @@ static int mv_pp2x_bm_init(struct platform_device *pdev, struct mv_pp2x *priv)
 	u8 first_pool = mv_pp2x_first_pool_get(priv);
 	u8 num_pools = mv_pp2x_num_pools_get(priv);
 
-	for (i = first_pool; i < (first_pool+num_pools); i++) {
+	for (i = first_pool; i < (first_pool + num_pools); i++) {
 		/* Mask BM all interrupts */
 		mv_pp2x_write(&priv->hw, MVPP2_BM_INTR_MASK_REG(i), 0);
 		/* Clear BM cause register */
@@ -404,7 +396,8 @@ static int mv_pp2x_bm_init(struct platform_device *pdev, struct mv_pp2x *priv)
 
 	/* Allocate and initialize BM pools */
 	priv->bm_pools = devm_kcalloc(&pdev->dev, num_pools,
-			     sizeof(struct mv_pp2x_bm_pool), GFP_KERNEL);
+				      sizeof(struct mv_pp2x_bm_pool),
+				      GFP_KERNEL);
 	if (!priv->bm_pools)
 		return -ENOMEM;
 
@@ -414,14 +407,11 @@ static int mv_pp2x_bm_init(struct platform_device *pdev, struct mv_pp2x *priv)
 	return 0;
 }
 
-
-
-
 /* Allocate skb for BM pool */
 static struct sk_buff *mv_pp2x_skb_alloc(struct mv_pp2x_port *port,
-				       struct mv_pp2x_bm_pool *bm_pool,
-				       dma_addr_t *buf_phys_addr,
-				       gfp_t gfp_mask)
+					      struct mv_pp2x_bm_pool *bm_pool,
+					      dma_addr_t *buf_phys_addr,
+					      gfp_t gfp_mask)
 {
 	struct sk_buff *skb;
 	dma_addr_t phys_addr;
@@ -436,14 +426,14 @@ static struct sk_buff *mv_pp2x_skb_alloc(struct mv_pp2x_port *port,
 	STAT_DBG(bm_pool->stats.skb_alloc_ok++);
 	phys_addr = dma_map_single(port->dev->dev.parent, skb->head,
 				   MVPP2_RX_BUF_SIZE(bm_pool->pkt_size),
-				    DMA_FROM_DEVICE);
+				   DMA_FROM_DEVICE);
 #if DEBUG
 	pr_crit_once("dev_ptr:%p, dev_name:%s, sizeof(dma_addr_t):%ld",
-		port->dev->dev.parent, port->dev->dev.parent->init_name,
-		sizeof(dma_addr_t));
+		     port->dev->dev.parent, port->dev->dev.parent->init_name,
+		     sizeof(dma_addr_t));
 	pr_crit_once("sizeof(long):%ld, phys_addr:%llx, size:%d\n",
-		sizeof(long),
-		phys_addr, MVPP2_RX_BUF_SIZE(bm_pool->pkt_size));
+		     sizeof(long),
+		     phys_addr, MVPP2_RX_BUF_SIZE(bm_pool->pkt_size));
 
 #endif
 	if (unlikely(dma_mapping_error(port->dev->dev.parent, phys_addr))) {
@@ -456,11 +446,9 @@ static struct sk_buff *mv_pp2x_skb_alloc(struct mv_pp2x_port *port,
 	return skb;
 }
 
-
-
 /* Allocate buffers for the pool */
 int mv_pp2x_bm_bufs_add(struct mv_pp2x_port *port,
-			     struct mv_pp2x_bm_pool *bm_pool, int buf_num)
+			       struct mv_pp2x_bm_pool *bm_pool, int buf_num)
 {
 	struct sk_buff *skb;
 	int i, buf_size, total_size;
@@ -470,7 +458,6 @@ int mv_pp2x_bm_bufs_add(struct mv_pp2x_port *port,
 	total_size = MVPP2_RX_TOTAL_SIZE(buf_size);
 
 	PALAD(MVPP2_PRINT_LINE());
-
 
 	if (buf_num < 0 ||
 	    (buf_num + bm_pool->buf_num > bm_pool->size)) {
@@ -490,12 +477,12 @@ int mv_pp2x_bm_bufs_add(struct mv_pp2x_port *port,
 			PALAD(MVPP2_PRINT_LINE());
 			break;
 		}
-		if ((i&0xF) == 0)
+		if ((i & 0xF) == 0)
 			PALAD(MVPP2_PRINT_LINE());
 
 		mv_pp2x_pool_refill(port->priv, (u32)bm_pool->id,
-				phys_addr, skb);
-		if ((i&0xF) == 0)
+				    phys_addr, skb);
+		if ((i & 0xF) == 0)
 			PALAD(MVPP2_PRINT_LINE());
 	}
 
@@ -516,15 +503,15 @@ int mv_pp2x_bm_bufs_add(struct mv_pp2x_port *port,
 }
 
 static int mv_pp2x_bm_buf_calc(enum mv_pp2x_bm_pool_log_num log_pool,
-	u32 port_map)
+				     u32 port_map)
 {
 	/*TODO: Code algo based  on
-	port_map/num_rx_queues/num_tx_queues/queue_sizes */
+	 * port_map/num_rx_queues/num_tx_queues/queue_sizes
+	 */
 	int num_ports = hweight_long(port_map);
 
-	return(num_ports*mv_pp2x_pool_buf_num_get(log_pool));
+	return(num_ports * mv_pp2x_pool_buf_num_get(log_pool));
 }
-
 
 /* Notify the driver that BM pool is being used as specific type and return the
  * pool pointer on success
@@ -538,7 +525,7 @@ static struct mv_pp2x_bm_pool *mv_pp2x_bm_pool_use_internal(
 	struct mv_pp2x_bm_pool *pool = &port->priv->bm_pools[log_pool];
 
 	if (log_pool < MVPP2_BM_SWF_SHORT_POOL ||
-		log_pool > MVPP2_BM_SWF_JUMBO_POOL) {
+	    log_pool > MVPP2_BM_SWF_JUMBO_POOL) {
 		netdev_err(port->dev, "pool does not exist\n");
 		return NULL;
 	}
@@ -546,11 +533,13 @@ static struct mv_pp2x_bm_pool *mv_pp2x_bm_pool_use_internal(
 
 	if (add_port) {
 		pkts_num = mv_pp2x_bm_buf_calc(log_pool,
-			pool->port_map | (1 << port->id));
+					       pool->port_map |
+					       (1 << port->id));
 		MVPP2_PRINT_VAR(pkts_num);
 	} else {
 		pkts_num = mv_pp2x_bm_buf_calc(log_pool,
-			pool->port_map & ~(1 << port->id));
+					       pool->port_map &
+					       ~(1 << port->id));
 	}
 
 	add_num = pkts_num - pool->buf_num;
@@ -572,14 +561,12 @@ static struct mv_pp2x_bm_pool *mv_pp2x_bm_pool_use_internal(
 	return pool;
 }
 
-
-
-static struct mv_pp2x_bm_pool *mv_pp2x_bm_pool_use(struct mv_pp2x_port *port,
+static struct mv_pp2x_bm_pool *mv_pp2x_bm_pool_use(
+			struct mv_pp2x_port *port,
 			enum mv_pp2x_bm_pool_log_num log_pool)
 {
 	return mv_pp2x_bm_pool_use_internal(port, log_pool, true);
 }
-
 
 static struct mv_pp2x_bm_pool *mv_pp2x_bm_pool_stop_use(
 			struct mv_pp2x_port *port,
@@ -587,7 +574,6 @@ static struct mv_pp2x_bm_pool *mv_pp2x_bm_pool_stop_use(
 {
 	return mv_pp2x_bm_pool_use_internal(port, log_pool, false);
 }
-
 
 /* Initialize pools for swf */
 static int mv_pp2x_swf_bm_pool_init(struct mv_pp2x_port *port)
@@ -636,7 +622,7 @@ static int mv_pp2x_bm_update_mtu(struct net_device *dev, int mtu)
 {
 	struct mv_pp2x_port *port = netdev_priv(dev);
 	struct mv_pp2x_bm_pool *old_port_pool = port->pool_long;
-	struct mv_pp2x_hw *hw = &(port->priv->hw);
+	struct mv_pp2x_hw *hw = &port->priv->hw;
 	enum mv_pp2x_bm_pool_log_num new_log_pool;
 	enum mv_pp2x_bm_pool_log_num old_log_pool = old_port_pool->log_id;
 	int rxq;
@@ -667,12 +653,11 @@ static int mv_pp2x_bm_update_mtu(struct net_device *dev, int mtu)
 	return 0;
 }
 
-
 /* Set defaults to the MVPP2 port */
 static void mv_pp2x_defaults_set(struct mv_pp2x_port *port)
 {
 	int tx_port_num, val, queue, ptxq, lrxq;
-	struct mv_pp2x_hw *hw = &(port->priv->hw);
+	struct mv_pp2x_hw *hw = &port->priv->hw;
 
 	/* Configure port to loopback if needed */
 	if (port->flags & MVPP2_F_LOOPBACK) {
@@ -699,21 +684,21 @@ static void mv_pp2x_defaults_set(struct mv_pp2x_port *port)
 	/* Disable Legacy WRR, Disable EJP, Release from reset */
 	tx_port_num = mv_pp2x_egress_port(port);
 	mv_pp2x_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG,
-		    tx_port_num);
+		      tx_port_num);
 	mv_pp2x_write(hw, MVPP2_TXP_SCHED_CMD_1_REG, 0);
 
 	/* Close bandwidth for all queues */
 	for (queue = 0; queue < MVPP2_MAX_TXQ; queue++) {
 		ptxq = mv_pp2x_txq_phys(port->id, queue);
 		mv_pp2x_write(hw,
-			    MVPP2_TXQ_SCHED_TOKEN_CNTR_REG(ptxq), 0);
+			      MVPP2_TXQ_SCHED_TOKEN_CNTR_REG(ptxq), 0);
 	}
 
 	/* Set refill period to 1 usec, refill tokens
 	 * and bucket size to maximum
 	 */
 	mv_pp2x_write(hw, MVPP2_TXP_SCHED_PERIOD_REG,
-		    hw->tclk / USEC_PER_SEC);
+		      hw->tclk / USEC_PER_SEC);
 	val = mv_pp2x_read(hw, MVPP2_TXP_SCHED_REFILL_REG);
 	val &= ~MVPP2_TXP_REFILL_PERIOD_ALL_MASK;
 	val |= MVPP2_TXP_REFILL_PERIOD_MASK(1);
@@ -724,15 +709,15 @@ static void mv_pp2x_defaults_set(struct mv_pp2x_port *port)
 
 	/* Set MaximumLowLatencyPacketSize value to 256 */
 	mv_pp2x_write(hw, MVPP2_RX_CTRL_REG(port->id),
-		    MVPP2_RX_USE_PSEUDO_FOR_CSUM_MASK |
-		    MVPP2_RX_LOW_LATENCY_PKT_SIZE(256));
+		      MVPP2_RX_USE_PSEUDO_FOR_CSUM_MASK |
+		      MVPP2_RX_LOW_LATENCY_PKT_SIZE(256));
 
 	/* Enable Rx cache snoop */
 	for (lrxq = 0; lrxq < port->num_rx_queues; lrxq++) {
 		queue = port->rxqs[lrxq]->id;
 		val = mv_pp2x_read(hw, MVPP2_RXQ_CONFIG_REG(queue));
 		val |= MVPP2_SNOOP_PKT_SIZE_MASK |
-			   MVPP2_SNOOP_BUF_HDR_MASK;
+		       MVPP2_SNOOP_BUF_HDR_MASK;
 		mv_pp2x_write(hw, MVPP2_RXQ_CONFIG_REG(queue), val);
 	}
 
@@ -740,19 +725,14 @@ static void mv_pp2x_defaults_set(struct mv_pp2x_port *port)
 	mv_pp2x_port_interrupts_disable(port);
 }
 
-
-
-
-
-
-
 /* Check if there are enough reserved descriptors for transmission.
  * If not, request chunk of reserved descriptors and check again.
  */
-static int mv_pp2x_txq_reserved_desc_num_proc(struct mv_pp2x *priv,
-					    struct mv_pp2x_tx_queue *txq,
-					    struct mv_pp2x_txq_pcpu *txq_pcpu,
-					    int num)
+static int mv_pp2x_txq_reserved_desc_num_proc(
+					struct mv_pp2x *priv,
+					struct mv_pp2x_tx_queue *txq,
+					struct mv_pp2x_txq_pcpu *txq_pcpu,
+					int num)
 {
 	int req, cpu, desc_count;
 
@@ -780,8 +760,8 @@ static int mv_pp2x_txq_reserved_desc_num_proc(struct mv_pp2x *priv,
 	   (txq->size - (num_active_cpus() * MVPP2_CPU_DESC_CHUNK)))
 		return -ENOMEM;
 
-	txq_pcpu->reserved_num += mv_pp2x_txq_alloc_reserved_desc(priv,
-				txq, req);
+	txq_pcpu->reserved_num += mv_pp2x_txq_alloc_reserved_desc(priv, txq,
+								  req);
 
 	/* OK, the descriptor cound has been updated: check again. */
 	if (txq_pcpu->reserved_num < num)
@@ -794,15 +774,11 @@ static int mv_pp2x_txq_reserved_desc_num_proc(struct mv_pp2x *priv,
  * mapping failures in the Tx path.
  */
 
-
-
-
-
-
 /* Free Tx queue skbuffs */
 static void mv_pp2x_txq_bufs_free(struct mv_pp2x_port *port,
-				struct mv_pp2x_tx_queue *txq,
-				struct mv_pp2x_txq_pcpu *txq_pcpu, int num)
+				       struct mv_pp2x_tx_queue *txq,
+				       struct mv_pp2x_txq_pcpu *txq_pcpu,
+				       int num)
 {
 	int i;
 
@@ -822,11 +798,10 @@ static void mv_pp2x_txq_bufs_free(struct mv_pp2x_port *port,
 	}
 }
 
-
-
 /* Handle end of transmission */
 static void mv_pp2x_txq_done(struct mv_pp2x_port *port,
-	struct mv_pp2x_tx_queue *txq, struct mv_pp2x_txq_pcpu *txq_pcpu)
+				   struct mv_pp2x_tx_queue *txq,
+				   struct mv_pp2x_txq_pcpu *txq_pcpu)
 {
 	struct netdev_queue *nq = netdev_get_tx_queue(port->dev, txq->log_id);
 	int tx_done;
@@ -858,7 +833,6 @@ static void mv_pp2x_txq_done(struct mv_pp2x_port *port,
 			netif_tx_wake_queue(nq);
 }
 
-
 static unsigned int mv_pp2x_tx_done(struct mv_pp2x_port *port, u32 cause)
 {
 	struct mv_pp2x_tx_queue *txq;
@@ -887,9 +861,9 @@ static unsigned int mv_pp2x_tx_done(struct mv_pp2x_port *port, u32 cause)
 
 /* Allocate and initialize descriptors for aggr TXQ */
 static int mv_pp2x_aggr_txq_init(struct platform_device *pdev,
-			       struct mv_pp2x_aggr_tx_queue *aggr_txq,
-			       int desc_num, int cpu,
-			       struct mv_pp2x *priv)
+				      struct mv_pp2x_aggr_tx_queue *aggr_txq,
+				      int desc_num, int cpu,
+				      struct mv_pp2x *priv)
 {
 	struct mv_pp2x_hw *hw = &priv->hw;
 	dma_addr_t first_desc_phy;
@@ -912,12 +886,14 @@ static int mv_pp2x_aggr_txq_init(struct platform_device *pdev,
 
 	/* Aggr TXQ no reset WA */
 	aggr_txq->next_desc_to_proc = mv_pp2x_read(hw,
-		MVPP2_AGGR_TXQ_INDEX_REG(cpu));
+						MVPP2_AGGR_TXQ_INDEX_REG(cpu));
 
-	/* Set Tx descriptors queue starting address */
-	/* indirect access */
+	/* Set Tx descriptors queue starting address
+	 * indirect access
+	 */
 	mv_pp2x_write(hw, MVPP2_AGGR_TXQ_DESC_ADDR_REG(cpu),
-		first_desc_phy >> priv->pp2xdata->hw.desc_queue_addr_shift);
+		      first_desc_phy >>
+		      priv->pp2xdata->hw.desc_queue_addr_shift);
 	mv_pp2x_write(hw, MVPP2_AGGR_TXQ_DESC_SIZE_REG(cpu), desc_num);
 
 	return 0;
@@ -925,18 +901,17 @@ static int mv_pp2x_aggr_txq_init(struct platform_device *pdev,
 
 /* Create a specified Rx queue */
 static int mv_pp2x_rxq_init(struct mv_pp2x_port *port,
-			  struct mv_pp2x_rx_queue *rxq)
-
+			       struct mv_pp2x_rx_queue *rxq)
 {
-	struct mv_pp2x_hw *hw = &(port->priv->hw);
+	struct mv_pp2x_hw *hw = &port->priv->hw;
 	dma_addr_t first_desc_phy;
 
 	rxq->size = port->rx_ring_size;
 
 	/* Allocate memory for RX descriptors */
 	rxq->desc_mem = dma_alloc_coherent(port->dev->dev.parent,
-					MVPP2_DESCQ_MEM_SIZE(rxq->size),
-					&rxq->descs_phys, GFP_KERNEL);
+					   MVPP2_DESCQ_MEM_SIZE(rxq->size),
+					   &rxq->descs_phys, GFP_KERNEL);
 	if (!rxq->desc_mem)
 		return -ENOMEM;
 
@@ -953,7 +928,7 @@ static int mv_pp2x_rxq_init(struct mv_pp2x_port *port,
 	mv_pp2x_write(hw, MVPP2_RXQ_NUM_REG, rxq->id);
 
 	mv_pp2x_write(hw, MVPP2_RXQ_DESC_ADDR_REG, (first_desc_phy >>
-		port->priv->pp2xdata->hw.desc_queue_addr_shift));
+		      port->priv->pp2xdata->hw.desc_queue_addr_shift));
 	mv_pp2x_write(hw, MVPP2_RXQ_DESC_SIZE_REG, rxq->size);
 	mv_pp2x_write(hw, MVPP2_RXQ_INDEX_REG, 0);
 
@@ -972,7 +947,7 @@ static int mv_pp2x_rxq_init(struct mv_pp2x_port *port,
 
 /* Push packets received by the RXQ to BM pool */
 static void mv_pp2x_rxq_drop_pkts(struct mv_pp2x_port *port,
-				struct mv_pp2x_rx_queue *rxq)
+					struct mv_pp2x_rx_queue *rxq)
 {
 	int rx_received, i;
 	struct sk_buff *buf_cookie;
@@ -1001,7 +976,7 @@ static void mv_pp2x_rxq_drop_pkts(struct mv_pp2x_port *port,
 
 /* Cleanup Rx queue */
 static void mv_pp2x_rxq_deinit(struct mv_pp2x_port *port,
-			     struct mv_pp2x_rx_queue *rxq)
+				   struct mv_pp2x_rx_queue *rxq)
 {
 	struct mv_pp2x_hw *hw = &(port->priv->hw);
 
@@ -1030,7 +1005,7 @@ static void mv_pp2x_rxq_deinit(struct mv_pp2x_port *port,
 
 /* Create and initialize a Tx queue */
 static int mv_pp2x_txq_init(struct mv_pp2x_port *port,
-			  struct mv_pp2x_tx_queue *txq)
+			       struct mv_pp2x_tx_queue *txq)
 {
 	u32 val;
 	int cpu, desc, desc_per_txq, tx_port_num;
@@ -1042,8 +1017,8 @@ static int mv_pp2x_txq_init(struct mv_pp2x_port *port,
 
 	/* Allocate memory for Tx descriptors */
 	txq->desc_mem = dma_alloc_coherent(port->dev->dev.parent,
-				MVPP2_DESCQ_MEM_SIZE(txq->size),
-				&txq->descs_phys, GFP_KERNEL);
+					   MVPP2_DESCQ_MEM_SIZE(txq->size),
+					   &txq->descs_phys, GFP_KERNEL);
 	if (!txq->desc_mem)
 		return -ENOMEM;
 
@@ -1057,12 +1032,12 @@ static int mv_pp2x_txq_init(struct mv_pp2x_port *port,
 	/* Set Tx descriptors queue starting address - indirect access */
 	mv_pp2x_write(hw, MVPP2_TXQ_NUM_REG, txq->id);
 	mv_pp2x_write(hw, MVPP2_TXQ_DESC_ADDR_LOW_REG,
-		first_desc_phy >> MVPP2_TXQ_DESC_ADDR_LOW_SHIFT);
+		      first_desc_phy >> MVPP2_TXQ_DESC_ADDR_LOW_SHIFT);
 	mv_pp2x_write(hw, MVPP2_TXQ_DESC_SIZE_REG,
-		txq->size & MVPP2_TXQ_DESC_SIZE_MASK);
+		      txq->size & MVPP2_TXQ_DESC_SIZE_MASK);
 	mv_pp2x_write(hw, MVPP2_TXQ_INDEX_REG, 0);
 	mv_pp2x_write(hw, MVPP2_TXQ_RSVD_CLR_REG,
-		txq->id << MVPP2_TXQ_RSVD_CLR_OFFSET);
+		      txq->id << MVPP2_TXQ_RSVD_CLR_OFFSET);
 	val = mv_pp2x_read(hw, MVPP2_TXQ_PENDING_REG);
 	val &= ~MVPP2_TXQ_PENDING_MASK;
 	mv_pp2x_write(hw, MVPP2_TXQ_PENDING_REG, val);
@@ -1077,8 +1052,8 @@ static int mv_pp2x_txq_init(struct mv_pp2x_port *port,
 	       (txq->log_id * desc_per_txq);
 
 	mv_pp2x_write(hw, MVPP2_TXQ_PREF_BUF_REG,
-		    MVPP2_PREF_BUF_PTR(desc) | MVPP2_PREF_BUF_SIZE_16 |
-		    MVPP2_PREF_BUF_THRESH(desc_per_txq/2));
+		      MVPP2_PREF_BUF_PTR(desc) | MVPP2_PREF_BUF_SIZE_16 |
+		      MVPP2_PREF_BUF_THRESH(desc_per_txq/2));
 
 	/* WRR / EJP configuration - indirect access */
 	tx_port_num = mv_pp2x_egress_port(port);
@@ -1092,7 +1067,7 @@ static int mv_pp2x_txq_init(struct mv_pp2x_port *port,
 
 	val = MVPP2_TXQ_TOKEN_SIZE_MAX;
 	mv_pp2x_write(hw, MVPP2_TXQ_SCHED_TOKEN_SIZE_REG(txq->log_id),
-		    val);
+		      val);
 
 	for_each_online_cpu(cpu) {
 		txq_pcpu = per_cpu_ptr(txq->pcpu, cpu);
@@ -1132,10 +1107,10 @@ error:
 
 /* Free allocated TXQ resources */
 static void mv_pp2x_txq_deinit(struct mv_pp2x_port *port,
-			     struct mv_pp2x_tx_queue *txq)
+				   struct mv_pp2x_tx_queue *txq)
 {
 	struct mv_pp2x_txq_pcpu *txq_pcpu;
-	struct mv_pp2x_hw *hw = &(port->priv->hw);
+	struct mv_pp2x_hw *hw = &port->priv->hw;
 	int cpu;
 
 	for_each_online_cpu(cpu) {
@@ -1146,7 +1121,7 @@ static void mv_pp2x_txq_deinit(struct mv_pp2x_port *port,
 
 	if (txq->desc_mem)
 		dma_free_coherent(port->dev->dev.parent,
-				   MVPP2_DESCQ_MEM_SIZE(txq->size),
+				  MVPP2_DESCQ_MEM_SIZE(txq->size),
 				  txq->desc_mem, txq->descs_phys);
 
 	txq->desc_mem		= NULL;
@@ -1166,12 +1141,12 @@ static void mv_pp2x_txq_deinit(struct mv_pp2x_port *port,
 
 /* Cleanup Tx ports */
 static void mv_pp2x_txq_clean(struct mv_pp2x_port *port,
-		struct mv_pp2x_tx_queue *txq)
+				   struct mv_pp2x_tx_queue *txq)
 {
 	struct mv_pp2x_txq_pcpu *txq_pcpu;
 	int delay, pending, cpu;
 	u32 val;
-	struct mv_pp2x_hw *hw = &(port->priv->hw);
+	struct mv_pp2x_hw *hw = &port->priv->hw;
 
 	mv_pp2x_write(hw, MVPP2_TXQ_NUM_REG, txq->id);
 	val = mv_pp2x_read(hw, MVPP2_TXQ_PREF_BUF_REG);
@@ -1217,7 +1192,7 @@ void mv_pp2x_cleanup_txqs(struct mv_pp2x_port *port)
 	struct mv_pp2x_tx_queue *txq;
 	int queue;
 	u32 val;
-	struct mv_pp2x_hw *hw = &(port->priv->hw);
+	struct mv_pp2x_hw *hw = &port->priv->hw;
 
 	val = mv_pp2x_read(hw, MVPP2_TX_PORT_FLUSH_REG);
 
@@ -1287,7 +1262,6 @@ err_cleanup:
 	return err;
 }
 
-
 void mv_pp2x_cleanup_irqs(struct mv_pp2x_port *port)
 {
 	int qvec;
@@ -1298,7 +1272,6 @@ void mv_pp2x_cleanup_irqs(struct mv_pp2x_port *port)
 	for (qvec = 0; qvec < port->num_qvector; qvec++)
 		free_irq(port->q_vector[qvec].irq, &port->q_vector[qvec]);
 }
-
 
 /* The callback for per-q_vector interrupt */
 static irqreturn_t mv_pp2x_isr(int irq, void *dev_id)
@@ -1325,6 +1298,7 @@ static irqreturn_t mv_pp2_link_change_isr(int irq, void *data)
 	return IRQ_HANDLED;
 
 }
+
 int mv_pp2x_setup_irqs(struct net_device *dev, struct mv_pp2x_port *port)
 {
 	int qvec, err;
@@ -1334,10 +1308,10 @@ int mv_pp2x_setup_irqs(struct net_device *dev, struct mv_pp2x_port *port)
 	for (qvec = 0; qvec < port->num_qvector; qvec++) {
 		sprintf(temp_buf, "%s.q_vec[%d]", dev->name, qvec);
 		err = request_irq(port->q_vector[qvec].irq, mv_pp2x_isr, 0,
-			temp_buf, &port->q_vector[qvec]);
+				  temp_buf, &port->q_vector[qvec]);
 		if (err) {
 			netdev_err(dev, "cannot request IRQ %d\n",
-				port->q_vector[qvec].irq);
+				   port->q_vector[qvec].irq);
 			goto err_cleanup;
 		}
 	}
@@ -1345,10 +1319,10 @@ int mv_pp2x_setup_irqs(struct net_device *dev, struct mv_pp2x_port *port)
 	if (port->mac_data.link_irq != MVPP2_NO_LINK_IRQ) {
 		sprintf(temp_buf, "%s link_change", dev->name);
 		err = request_irq(port->mac_data.link_irq,
-		       mv_pp2_link_change_isr, 0, temp_buf, dev);
+				  mv_pp2_link_change_isr, 0, temp_buf, dev);
 		if (err) {
 			netdev_err(dev, "cannot request IRQ %d\n",
-				port->mac_data.link_irq);
+				   port->mac_data.link_irq);
 			goto err_cleanup;
 		}
 	}
@@ -1357,7 +1331,6 @@ err_cleanup:
 	mv_pp2x_cleanup_irqs(port);
 	return err;
 }
-
 
 /* Adjust link */
 
@@ -1369,13 +1342,11 @@ static void mv_pp22_dev_link_event(struct net_device *dev)
 	struct mv_pp2x_port *port = netdev_priv(dev);
 	struct gop_hw *gop = &port->priv->hw.gop;
 
-
 	/* Check Link status on ethernet port */
 	link_is_up = mv_gop110_port_is_link_up(gop, &port->mac_data);
 
 
 	if (link_is_up) {
-
 		if (netif_carrier_ok(dev))
 			return;
 
@@ -1384,7 +1355,6 @@ static void mv_pp22_dev_link_event(struct net_device *dev)
 		pr_crit("%s: link up\n", dev->name);
 		port->mac_data.flags |= MV_EMAC_F_LINK_UP;
 	} else {
-
 		if (!netif_carrier_ok(dev))
 			return;
 		netif_carrier_off(dev);
@@ -1474,6 +1444,7 @@ void mv_pp2_link_change_tasklet(unsigned long data)
 	mv_gop110_port_events_unmask(&port->priv->hw.gop, &port->mac_data);
 #endif
 }
+
 static void mv_pp2x_timer_set(struct mv_pp2x_port_pcpu *port_pcpu)
 {
 #if !defined(CONFIG_MV_PP2_PALLADIUM)
@@ -1485,13 +1456,12 @@ static void mv_pp2x_timer_set(struct mv_pp2x_port_pcpu *port_pcpu)
 #ifdef CONFIG_MV_PP2_PALLADIUM
 		 /*CONFIG_HZ=20*/
 		mod_timer(&port_pcpu->slow_tx_done_timer,
-			jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME));
+			  jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME));
 #else
 		interval = ktime_set(0, MVPP2_TXDONE_HRTIMER_PERIOD_NS);
 		hrtimer_start(&port_pcpu->tx_done_timer, interval,
-			HRTIMER_MODE_REL_PINNED);
+			      HRTIMER_MODE_REL_PINNED);
 #endif
-
 	}
 }
 
@@ -2604,9 +2574,9 @@ void mv_pp2x_start_dev(struct mv_pp2x_port *port)
 	else
 		mv_pp22_dev_link_event(port->dev);
 #else
-if (!netif_carrier_ok(port->dev))
+	if (!netif_carrier_ok(port->dev))
 		netif_carrier_on(port->dev);
-		netif_tx_start_all_queues(port->dev);
+	netif_tx_start_all_queues(port->dev);
 #endif
 
 	tasklet_init(&port->link_change_tasklet, mv_pp2_link_change_tasklet,
@@ -2905,7 +2875,8 @@ int mv_pp2x_open(struct net_device *dev)
 
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	/*FIXME: Should check which gop_version
-	 * (better, gop_version_attr: support_phy_connect), not the pp_version*/
+	 * (better, gop_version_attr: support_phy_connect), not the pp_version
+	 */
 	if (port->priv->pp2_version == PPV21) {
 		err = mv_pp2x_phy_connect(port);
 		if (err < 0)
@@ -3474,11 +3445,12 @@ static int mv_pp2_init_emac_data(struct mv_pp2x_port *port,
 	if (phy_node) {
 		port->mac_data.phy_node = phy_node;
 		if (of_property_read_u32(phy_node, "reg",
-			&port->mac_data.phy_addr))
+		    &port->mac_data.phy_addr))
 			pr_err("%s: NO PHY address on emac %d\n", __func__,
-				port->mac_data.gop_index);
+			       port->mac_data.gop_index);
 
-		pr_debug("gop_mac(%d), phy_reg(%d)\n", id,  port->mac_data.phy_addr);
+		pr_debug("gop_mac(%d), phy_reg(%d)\n", id,
+			     port->mac_data.phy_addr);
 	} else {
 		pr_debug("No PHY NODE on emac %d\n", id);
 	}
@@ -3684,7 +3656,8 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 	mv_pp2x_set_ethtool_ops(dev);
 
 	/*YuvalC: Port first_rxq relative to port->id, not dependent on board
-	 * topology, i.e. not dynamically allocated */
+	 * topology, i.e. not dynamically allocated
+	 */
 	port->first_rxq = (port->id)*(priv->pp2xdata->pp2x_max_port_rxqs) +
 		first_log_rxq_queue;
 
@@ -4353,7 +4326,7 @@ void mv_pp2x_pp2_port_print(struct mv_pp2x_port *port)
 		port->mac_data.force_link, port->mac_data.autoneg,
 		port->mac_data.duplex, port->mac_data.speed);
 #if !defined(CONFIG_MV_PP2_POLLING)
-	DBG_MSG("\t GOP link_irq(%d) \n", port->mac_data.link_irq);
+	DBG_MSG("\t GOP link_irq(%d)\n", port->mac_data.link_irq);
 #endif
 	DBG_MSG("\t GOP phy_dev(%p) phy_node(%p)\n", port->mac_data.phy_dev,
 		port->mac_data.phy_node);
@@ -4403,7 +4376,7 @@ static int mv_pp2x_platform_data_get(struct platform_device *pdev,
 
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	if (of_property_read_u32(dn, "cell-index", cell_index))
-			*cell_index = 0;
+		*cell_index = 0;
 
 	MVPP2_PRINT_VAR(*cell_index);
 
@@ -4533,7 +4506,6 @@ static int mv_pp2x_platform_data_get(struct platform_device *pdev,
 	pr_debug("mvpp2(%d): mv_pp2x_probe:mv_pp2_vfpga_address=0x%p\n",
 		__LINE__, mv_pp2_vfpga_address);
 #endif
-
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 #if 0
 	MVPP2_PRINT_2LINE();
@@ -4557,7 +4529,6 @@ static int mv_pp2x_platform_data_get(struct platform_device *pdev,
 	/* Get system's tclk rate */
 	hw->tclk = 333330000;/* PKAK clk_get_rate(hw->pp_clk);*/
 	MVPP2_PRINT_VAR(hw->tclk);
-
 #else
 	hw->tclk = 25000000;
 #endif
@@ -4915,12 +4886,14 @@ static int __init mpp2_module_init(void)
 #endif
 
 	/*pr_crit("mv_pp2x_device list_empty=%d line=%d\n",
-		list_empty(&mv_pp2x_device.dev.devres_head), __LINE__); */
+	 *	list_empty(&mv_pp2x_device.dev.devres_head), __LINE__);
+	*/
 
 	mv_pp2x_device.dev.dma_mask = &(mv_pp2x_device.dev.coherent_dma_mask);
 
 	/*pr_crit("mv_pp2x_device list_empty=%d line=%d\n",
-		list_empty(&mv_pp2x_device.dev.devres_head), __LINE__); */
+	 *	list_empty(&mv_pp2x_device.dev.devres_head), __LINE__);
+	 */
 
 	mv_pp2x_num_cos_queues = 4;
 
@@ -4938,14 +4911,16 @@ static int __init mpp2_module_init(void)
 		MVPP2_BM_JUMBO_PKT_SIZE;
 
 	/*pr_crit("mv_pp2x_device list_empty=%d line=%d\n",
-		list_empty(&mv_pp2x_device.dev.devres_head), __LINE__); */
+	 * list_empty(&mv_pp2x_device.dev.devres_head), __LINE__);
+	 */
 
 	PALAD(MVPP2_PRINT_LINE());
 
 	ret = platform_driver_register(&mv_pp2x_driver);
 
 	/*pr_crit("mv_pp2x_device list_empty=%d line=%d\n",
-		list_empty(&mv_pp2x_device.dev.devres_head), __LINE__); */
+	 *	list_empty(&mv_pp2x_device.dev.devres_head), __LINE__);
+	 */
 	PALAD(MVPP2_PRINT_LINE());
 
 	return ret;
