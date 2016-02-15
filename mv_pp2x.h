@@ -79,7 +79,7 @@
 #if DEBUG
 #define DBG_MSG(fmt, args...)	pr_debug(PFX fmt, ## args)
 #else
-#define DBG_MSG(fmt, args...)	(while (0) printk(fmt, ## args))
+#define DBG_MSG(fmt, args...)	while (0) printk(fmt, ## args)
 #endif /*DEBUG*/
 #endif /*VERBOSE*/
 
@@ -158,12 +158,11 @@
 #define __FILENAME__ (strrchr(__FILE__, '/') ? \
 	strrchr(__FILE__, '/') + 1 : __FILE__)
 /*#define MVPP2_PRINT_LINE()*/
-/*//#define MVPP2_PRINT_2LINE()*/
+/*#define MVPP2_PRINT_2LINE()*/
 #define MVPP2_PRINT_2LINE() \
 	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
 #define MVPP2_PRINT_LINE() \
 	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
-
 
 #define MVPP2_PRINT_VAR(var) \
 	pr_crit("%s(%d): "#var"=0x%lx\n", __FILENAME__, __LINE__,\
@@ -435,7 +434,6 @@ struct gop_hw {
 };
 
 struct mv_pp2x_hw {
-
 	/* Shared registers' base addresses */
 	void __iomem *base;	/* PPV22 base_address as received in
 				 *devm_ioremap_resource().
@@ -518,7 +516,6 @@ struct mv_pp2x {
 
 	u16 cpu_map; /* Bitmap of the participating cpu's */
 
-
 	struct mv_pp2x_param_config pp2_cfg;
 
 	/* List of pointers to port structures */
@@ -557,6 +554,7 @@ struct mv_pp2x_port_pcpu {
 	/* Tasklet for egress finalization */
 	struct tasklet_struct tx_done_tasklet;
 };
+
 struct queue_vector {
 	unsigned int irq;
 	struct napi_struct napi;
@@ -614,7 +612,6 @@ struct mv_pp2x_port {
 	u32 tx_time_coal;
 	struct mv_pp2x_pcpu_stats __percpu *stats;
 
-
 	struct mv_pp2x_bm_pool *pool_long; /* Pointer to the pool_id
 					* (long or jumbo)
 					*/
@@ -624,7 +621,7 @@ struct mv_pp2x_port {
 	/* q_vector is the parameter that will be passed to
 	 * mv_pp2_isr(int irq, void *dev_id=q_vector)
 	 */
-	struct queue_vector q_vector[MVPP2_MAX_CPUS+MVPP2_MAX_SHARED];
+	struct queue_vector q_vector[MVPP2_MAX_CPUS + MVPP2_MAX_SHARED];
 };
 
 struct pp2x_hw_params {
@@ -660,7 +657,7 @@ static inline int mv_pp2x_max_check(int value, int limit, char *name)
 }
 
 static inline struct mv_pp2x_port *mv_pp2x_port_struct_get(struct mv_pp2x *priv,
-		int port)
+							   int port)
 {
 	int i;
 
@@ -672,7 +669,7 @@ static inline struct mv_pp2x_port *mv_pp2x_port_struct_get(struct mv_pp2x *priv,
 }
 
 static inline u8 mv_pp2x_cosval_queue_map(struct mv_pp2x_port *port,
-		u8 cos_value)
+					  u8 cos_value)
 {
 	int cos_width, cos_mask;
 
@@ -686,7 +683,6 @@ static inline u8 mv_pp2x_cosval_queue_map(struct mv_pp2x_port *port,
 
 static inline u8 mv_pp2x_bound_cpu_first_rxq_calc(struct mv_pp2x_port *port)
 {
-
 	u8 cos_width, bind_cpu;
 
 	cos_width = ilog2(roundup_pow_of_two(

@@ -3929,7 +3929,7 @@ void mv_pp21_port_reset(struct mv_pp2x_port *port)
 void mv_pp2x_pool_refill(struct mv_pp2x *priv, u32 pool,
 			 dma_addr_t phys_addr, struct sk_buff *cookie)
 {
-	struct mv_pp2x_bm_pool *bm_pool = &priv->bm_pools[pool];
+	STAT_DBG(struct mv_pp2x_bm_pool *bm_pool = &priv->bm_pools[pool]);
 
 	mv_pp2x_bm_pool_put(&priv->hw, pool, phys_addr, cookie);
 	STAT_DBG(bm_pool->stats.bm_put++);

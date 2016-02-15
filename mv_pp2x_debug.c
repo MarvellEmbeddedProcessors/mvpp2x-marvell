@@ -116,14 +116,13 @@ void mv_pp2x_pool_status(struct mv_pp2x *priv, int log_pool_num)
 			pool = bm_pool->id;
 		}
 	}
-	if (bm_pool == NULL) {
+	if (!bm_pool) {
 		pr_err("%s: Logical BM pool %d is not initialized\n",
 		       __func__, log_pool_num);
 		return;
 	}
 
 	total_size = RX_TOTAL_SIZE(bm_pool->buf_size);
-
 
 	DBG_MSG(
 		"\n%12s log_pool=%d, phy_pool=%d: pkt_size=%d, buf_size=%d total_size=%d\n",
@@ -141,7 +140,7 @@ void mv_pp2_pool_stats_print(struct mv_pp2x *priv, int log_pool_num)
 	struct mv_pp2x_bm_pool *bm_pool = NULL;
 
 	if (mv_pp2x_max_check(log_pool_num, MVPP2_BM_SWF_POOL_OUT_OF_RANGE,
-			"log_pool"))
+			      "log_pool"))
 		return;
 
 	for (i = 0; i < priv->num_pools; i++) {
@@ -150,9 +149,9 @@ void mv_pp2_pool_stats_print(struct mv_pp2x *priv, int log_pool_num)
 			pool = bm_pool->id;
 		}
 	}
-	if (bm_pool == NULL) {
+	if (!bm_pool) {
 		pr_err("%s: Logical BM pool %d is not initialized\n",
-			__func__, log_pool_num);
+		       __func__, log_pool_num);
 		return;
 	}
 
@@ -173,14 +172,14 @@ void mvPp2RxDmaRegsPrint(struct mv_pp2x *priv, bool print_all,
 
 	struct mv_pp2x_hw *hw = &priv->hw;
 
-	num_rx_queues = (MVPP2_MAX_PORTS*priv->pp2xdata->pp2x_max_port_rxqs);
+	num_rx_queues = (MVPP2_MAX_PORTS * priv->pp2xdata->pp2x_max_port_rxqs);
 	if (stop >= num_rx_queues || start > stop || start < 0) {
 		DBG_MSG("\nERROR: wrong inputs\n");
 		return;
 	}
 
 	DBG_MSG("\n[RX DMA regs]\n");
-	DBG_MSG("\nRXQs [0..%d], registers\n", num_rx_queues-1);
+	DBG_MSG("\nRXQs [0..%d], registers\n", num_rx_queues - 1);
 
 	for (i = start; i <= stop; i++) {
 		if (!print_all) {
@@ -195,7 +194,7 @@ void mvPp2RxDmaRegsPrint(struct mv_pp2x *priv, bool print_all,
 					   "MVPP2_RXQ_CONFIG_REG", i);
 		}
 	}
-	DBG_MSG("\nBM pools [0..%d] registers\n", MVPP2_BM_POOLS_NUM-1);
+	DBG_MSG("\nBM pools [0..%d] registers\n", MVPP2_BM_POOLS_NUM - 1);
 	for (i = 0; i < MVPP2_BM_POOLS_NUM; i++) {
 		if (!print_all) {
 			enabled = mv_pp2x_read(hw, MVPP2_BM_POOL_CTRL_REG(i)) &
@@ -207,7 +206,7 @@ void mvPp2RxDmaRegsPrint(struct mv_pp2x *priv, bool print_all,
 					   "MVPP2_POOL_BUF_SIZE_REG", i);
 		}
 	}
-	DBG_MSG("\nIngress ports [0..%d] registers\n", MVPP2_MAX_PORTS-1);
+	DBG_MSG("\nIngress ports [0..%d] registers\n", MVPP2_MAX_PORTS - 1);
 	for (i = 0; i < MVPP2_MAX_PORTS; i++) {
 		mv_pp2x_print_reg2(hw, MVPP2_RX_CTRL_REG(i),
 				   "MVPP2_RX_CTRL_REG", i);
@@ -224,8 +223,8 @@ static void mvPp2RxQueueDetailedShow(struct mv_pp2x *priv,
 
 	for (i = 0; i < pp_rxq->size; i++) {
 		DBG_MSG("%3d. desc=%p, status=%08x, data_size=%4d",
-			   i, rx_desc+i, rx_desc[i].status,
-			   rx_desc[i].data_size);
+			i, rx_desc+i, rx_desc[i].status,
+			rx_desc[i].data_size);
 		if (priv->pp2_version == PPV21) {
 			DBG_MSG("buf_addr=%lx, buf_cookie=%p",
 				(unsigned long)
@@ -1899,8 +1898,8 @@ int mv_pp2x_prs_sw_dump(struct mv_pp2x_prs_entry *pe)
 	mv_pp2x_prs_sw_sram_flowid_gen_get(pe, &flowid);
 	DBG_MSG("%s ", flowid ? "FIDG" : "N_FIDG");
 
-	(pe->tcam.word[MVPP2_PRS_TCAM_INV_WORD] & MVPP2_PRS_TCAM_INV_MASK) ?
-		DBG_MSG(" [inv]") : 0;
+	if ((pe->tcam.word[MVPP2_PRS_TCAM_INV_WORD] & MVPP2_PRS_TCAM_INV_MASK))
+		DBG_MSG(" [inv]");
 
 	if (mv_pp2x_prs_sw_sram_ri_dump(pe))
 		return MV_ERROR;
@@ -2159,19 +2158,29 @@ int mv_pp2x_cls_c2_sw_dump(struct mv_pp2x_cls_c2_entry *c2)
 		  MVPP2_CLS2_ACT_DATA_TBL_COLOR_OFF);
 
 	DBG_MSG("FROM_QOS_%s_TBL[%2.2d]:  ", sel ? "DSCP" : "PRI", id);
-	type ? DBG_MSG("%s	", sel ? "DSCP" : "PRIO") : 0;
-	color ? DBG_MSG("COLOR	") : 0;
-	gemid ? DBG_MSG("GEMID	") : 0;
-	low_q ? DBG_MSG("LOW_Q	") : 0;
-	high_q ? DBG_MSG("HIGH_Q	") : 0;
+	if (type)
+		DBG_MSG("%s	", sel ? "DSCP" : "PRIO");
+	if (color)
+		DBG_MSG("COLOR	");
+	if (gemid)
+		DBG_MSG("GEMID	");
+	if (low_q)
+		DBG_MSG("LOW_Q	");
+	if (high_q)
+		DBG_MSG("HIGH_Q	");
 	DBG_MSG("\n");
 
 	DBG_MSG("FROM_ACT_TBL:		");
-	(type == 0) ? DBG_MSG("%s	", sel ? "DSCP" : "PRI") : 0;
-	(gemid == 0) ? DBG_MSG("GEMID	") : 0;
-	(low_q == 0) ? DBG_MSG("LOW_Q	") : 0;
-	(high_q == 0) ? DBG_MSG("HIGH_Q	") : 0;
-	(color == 0) ? DBG_MSG("COLOR	") : 0;
+	if (type == 0)
+		DBG_MSG("%s	", sel ? "DSCP" : "PRI");
+	if (gemid == 0)
+		DBG_MSG("GEMID	");
+	if (low_q == 0)
+		DBG_MSG("LOW_Q	");
+	if (high_q == 0)
+		DBG_MSG("HIGH_Q	");
+	if (color == 0)
+		DBG_MSG("COLOR	");
 	DBG_MSG("\n\n");
 
 	/*------------------------------*/

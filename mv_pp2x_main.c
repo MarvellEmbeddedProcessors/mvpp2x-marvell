@@ -3767,7 +3767,6 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 	mv_pp2x_netmap_attach(port);
 #endif /* DEV_NETMAP */
 
-
 err_free_port_pcpu:
 	free_percpu(port->pcpu);
 err_free_txq_pcpu:
@@ -4637,7 +4636,6 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 		goto err_clk;
 	}
 	MVPP2_PRINT_2LINE();
-
 
 	priv->pp2_version = priv->pp2xdata->pp2x_ver;
 

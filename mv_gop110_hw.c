@@ -574,7 +574,6 @@ int mv_gop110_gmac_force_link_mode_get(struct gop_hw *gop, int mac_num,
 	return 0;
 }
 
-
 /* Sets port speed to Auto Negotiation / 1000 / 100 / 10 Mbps.
 *  Sets port duplex to Auto Negotiation / Full / Half Duplex.
 */
@@ -1076,8 +1075,8 @@ void mv_gop110_port_disable(struct gop_hw *gop, struct mv_mac_data *mac)
 }
 
 void mv_gop110_port_periodic_xon_set(struct gop_hw *gop,
-					     struct mv_mac_data *mac,
-					     int enable)
+				     struct mv_mac_data *mac,
+				     int enable)
 {
 	int port_num = mac->gop_index;
 
@@ -1359,8 +1358,8 @@ int mv_gop110_speed_duplex_get(struct gop_hw *gop, struct mv_mac_data *mac,
 
 /* set port speed and duplex */
 int mv_gop110_speed_duplex_set(struct gop_hw *gop, struct mv_mac_data *mac,
-				       enum mv_port_speed speed,
-				       enum mv_port_duplex duplex)
+			       enum mv_port_speed speed,
+			       enum mv_port_duplex duplex)
 {
 	int port_num = mac->gop_index;
 
@@ -1771,14 +1770,14 @@ int mv_gop110_xlg_mac_mode_cfg(struct gop_hw *gop, int mac_num,
 	reg_addr = MV_XLG_PORT_FIFOS_THRS_CFG_REG;
 	val = mv_gop110_xlg_mac_read(gop, mac_num, reg_addr);
 	U32_SET_FIELD(val, MV_XLG_MAC_PORT_FIFOS_THRS_CFG_TXRDTHR_MASK,
-		     (6 << MV_XLG_MAC_PORT_FIFOS_THRS_CFG_TXRDTHR_OFFS));
+		      (6 << MV_XLG_MAC_PORT_FIFOS_THRS_CFG_TXRDTHR_OFFS));
 	mv_gop110_xlg_mac_write(gop, mac_num, reg_addr, val);
 
 	/* configure 10G MAC mode */
 	reg_addr = MV_XLG_PORT_MAC_CTRL3_REG;
 	val = mv_gop110_xlg_mac_read(gop, mac_num, reg_addr);
 	U32_SET_FIELD(val, MV_XLG_MAC_CTRL3_MACMODESELECT_MASK,
-		     (1 << MV_XLG_MAC_CTRL3_MACMODESELECT_OFFS));
+		      (1 << MV_XLG_MAC_CTRL3_MACMODESELECT_OFFS));
 	mv_gop110_xlg_mac_write(gop, mac_num, reg_addr, val);
 
 	reg_addr = MV_XLG_PORT_MAC_CTRL4_REG;
@@ -2174,7 +2173,6 @@ void mv_gop110_xpcs_gl_regs_dump(struct gop_hw *gop)
 				    MV_XPCS_TX_PCKTS_CNTR_LSB_REG);
 	mv_gop110_xpcs_global_print(gop, "TX_PCKTS_CNTR_MSB",
 				    MV_XPCS_TX_PCKTS_CNTR_MSB_REG);
-
 }
 EXPORT_SYMBOL(mv_gop110_xpcs_gl_regs_dump);
 
@@ -2272,7 +2270,7 @@ u64 mv_gop110_mib_read64(struct gop_hw *gop, int port, unsigned int offset)
 	val = mv_gop110_xmib_mac_read(gop, port, offset);
 	if (offset == MV_MIB_GOOD_OCTETS_RECEIVED_LOW ||
 	    offset == MV_MIB_GOOD_OCTETS_SENT_LOW) {
-		val2 = mv_gop110_xmib_mac_read(gop, port, offset+4);
+		val2 = mv_gop110_xmib_mac_read(gop, port, offset + 4);
 		val += (val2 << 32);
 	}
 
@@ -2280,7 +2278,7 @@ u64 mv_gop110_mib_read64(struct gop_hw *gop, int port, unsigned int offset)
 }
 
 static void mv_gop110_mib_print(struct gop_hw *gop, int port, u32 offset,
-		char *mib_name)
+				char *mib_name)
 {
 	u64 val;
 
@@ -2412,10 +2410,7 @@ void mv_gop110_ptp_enable(struct gop_hw *gop, int port, bool state)
 		mv_gop110_ptp_write(gop, port, MV_PTP_GENERAL_CTRL_REG,
 				    reg_data);
 	}
-
 }
-
-
 
 void mv_gop110_netc_active_port(struct gop_hw *gop, u32 port, u32 val)
 {
@@ -2716,7 +2711,6 @@ int mv_gop110_netc_init(struct gop_hw *gop,
 		/* De-assert GOP unit reset */
 		mv_gop110_netc_gop_reset(gop, 1);
 	}
-
 	return 0;
 }
 

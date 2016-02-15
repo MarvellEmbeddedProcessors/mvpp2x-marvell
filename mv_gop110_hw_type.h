@@ -355,7 +355,6 @@
 #define MV_GMAC_PORT_FIFO_CFG_1_PORT_EN_FIX_EN_MASK    \
 		(0x00000001 << MV_GMAC_PORT_FIFO_CFG_1_PORT_EN_FIX_EN_OFFS)
 
-
 /* Port Serdes Configuration0 */
 #define MV_GMAC_PORT_SERDES_CFG0_REG				(0x0028)
 #define MV_GMAC_PORT_SERDES_CFG0_SERDESRESET_OFFS		0
@@ -1801,7 +1800,7 @@
 	(0x1 << MV_SMI_PHY_AN_CFG_FCADVSETFIBER_OFFS)
 
 /* PHY_ADDRESS_REGISTER0 Register */
-#define MV_SMI_PHY_ADDRESS_REG(n)				(0xC + 0x4*n)
+#define MV_SMI_PHY_ADDRESS_REG(n)				(0xC + 0x4 * n)
 #define MV_SMI_PHY_ADDRESS_PHYAD_OFFS					0
 #define MV_SMI_PHY_ADDRESS_PHYAD_MASK					\
 	(0x1F << MV_SMI_PHY_ADDRESS_PHYAD_OFFS)
@@ -2084,7 +2083,6 @@
 #define MV_PTP_NTP_PTP_OFFSET_LOW_PTP_NTP_OFFSET_LOW_MASK    \
 	(0x0000ffff << MV_PTP_NTP_PTP_OFFSET_LOW_PTP_NTP_OFFSET_LOW_OFFS)
 
-
 /******************************************************************************/
 /* System Soft Reset 1 */
 #define MV_GOP_SOFT_RESET_1_REG		0x108
@@ -2176,7 +2174,6 @@
 #define SD1_CONTROL_RXAUI1_L45_EN_OFFSET	26
 #define SD1_CONTROL_RXAUI1_L45_EN_MASK	(0x1 << \
 					SD1_CONTROL_RXAUI1_L45_EN_OFFSET)
-
 
 #endif /*_MV_GOP_HW_TYPE_H_*/
 
