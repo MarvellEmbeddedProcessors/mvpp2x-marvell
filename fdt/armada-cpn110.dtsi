@@ -16,6 +16,11 @@
 /*
  * Generic Device Tree describing Marvell Armada CPN-110 devices
  */
+aliases {
+	ethernet0 = &emac0;
+	ethernet1 = &emac2;
+	ethernet2 = &emac3;
+};
 
 ppv2clk: ppv2_clock@0x0 { /* no address - use fixed clock */
 	compatible = "marvell,armada-cpn110-ppv2-clock";
@@ -23,9 +28,9 @@ ppv2clk: ppv2_clock@0x0 { /* no address - use fixed clock */
 	#clock-cells = <1>;
 };
 
-nandclk: nand_clock@0x0 { /* no address - use fixed clock */
+nandclk: nand_clock@0x0 {
 	compatible = "marvell,armada-cpn110-nand-clock";
-	reg = <0x0 0x0>;
+	reg = <0x440700 0x4>;
 	#clock-cells = <1>;
 };
 
@@ -45,39 +50,35 @@ gateclk: clock-gating-control@440220 {
 usb3h0: usb3@500000 {
 	compatible = "generic-xhci";
 	reg = <0x500000 0x4000>;
-	interrupts = <GIC_SPI 106 IRQ_TYPE_LEVEL_HIGH>;
-	clocks = <&gateclk 22>;
+	dma-coherent;
+	interrupts = <GIC_SPI 62 IRQ_TYPE_LEVEL_HIGH>;
+	clocks = <&gateclk 22>, <&gateclk 16>;
 	status = "disabled";
 };
 
 usb3h1: usb3@510000 {
 	compatible = "generic-xhci";
 	reg = <0x510000 0x4000>;
-	interrupts = <GIC_SPI 105 IRQ_TYPE_LEVEL_HIGH>;
-	clocks = <&gateclk 23>;
+	dma-coherent;
+	interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>;
+	clocks = <&gateclk 23>, <&gateclk 16>;
 	status = "disabled";
 };
 
-sata0: sata@550000 {
+sata: sata@540000 {
 	compatible = "marvell,armada-3700-ahci";
-	reg = <0x550000 0x1000>;
-	interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>;
-	clocks = <&gateclk 15>;
+	reg = <0x540000 0x30000>;
+	interrupts = <GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH>;
+	clocks = <&gateclk 15>, <&gateclk 16>;
 	status = "disabled";
-};
-
-sata1: sata@560000 {
-	compatible = "marvell,armada-3700-ahci";
-	reg = <0x560000 0x1000>;
-	interrupts = <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>;
-	clocks = <&gateclk 15>;
-	status = "disabled";
+	port_base = <0x10000>;
+	port_offset = <0x10000>;
 };
 
 cpxor0@6a0000 {
 	compatible = "marvell,mv-xor-v2";
-	reg = <0x6a0000 0x100>,
-	      <0x6b0000 0x100>;
+	reg = <0x6a0000 0x1000>,
+	      <0x6b0000 0x1000>;
 	interrupts = <GIC_SPI 100 IRQ_TYPE_EDGE_RISING>;
 	dma-coherent;
 	dmacap,memcpy;
@@ -88,8 +89,8 @@ cpxor0@6a0000 {
 
 cpxor1@6c0000 {
 	compatible = "marvell,mv-xor-v2";
-	reg = <0x6c0000 0x100>,
-	      <0x6d0000 0x100>;
+	reg = <0x6c0000 0x1000>,
+	      <0x6d0000 0x1000>;
 	interrupts = <GIC_SPI 101 IRQ_TYPE_EDGE_RISING>;
 	dma-coherent;
 	dmacap,memcpy;
@@ -132,23 +133,61 @@ sdhci0: sdhci@780000 {
 	clocks = <&gateclk 4>;
 	status = "disabled";
 };
+
+spi@700600 {
+	compatible = "marvell,armada-380-spi";
+	reg = <0x700600 0x50>;
+	#address-cells = <0x1>;
+	#size-cells = <0x0>;
+	cell-index = <0x0>;
+	clocks = <&refclk 0>;
+	status = "disabled";
+};
+
+spi@700680 {
+	compatible = "marvell,armada-380-spi";
+	reg = <0x700680 0x50>;
+	#address-cells = <0x1>;
+	#size-cells = <0x0>;
+	cell-index = <0x0>;
+	clocks = <&refclk 0>;
+	status = "disabled";
+};
+
+nand@720000 {
+	compatible = "marvell,armada370-nand";
+	reg = <0x720000 0x54>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+	num-cs = <1>;
+	marvell,nand-enable-arbiter;
+	nand-on-flash-bbt;
+	interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
+	clocks = <&gateclk 2>;
+/*	clocks = <&nandclk 0>;*/
+	nand-ecc-strength = <4>;
+	nand-ecc-step-size = <512>;
+	status = "disabled";
+};
 gop {
 	emac0: mac0 {
 		interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;  /* Link IRQ */
-		mac-address = [ 00 00 00 00 00 01 ];
-		port-id = <0>;
+		mac-address = [00 00 00 00 00 01];
+		port-id = <0>; /* gop_port_id */
 	};
 	emac2: mac2 {
 		interrupts = <GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;  /* Link IRQ */
-		mac-address = [ 00 00 00 00 00 02 ];
-		port-id = <2>;
+		mac-address = [00 00 00 00 00 02];
+		port-id = <2>; /* gop_port_id */
 	};
-	emac3: mac3 {		
+	emac3: mac3 {
 		interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;  /* Link IRQ */
-		mac-address = [ 00 00 00 00 00 03 ];
-		port-id = <3>;
+		mac-address = [00 00 00 00 00 03];
+		port-id = <3>; /* gop_port_id */
 	};
 };
+
+
 ppv22@000000 {
 	compatible = "marvell,mv-pp22";
 	reg = <0x000000 0x80000>, /* Packet Processor regs */
@@ -158,31 +197,33 @@ ppv22@000000 {
 	      <0x12a200 0x200>,  /* SMI regs */
 	      <0x12a400 0x200>,  /* TAI regs */
 	      <0x12a600 0x200>,  /* XSMI regs */
-	      <0x130000 0x6000>, /* MSPG regs */	      
+	      <0x12b000 0x1000>,  /* MG Internal regs */
+	      <0x130000 0x6000>, /* MSPG regs */
 	      <0x130400 0x200>,  /* MSPG - XPCS regs */
 	      <0x130e00 0x100>,  /* MSPG - GMAC regs */
-	      <0x130f00 0x100>;  /* MSPG - XLG MAC regs */
-	reg-names = "pp", "serdes", "xmib", "led", "smi", "tai", "xsmi", "mspg", "xpcs", "gmac", "xlg";	
-	cell-index = <5>;
-//	clocks = <&ppv2clk 0>, <&gateclk 18>;
-//	clock-names = "pp_clk", "gop_clk";		
+	      <0x130f00 0x100>,  /* MSPG - XLG MAC regs */
+	      <0x441000 0x1000>;  /* RFU-1 Regs */
+	reg-names = "pp", "serdes", "xmib", "led", "smi", "tai", "xsmi", "mg", "mspg", "xpcs", "gmac", "xlg", "rfu1";
+	clocks = <&gateclk 3>, <&gateclk 18>, <&gateclk 9>, <&gateclk 6>, <&gateclk 5>;
+	clock-names = "pp_clk", "gop_core_clk", "gop_clk", "mg_core_clk", "mg_clk";
 	status = "okay";
 	eth0: eth0@010000 {
 		interrupts = <GIC_SPI 05 IRQ_TYPE_LEVEL_HIGH>; /* TX/RX Interrupt */
-		port-id = <0>;
-		emac-data = <&emac0>;		
-		status = "okay";
+		port-id = <0>; /* pp2_port_id */
+		emac-data = <&emac0>;
+		status = "disabled";
 	};
-	eth1: eth1@020000 {		
+	eth1: eth1@020000 {
 		interrupts = <GIC_SPI 06 IRQ_TYPE_LEVEL_HIGH>; /* TX/RX Interrupt */
-		port-id = <1>;
-		emac-data = <&emac2>;		
-		status = "okay";
+		port-id = <1>; /* pp2_port_id */
+		emac-data = <&emac2>;
+		status = "disabled";
 	};
 	eth2: eth2@030000 {
 		interrupts = <GIC_SPI 07 IRQ_TYPE_LEVEL_HIGH>; /* TX/RX Interrupt */
-		port-id = <2>;
-		emac-data = <&emac3>;		
-		status = "okay";
+		port-id = <2>; /* pp2_port_id */
+		emac-data = <&emac3>;
+		status = "disabled";
 	};
 };
+
