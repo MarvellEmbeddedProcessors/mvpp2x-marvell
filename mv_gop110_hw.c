@@ -43,6 +43,8 @@ void mv_gop110_register_bases_dump(struct gop_hw *gop)
 	pr_info("  %-32s: 0x%p\n", "MSPG", gop->gop_110.mspg_base);
 	pr_info("  %-32s: 0x%p\n", "XPCS", gop->gop_110.xpcs_base);
 	pr_info("  %-32s: 0x%p\n", "PTP", gop->gop_110.ptp.base);
+	pr_info("  %-32s: 0x%p\n", "RFU1", gop->gop_110.rfu1_base);
+
 }
 EXPORT_SYMBOL(mv_gop110_register_bases_dump);
 
@@ -173,6 +175,7 @@ static void mv_gop110_gmac_rgmii_cfg(struct gop_hw *gop, int mac_num)
 	mv_gop110_gmac_write(gop, mac_num, MV_GMAC_PORT_CTRL4_REG, val);
 
 	val = mv_gop110_gmac_read(gop, mac_num, MV_GMAC_PORT_CTRL2_REG);
+	val |= MV_GMAC_PORT_CTRL2_CLK_125_BYPS_EN_MASK;
 	val &= ~MV_GMAC_PORT_CTRL2_DIS_PADING_OFFS;
 	mv_gop110_gmac_write(gop, mac_num, MV_GMAC_PORT_CTRL2_REG, val);
 
@@ -2411,3 +2414,310 @@ void mv_gop110_ptp_enable(struct gop_hw *gop, int port, bool state)
 	}
 
 }
+
+
+
+void mv_gop110_netc_active_port(struct gop_hw *gop, u32 port, u32 val)
+{
+	u32 reg;
+
+	reg = mv_gop110_rfu1_read(gop, MV_NETCOMP_PORTS_CONTROL_1);
+	reg &= ~(NETC_PORTS_ACTIVE_MASK(port));
+
+	val <<= NETC_PORTS_ACTIVE_OFFSET(port);
+	val &= NETC_PORTS_ACTIVE_MASK(port);
+
+	reg |= val;
+
+	mv_gop110_rfu1_write(gop, MV_NETCOMP_PORTS_CONTROL_1, reg);
+}
+
+static void mv_gop110_netc_xaui_enable(struct gop_hw *gop, u32 port, u32 val)
+{
+	u32 reg;
+
+	reg = mv_gop110_rfu1_read(gop, SD1_CONTROL_1_REG);
+	reg &= ~SD1_CONTROL_XAUI_EN_MASK;
+
+	val <<= SD1_CONTROL_XAUI_EN_OFFSET;
+	val &= SD1_CONTROL_XAUI_EN_MASK;
+
+	reg |= val;
+
+	mv_gop110_rfu1_write(gop, SD1_CONTROL_1_REG, reg);
+}
+
+static void mv_gop110_netc_rxaui0_enable(struct gop_hw *gop, u32 port, u32 val)
+{
+	u32 reg;
+
+	reg = mv_gop110_rfu1_read(gop, SD1_CONTROL_1_REG);
+	reg &= ~SD1_CONTROL_RXAUI0_L23_EN_MASK;
+
+	val <<= SD1_CONTROL_RXAUI0_L23_EN_OFFSET;
+	val &= SD1_CONTROL_RXAUI0_L23_EN_MASK;
+
+	reg |= val;
+
+	mv_gop110_rfu1_write(gop, SD1_CONTROL_1_REG, reg);
+}
+
+static void mv_gop110_netc_rxaui1_enable(struct gop_hw *gop, u32 port, u32 val)
+{
+	u32 reg;
+
+	reg = mv_gop110_rfu1_read(gop, SD1_CONTROL_1_REG);
+	reg &= ~SD1_CONTROL_RXAUI1_L45_EN_MASK;
+
+	val <<= SD1_CONTROL_RXAUI1_L45_EN_OFFSET;
+	val &= SD1_CONTROL_RXAUI1_L45_EN_MASK;
+
+	reg |= val;
+
+	mv_gop110_rfu1_write(gop, SD1_CONTROL_1_REG, reg);
+}
+
+
+
+static void mv_gop110_netc_mii_mode(struct gop_hw *gop, u32 port, u32 val)
+{
+	u32 reg;
+
+	reg = mv_gop110_rfu1_read(gop, MV_NETCOMP_CONTROL_0);
+	reg &= ~NETC_GBE_PORT1_MII_MODE_MASK;
+
+	val <<= NETC_GBE_PORT1_MII_MODE_OFFSET;
+	val &= NETC_GBE_PORT1_MII_MODE_MASK;
+
+	reg |= val;
+
+	mv_gop110_rfu1_write(gop, MV_NETCOMP_CONTROL_0, reg);
+}
+
+
+
+static void mv_gop110_netc_gop_reset(struct gop_hw *gop, u32 val)
+{
+	u32 reg;
+
+	reg = mv_gop110_rfu1_read(gop, MV_GOP_SOFT_RESET_1_REG);
+	reg &= ~NETC_GOP_SOFT_RESET_MASK;
+
+	val <<= NETC_GOP_SOFT_RESET_OFFSET;
+	val &= NETC_GOP_SOFT_RESET_MASK;
+
+	reg |= val;
+
+	mv_gop110_rfu1_write(gop, MV_GOP_SOFT_RESET_1_REG, reg);
+}
+
+static void mv_gop110_netc_gop_clock_logic_set(struct gop_hw *gop, u32 val)
+{
+	u32 reg;
+
+	reg = mv_gop110_rfu1_read(gop, MV_NETCOMP_PORTS_CONTROL_0);
+	reg &= ~NETC_CLK_DIV_PHASE_MASK;
+
+	val <<= NETC_CLK_DIV_PHASE_OFFSET;
+	val &= NETC_CLK_DIV_PHASE_MASK;
+
+	reg |= val;
+
+	mv_gop110_rfu1_write(gop, MV_NETCOMP_PORTS_CONTROL_0, reg);
+}
+
+static void mv_gop110_netc_port_rf_reset(struct gop_hw *gop, u32 port, u32 val)
+{
+	u32 reg;
+
+	reg = mv_gop110_rfu1_read(gop, MV_NETCOMP_PORTS_CONTROL_1);
+	reg &= ~(NETC_PORT_GIG_RF_RESET_MASK(port));
+
+	val <<= NETC_PORT_GIG_RF_RESET_OFFSET(port);
+	val &= NETC_PORT_GIG_RF_RESET_MASK(port);
+
+	reg |= val;
+
+	mv_gop110_rfu1_write(gop, MV_NETCOMP_PORTS_CONTROL_1, reg);
+}
+
+static void mv_gop110_netc_gbe_sgmii_mode_select(struct gop_hw *gop, u32 port,
+						u32 val)
+{
+	u32 reg, mask, offset;
+
+	if (port == 2) {
+		mask = NETC_GBE_PORT0_SGMII_MODE_MASK;
+		offset = NETC_GBE_PORT0_SGMII_MODE_OFFSET;
+	} else {
+		mask = NETC_GBE_PORT1_SGMII_MODE_MASK;
+		offset = NETC_GBE_PORT1_SGMII_MODE_OFFSET;
+	}
+	reg = mv_gop110_rfu1_read(gop, MV_NETCOMP_CONTROL_0);
+	reg &= ~mask;
+
+	val <<= offset;
+	val &= mask;
+
+	reg |= val;
+
+	mv_gop110_rfu1_write(gop, MV_NETCOMP_CONTROL_0, reg);
+}
+
+static void mv_gop110_netc_bus_width_select(struct gop_hw *gop, u32 val)
+{
+	u32 reg;
+
+	reg = mv_gop110_rfu1_read(gop, MV_NETCOMP_PORTS_CONTROL_0);
+	reg &= ~NETC_BUS_WIDTH_SELECT_MASK;
+
+	val <<= NETC_BUS_WIDTH_SELECT_OFFSET;
+	val &= NETC_BUS_WIDTH_SELECT_MASK;
+
+	reg |= val;
+
+	mv_gop110_rfu1_write(gop, MV_NETCOMP_PORTS_CONTROL_0, reg);
+}
+
+static void mv_gop110_netc_sample_stages_timing(struct gop_hw *gop, u32 val)
+{
+	u32 reg;
+
+	reg = mv_gop110_rfu1_read(gop, MV_NETCOMP_PORTS_CONTROL_0);
+	reg &= ~NETC_GIG_RX_DATA_SAMPLE_MASK;
+
+	val <<= NETC_GIG_RX_DATA_SAMPLE_OFFSET;
+	val &= NETC_GIG_RX_DATA_SAMPLE_MASK;
+
+	reg |= val;
+
+	mv_gop110_rfu1_write(gop, MV_NETCOMP_PORTS_CONTROL_0, reg);
+}
+
+static void mv_gop110_netc_mac_to_xgmii(struct gop_hw *gop, u32 port,
+					enum mv_netc_phase phase)
+{
+	switch (phase) {
+	case MV_NETC_FIRST_PHASE:
+		/* Set Bus Width to HB mode = 1 */
+		mv_gop110_netc_bus_width_select(gop, 1);
+		/* Select RGMII mode */
+		mv_gop110_netc_gbe_sgmii_mode_select(gop, port,
+							MV_NETC_GBE_XMII);
+		break;
+	case MV_NETC_SECOND_PHASE:
+		/* De-assert the relevant port HB reset */
+		mv_gop110_netc_port_rf_reset(gop, port, 1);
+		break;
+	}
+}
+
+static void mv_gop110_netc_mac_to_sgmii(struct gop_hw *gop, u32 port,
+					enum mv_netc_phase phase)
+{
+	switch (phase) {
+	case MV_NETC_FIRST_PHASE:
+		/* Set Bus Width to HB mode = 1 */
+		mv_gop110_netc_bus_width_select(gop, 1);
+		/* Select SGMII mode */
+		if (port >= 1)
+			mv_gop110_netc_gbe_sgmii_mode_select(gop, port,
+			MV_NETC_GBE_SGMII);
+
+		/* Configure the sample stages */
+		mv_gop110_netc_sample_stages_timing(gop, 0);
+		/* Configure the ComPhy Selector */
+		/* mv_gop110_netc_com_phy_selector_config(netComplex); */
+		break;
+	case MV_NETC_SECOND_PHASE:
+		/* De-assert the relevant port HB reset */
+		mv_gop110_netc_port_rf_reset(gop, port, 1);
+		break;
+	}
+}
+
+static void mv_gop110_netc_mac_to_rxaui(struct gop_hw *gop, u32 port,
+					enum mv_netc_phase phase,
+					enum mv_netc_lanes lanes)
+{
+	/* Currently only RXAUI0 supported */
+	if (port != 0)
+		return;
+
+	switch (phase) {
+	case MV_NETC_FIRST_PHASE:
+		/* RXAUI Serdes/s Clock alignment */
+		if (lanes == MV_NETC_LANE_23)
+			mv_gop110_netc_rxaui0_enable(gop, port, 1);
+		else
+			mv_gop110_netc_rxaui1_enable(gop, port, 1);
+		break;
+	case MV_NETC_SECOND_PHASE:
+		/* De-assert the relevant port HB reset */
+		mv_gop110_netc_port_rf_reset(gop, port, 1);
+		break;
+	}
+}
+
+static void mv_gop110_netc_mac_to_xaui(struct gop_hw *gop, u32 port,
+					enum mv_netc_phase phase)
+{
+	switch (phase) {
+	case MV_NETC_FIRST_PHASE:
+		/* RXAUI Serdes/s Clock alignment */
+		mv_gop110_netc_xaui_enable(gop, port, 1);
+		break;
+	case MV_NETC_SECOND_PHASE:
+		/* De-assert the relevant port HB reset */
+		mv_gop110_netc_port_rf_reset(gop, port, 1);
+		break;
+	}
+}
+
+
+int mv_gop110_netc_init(struct gop_hw *gop,
+			u32 net_comp_config, enum mv_netc_phase phase)
+{
+	u32 c = net_comp_config;
+
+	MVPP2_PRINT_VAR(net_comp_config);
+
+	if (c & MV_NETC_GE_MAC0_RXAUI_L23)
+		mv_gop110_netc_mac_to_rxaui(gop, 0, phase, MV_NETC_LANE_23);
+
+	if (c & MV_NETC_GE_MAC0_RXAUI_L45)
+		mv_gop110_netc_mac_to_rxaui(gop, 0, phase, MV_NETC_LANE_45);
+
+	if (c & MV_NETC_GE_MAC0_XAUI)
+		mv_gop110_netc_mac_to_xaui(gop, 0, phase);
+
+	if (c & MV_NETC_GE_MAC2_SGMII)
+		mv_gop110_netc_mac_to_sgmii(gop, 2, phase);
+	else
+		mv_gop110_netc_mac_to_xgmii(gop, 2, phase);
+	if (c & MV_NETC_GE_MAC3_SGMII)
+		mv_gop110_netc_mac_to_sgmii(gop, 3, phase);
+	else {
+		mv_gop110_netc_mac_to_xgmii(gop, 3, phase);
+		if (c & MV_NETC_GE_MAC3_RGMII)
+			mv_gop110_netc_mii_mode(gop, 3, MV_NETC_GBE_RGMII);
+		else
+			mv_gop110_netc_mii_mode(gop, 3, MV_NETC_GBE_MII);
+	}
+
+	/* Activate gop ports 0, 2, 3 */
+	mv_gop110_netc_active_port(gop, 0, 1);
+	mv_gop110_netc_active_port(gop, 2, 1);
+	mv_gop110_netc_active_port(gop, 3, 1);
+
+	if (phase == MV_NETC_SECOND_PHASE) {
+		/* Enable the GOP internal clock logic */
+		mv_gop110_netc_gop_clock_logic_set(gop, 1);
+		/* De-assert GOP unit reset */
+		mv_gop110_netc_gop_reset(gop, 1);
+	}
+
+	return 0;
+}
+
+

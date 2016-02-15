@@ -420,6 +420,8 @@ struct cpn110_gop_hw {
 	void __iomem *xsmi_base;
 	void __iomem *mspg_base;
 	void __iomem *xpcs_base;
+	void __iomem *rfu1_base;
+
 #ifdef MV_PP22_GOP_DEBUG
 	static struct gop_port_ctrl gop_port_debug[MVCPN110_GOP_MAC_NUM];
 #endif
@@ -451,6 +453,10 @@ struct mv_pp2x_hw {
 	/* Common clocks */
 	struct clk *pp_clk;
 	struct clk *gop_clk;
+	struct clk *gop_core_clk;
+	struct clk *mg_clk;
+	struct clk *mg_core_clk;
+
 	u32 tclk;
 
 	/* PRS shadow table */

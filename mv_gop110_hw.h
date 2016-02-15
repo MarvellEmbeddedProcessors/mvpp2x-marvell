@@ -19,113 +19,11 @@
 #ifndef _MV_GOP_HW_H_
 #define _MV_GOP_HW_H_
 
-#if 0
-#include <linux/kernel.h>
-#include <linux/skbuff.h>
-#include <linux/printk.h>
-#include <linux/string.h>
-#include <linux/io.h>
-#include <linux/errno.h>
-#endif
-
-#if 0
-#include <linux/if_vlan.h>
-#include <linux/platform_device.h>
-#include <linux/dma-direction.h>
-#include <linux/spinlock.h>
-#include <asm-generic/dma-mapping-broken.h>
-#include <linux/slab.h>
-#include <linux/module.h>
-#include <linux/netdevice.h>
-
-#define __ATTRIBUTE_PACKED__	__packed
-#define MV_MALLOC	kmalloc
-
-#define	MV_MAC_ADDR_SIZE	(6)
-#define MV_MAC_STR_SIZE		(20)
-#define MV_MH_SIZE		(2)
-#define MV_CRC_SIZE		(4)
-#define MV_DSCP_NUM		(64)
-
-#define MV_MTU_MIN		(68)
-/* Layer2 packet info EtherType + Double VLAN + MAC_SA + MAC_DA +
- * Marvell header
- */
-#define MV_L2_HLEN		(MV_MH_SIZE + 2 * VLAN_HLEN + ETH_HLEN)
-
-/* MTU = MRU - MV_L2_SIZE */
-#define MV_MTU_MAX		((10 * 1024) - MV_L2_HLEN)
-
-#define MV_MAC_IS_EQUAL(_mac1, _mac2)			\
-	(!memcmp((_mac1), (_mac2), MV_MAC_ADDR_SIZE))
-
-/******************************************************
- * common functions				      *
- ******************************************************/
-void mv_debug_mem_dump(void *addr, int size, int access);
-unsigned int mv_field_get(int offs, int bits,  unsigned int *entry);
-void mv_field_set(int offs, int bits, unsigned int *entry,  unsigned int val);
-
-
-/******************************************************
- * align memory allocateion                           *
- ******************************************************/
-/* Macro for testing aligment. Positive if number is NOT aligned   */
-#define MV_IS_NOT_ALIGN(number, align)      ((number) & ((align) - 1))
-
-/* Macro for alignment up. For example, MV_ALIGN_UP(0x0330, 0x20) = 0x0340   */
-#define MV_ALIGN_UP(number, align)                             \
-(((number) & ((align) - 1)) ? (((number) + (align)) & ~((align)-1)) : (number))
-
-/* Macro for alignment down. For example, MV_ALIGN_UP(0x0330, 0x20) = 0x0320 */
-#define MV_ALIGN_DOWN(number, align) ((number) & ~((align)-1))
-
-/* Return mask of all ones for any number of bits less than 32 */
-#define MV_ALL_ONES_MASK(bits)	((1 << (bits)) - 1)
-
-/* Check that num is power of 2 */
-#define MV_IS_POWER_OF_2(num) ((num != 0) && ((num & (num - 1)) == 0))
-
-
-/* QM/BM related */
-#define MV_MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define MV_MAX(a, b) (((a) > (b)) ? (a) : (b))
-
-#define UNIT_OF__8_BYTES  8
-#define UNIT_OF_64_BYTES 64
-
-#define MV_32_BITS		32
-#define MV_40_BITS		40
-#define MV_WORD_BITS		32
-#define MV_BYTE_BITS		8
-
-/* Error definitions*/
-/* Error Codes */
-#endif
-
-#if 0
-#define OK                                  0
-#define ON                                  1
-#define OFF                                 0
-#endif
-
 /* Sets the field located at the specified in data.     */
 #define U32_SET_FIELD(data, mask, val)	((data) = (((data) & ~(mask)) | (val)))
 
-
 /* port related */
 enum mv_reset {RESET, UNRESET};
-
-#if 0
-enum mv_port_mode {
-	MV_PORT_RXAUI,
-	MV_PORT_XAUI,
-	MV_PORT_SGMII,
-	MV_PORT_SGMII2_5,
-	MV_PORT_QSGMII,
-	MV_PORT_RGMII
-};
-#endif
 
 enum mv_port_speed {
 	MV_PORT_SPEED_AN,
@@ -171,57 +69,35 @@ enum mv_lb_type {
 
 enum sd_media_mode {MV_RXAUI, MV_XAUI};
 
-#if 0
-/* convert one char symbol to 8 bit interger hex format */
-static inline unsigned char char_to_hex(char msg)
-{
-	unsigned char tmp = 0;
+/* Net Complex */
+enum mv_netc_topology {
+	MV_NETC_GE_MAC0_RXAUI_L23	=	BIT(0),
+	MV_NETC_GE_MAC0_RXAUI_L45	=	BIT(1),
+	MV_NETC_GE_MAC0_XAUI		=	BIT(2),
+	MV_NETC_GE_MAC2_SGMII		=	BIT(3),
+	MV_NETC_GE_MAC3_SGMII		=	BIT(4),
+	MV_NETC_GE_MAC3_RGMII		=	BIT(5),
+};
 
-	if ((msg >= '0') && (msg <= '9'))
-		tmp = msg - '0';
-	else if ((msg >= 'a') && (msg <= 'f'))
-		tmp = msg - 'a' + 10;
-	else if ((msg >= 'A') && (msg <= 'F'))
-		tmp = msg - 'A' + 10;
+enum mv_netc_phase {
+	MV_NETC_FIRST_PHASE,
+	MV_NETC_SECOND_PHASE,
+};
 
-	return tmp;
-}
+enum mv_netc_sgmii_xmi_mode {
+	MV_NETC_GBE_SGMII,
+	MV_NETC_GBE_XMII,
+};
 
-/* convert asci string of known size to 8 bit interger hex format array */
-static inline void str_to_hex(char *msg, int size, unsigned char *imsg,
-	int new_size)
-{
-	int i, j;
-	unsigned char tmp;
+enum mv_netc_mii_mode {
+	MV_NETC_GBE_MII,
+	MV_NETC_GBE_RGMII,
+};
 
-	for (i = 0, j = 0; j < new_size; i = i + 2, j++) {
-		/* build high byte nible */
-		tmp = (char_to_hex(msg[i]) << 4);
-		/* build low byte nible */
-		tmp += char_to_hex(msg[i+1]);
-		imsg[j] = tmp;
-	}
-}
-
-
-/* convert mac address in format xx:xx:xx:xx:xx:xx to array of
-* unsigned char [6]
-*/
-static inline void mv_mac_str2hex(const char *mac_str, u8 *mac_hex)
-{
-	int i;
-	char tmp[3];
-	u8 tmp1;
-
-	for (i = 0; i < 6; i++) {
-		tmp[0] = mac_str[(i * 3) + 0];
-		tmp[1] = mac_str[(i * 3) + 1];
-		tmp[2] = '\0';
-		str_to_hex(tmp, 3, &tmp1, 1);
-		mac_hex[i] = tmp1;
-	}
-}
-#endif
+enum mv_netc_lanes {
+	MV_NETC_LANE_23,
+	MV_NETC_LANE_45,
+};
 
 /* pp3_gop_ctrl flags */
 #define mv_gop_F_DEBUG_BIT		0
@@ -520,6 +396,25 @@ static inline void mv_gop110_smi_print(struct gop_hw *gop, char *reg_name,
 	pr_info("  %-32s: 0x%x = 0x%08x\n", reg_name, reg,
 		mv_gop110_smi_read(gop, reg));
 }
+
+/* RFU1 Functions  */
+static inline u32 mv_gop110_rfu1_read(struct gop_hw *gop, u32 offset)
+{
+	return mv_gop_gen_read(gop->gop_110.rfu1_base, offset);
+}
+static inline void mv_gop110_rfu1_write(struct gop_hw *gop, u32 offset,
+		u32 data)
+{
+	mv_gop_gen_write(gop->gop_110.rfu1_base, offset, data);
+}
+static inline void mv_gop110_rfu1_print(struct gop_hw *gop, char *reg_name,
+		u32 reg)
+{
+	pr_info("  %-32s: 0x%x = 0x%08x\n", reg_name, reg,
+		mv_gop110_rfu1_read(gop, reg));
+}
+
+
 /* PTP Functions  */
 static inline u32 mv_gop110_ptp_read(struct gop_hw *gop, int mac_num,
 				     u32 offset)
@@ -549,5 +444,10 @@ void mv_gop110_mib_counters_show(struct gop_hw *gop, int port);
 
 /* PTP Functions */
 void mv_gop110_ptp_enable(struct gop_hw *gop, int port, bool state);
+
+/*RFU Functions */
+int mv_gop110_netc_init(struct gop_hw *gop,
+			u32 net_comp_config, enum mv_netc_phase phase);
+void mv_gop110_netc_active_port(struct gop_hw *gop, u32 port, u32 val);
 
 #endif /* _MV_GOP_HW_H_ */

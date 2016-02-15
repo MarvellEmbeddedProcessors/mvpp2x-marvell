@@ -3458,6 +3458,38 @@ return 0;
 }
 #endif
 
+static u32 mvp_pp2x_gop110_netc_cfg_create(struct mv_pp2x *priv)
+{
+	u32 val = 0;
+	int i;
+	struct mv_pp2x_port *port;
+	struct mv_mac_data *mac;
+
+	for (i = 0; i < priv->num_ports; i++) {
+		port = priv->port_list[i];
+		mac = &port->mac_data;
+		if (mac->gop_index == 0) {
+			if (mac->phy_mode == PHY_INTERFACE_MODE_XAUI)
+				val |= MV_NETC_GE_MAC0_XAUI;
+			else if (mac->phy_mode == PHY_INTERFACE_MODE_RXAUI)
+				val |= MV_NETC_GE_MAC0_RXAUI_L23;
+		}
+		if (mac->gop_index == 2) {
+			if (mac->phy_mode == PHY_INTERFACE_MODE_SGMII)
+				val |= MV_NETC_GE_MAC2_SGMII;
+		}
+		if (mac->gop_index == 3) {
+			if (mac->phy_mode == PHY_INTERFACE_MODE_SGMII)
+				val |= MV_NETC_GE_MAC3_SGMII;
+			else if (mac->phy_mode == PHY_INTERFACE_MODE_RGMII)
+				val |= MV_NETC_GE_MAC3_RGMII;
+		}
+
+	}
+	return val;
+}
+
+
 /* Initialize port HW */
 static int mv_pp2x_port_init(struct mv_pp2x_port *port)
 {
@@ -3734,6 +3766,7 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 #ifdef DEV_NETMAP
 	mv_pp2x_netmap_attach(port);
 #endif /* DEV_NETMAP */
+
 
 err_free_port_pcpu:
 	free_percpu(port->pcpu);
@@ -4274,6 +4307,8 @@ void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv)
 			priv->hw.gop.gop_110.mspg_base,
 			priv->hw.gop.gop_110.xpcs_base,
 			priv->hw.gop.gop_110.ptp.base);
+		DBG_MSG("gop_addr: rfu1(%p)\n",
+			priv->hw.gop.gop_110.rfu1_base);
 	}
 
 }
@@ -4427,6 +4462,13 @@ static int mv_pp2x_platform_data_get(struct platform_device *pdev,
 		if (IS_ERR(hw->gop.gop_110.smi_base))
 			return PTR_ERR(hw->gop.gop_110.smi_base);
 
+		/* rfu1 */
+		res = platform_get_resource_byname(pdev,
+			IORESOURCE_MEM, "rfu1");
+		hw->gop.gop_110.rfu1_base =
+			devm_ioremap_resource(&pdev->dev, res);
+		if (IS_ERR(hw->gop.gop_110.rfu1_base))
+			return PTR_ERR(hw->gop.gop_110.rfu1_base);
 
 		MVPP2_PRINT_2LINE();
 
@@ -4507,27 +4549,43 @@ static int mv_pp2x_platform_data_get(struct platform_device *pdev,
 		__LINE__, mv_pp2_vfpga_address);
 #endif
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
-#if 0
-	MVPP2_PRINT_2LINE();
-	hw->pp_clk = devm_clk_get(&pdev->dev, "pp_clk");
-	if (IS_ERR(hw->pp_clk))
-		return PTR_ERR(hw->pp_clk);
-	MVPP2_PRINT_2LINE();
-	err = clk_prepare_enable(hw->pp_clk);
+
+	hw->gop_core_clk = devm_clk_get(&pdev->dev, "gop_core_clk");
+	if (IS_ERR(hw->gop_core_clk))
+		return PTR_ERR(hw->gop_core_clk);
+	err = clk_prepare_enable(hw->gop_core_clk);
 	if (err < 0)
 		return err;
-	MVPP2_PRINT_2LINE();
+
 	hw->gop_clk = devm_clk_get(&pdev->dev, "gop_clk");
 	if (IS_ERR(hw->gop_clk))
 		return PTR_ERR(hw->gop_clk);
-	MVPP2_PRINT_2LINE();
 	err = clk_prepare_enable(hw->gop_clk);
 	if (err < 0)
 		return err;
-	MVPP2_PRINT_2LINE();
-#endif
+
+	hw->mg_core_clk = devm_clk_get(&pdev->dev, "mg_core_clk");
+	if (IS_ERR(hw->mg_clk))
+		return PTR_ERR(hw->mg_core_clk);
+	err = clk_prepare_enable(hw->mg_core_clk);
+	if (err < 0)
+		return err;
+
+	hw->mg_clk = devm_clk_get(&pdev->dev, "mg_clk");
+	if (IS_ERR(hw->mg_clk))
+		return PTR_ERR(hw->mg_clk);
+	err = clk_prepare_enable(hw->mg_clk);
+	if (err < 0)
+		return err;
+	hw->pp_clk = devm_clk_get(&pdev->dev, "pp_clk");
+	if (IS_ERR(hw->pp_clk))
+		return PTR_ERR(hw->pp_clk);
+	err = clk_prepare_enable(hw->pp_clk);
+	if (err < 0)
+		return err;
+
 	/* Get system's tclk rate */
-	hw->tclk = 333330000;/* PKAK clk_get_rate(hw->pp_clk);*/
+	hw->tclk = clk_get_rate(hw->pp_clk);
 	MVPP2_PRINT_VAR(hw->tclk);
 #else
 	hw->tclk = 25000000;
@@ -4546,13 +4604,6 @@ static int mv_pp2x_platform_data_get(struct platform_device *pdev,
 
 #endif
 	return 0;
-#if 0
-#if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
-err_pp_clk:
-	clk_disable_unprepare(hw->pp_clk);
-	return err;
-#endif
-#endif
 }
 static int mv_pp2x_probe(struct platform_device *pdev)
 {
@@ -4562,6 +4613,8 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 	int i, err;
 	u16 cpu_map;
 	u32 cell_index = 0;
+	u32 net_comp_config;
+
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	struct device_node *dn = pdev->dev.of_node;
 	struct device_node *port_node;
@@ -4573,28 +4626,26 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 	int start_port = 1;
 #endif
 
-	MVPP2_PRINT_2LINE();
-
 	priv = devm_kzalloc(&pdev->dev, sizeof(struct mv_pp2x), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
+	hw = &priv->hw;
 
 	err = mv_pp2x_platform_data_get(pdev, priv, &cell_index, &port_count);
 	if (err) {
 		pr_crit("mvpp2: platform_data get failed\n");
-		return err;
+		goto err_clk;
 	}
 	MVPP2_PRINT_2LINE();
 
 
-	hw = &priv->hw;
 	priv->pp2_version = priv->pp2xdata->pp2x_ver;
 
 	/* DMA Configruation */
 	err = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
 	if (err) {
 		pr_crit("mvpp2: cannot set dma_mask\n");
-		return -EIO;
+		goto err_clk;
 	}
 	/*Set dma_coherency to 0 */
 #ifdef CONFIG_MV_PP2_FPGA
@@ -4612,8 +4663,10 @@ MVPP2_PRINT_LINE();
 	if (priv->pp2xdata->skb_base_addr == 0) {
 		skb = alloc_skb(MVPP2_SKB_TEST_SIZE, GFP_KERNEL);
 		MVPP2_PRINT_VAR(skb);
-		if (!skb)
-			return -ENOMEM;
+		if (!skb) {
+			err = ENOMEM;
+			goto err_clk;
+		}
 		priv->pp2xdata->skb_base_addr =
 			(uintptr_t)skb & ~(priv->pp2xdata->skb_base_mask);
 		kfree_skb(skb);
@@ -4643,7 +4696,7 @@ MVPP2_PRINT_LINE();
 	err = mv_pp2x_init(pdev, priv);
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to initialize controller\n");
-		goto err_gop_clk;
+		goto err_clk;
 	}
 
 	/*Init GOP */
@@ -4661,15 +4714,10 @@ MVPP2_PRINT_LINE();
 	priv->port_list = devm_kcalloc(&pdev->dev, port_count,
 				      sizeof(struct mv_pp2x_port *),
 				      GFP_KERNEL);
-	PALAD(MVPP2_PRINT_LINE());
-
 	if (!priv->port_list) {
 		err = -ENOMEM;
-		goto err_gop_clk;
+		goto err_clk;
 	}
-
-	PALAD(MVPP2_PRINT_LINE());
-
 
 	/*Init PP2 Configuration */
 	mv_pp2x_init_config(&priv->pp2_cfg, cell_index);
@@ -4684,16 +4732,23 @@ MVPP2_PRINT_LINE();
 	for_each_available_child_of_node(dn, port_node) {
 		err = mv_pp2x_port_probe(pdev, port_node, priv);
 		if (err < 0)
-			goto err_gop_clk;
+			goto err_clk;
 	}
 #else
 
 	for (i = start_port ; i < (start_port+port_count) ; i++) {
 		err = mv_pp2x_port_probe_fpga(pdev, i, priv);
 		if (err < 0)
-			goto err_gop_clk;
+			goto err_clk;
 	}
 #endif
+
+	net_comp_config = mvp_pp2x_gop110_netc_cfg_create(priv);
+	mv_gop110_netc_init(&priv->hw.gop, net_comp_config,
+				MV_NETC_FIRST_PHASE);
+	mv_gop110_netc_init(&priv->hw.gop, net_comp_config,
+				MV_NETC_SECOND_PHASE);
+
 	mv_pp2x_pp2_ports_print(priv);
 #if defined(CONFIG_MV_PP2_POLLING)
 	init_timer(&cpu_poll_timer);
@@ -4705,8 +4760,13 @@ MVPP2_PRINT_LINE();
 	pr_debug("Platform Device Name : %s\n", kobject_name(&pdev->dev.kobj));
 	return 0;
 
-err_gop_clk:
+err_clk:
 	clk_disable_unprepare(hw->gop_clk);
+	clk_disable_unprepare(hw->pp_clk);
+	clk_disable_unprepare(hw->gop_clk);
+	clk_disable_unprepare(hw->gop_core_clk);
+	clk_disable_unprepare(hw->mg_clk);
+	clk_disable_unprepare(hw->mg_core_clk);
 	return err;
 }
 
