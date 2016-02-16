@@ -2095,8 +2095,9 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 		skb = (struct sk_buff *)((uintptr_t)skb |
 			port->priv->pp2xdata->skb_base_addr);
 #endif
-
+#ifdef MVPP2_DEBUG
 		mv_pp2x_skb_dump(skb, rx_desc->data_size, 4);
+#endif
 
 
 		/* In case of an error, release the requested buffer pointer
@@ -2268,6 +2269,7 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 	tx_desc = mv_pp2x_txq_next_desc_get(aggr_txq);
 	tx_desc->phys_txq = txq->id;
 	tx_desc->data_size = skb_headlen(skb);
+#ifdef MVPP2_DEBUG
 	pr_debug(
 		"tx_desc=%p, cmd(0x%x), pkt_offset(%d), phys_txq=%d, data_size=%d\n"
 		"rsrvd_hw_cmd1(0x%llx)\n"
@@ -2280,6 +2282,7 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 		tx_desc->u.pp22.buf_phys_addr_hw_cmd2,
 		tx_desc->u.pp22.buf_cookie_bm_qset_hw_cmd3,
 		skb->len, skb->data_len);
+#endif
 
 	buf_phys_addr = dma_map_single(dev->dev.parent, skb->data,
 				       tx_desc->data_size, DMA_TO_DEVICE);

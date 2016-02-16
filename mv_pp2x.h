@@ -156,8 +156,9 @@
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? \
 	strrchr(__FILE__, '/') + 1 : __FILE__)
-/*#define MVPP2_PRINT_LINE()*/
-/*#define MVPP2_PRINT_2LINE()*/
+
+
+#ifdef MVPP2_DEBUG
 #define MVPP2_PRINT_2LINE() \
 	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
 #define MVPP2_PRINT_LINE() \
@@ -168,6 +169,12 @@
 		(unsigned long)var)
 #define MVPP2_PRINT_VAR_NAME(var, name) \
 	pr_crit("%s(%d): %s=0x%lx\n", __FILENAME__, __LINE__, name, var)
+#else
+#define MVPP2_PRINT_LINE()
+#define MVPP2_PRINT_2LINE()
+#define MVPP2_PRINT_VAR(var)
+#define MVPP2_PRINT_VAR_NAME(var, name)
+#endif
 
 /* Descriptor ring Macros */
 #define MVPP2_QUEUE_NEXT_DESC(q, index) \
@@ -182,7 +189,7 @@
 #define MVPP2_MAX_SHARED	1
 
 /* Coalescing */
-#define MVPP2_TXDONE_COAL_PKTS		15
+#define MVPP2_TXDONE_COAL_PKTS		32
 #define MVPP2_TXDONE_HRTIMER_PERIOD_NS	1000000UL
 #define MVPP2_TXDONE_COAL_USEC		500
 
@@ -200,7 +207,7 @@
 #define MVPP2_BM_LONG_BUF_NUM		256
 #define MVPP2_BM_JUMBO_BUF_NUM		256
 #else
-#define MVPP2_BM_SHORT_BUF_NUM		2048
+#define MVPP2_BM_SHORT_BUF_NUM		3076
 #define MVPP2_BM_LONG_BUF_NUM		1024
 #define MVPP2_BM_JUMBO_BUF_NUM		512
 #endif

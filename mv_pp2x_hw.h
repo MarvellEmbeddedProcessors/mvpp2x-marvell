@@ -368,7 +368,6 @@ static inline int mv_pp2x_txq_sent_desc_proc(struct mv_pp2x_port *port,
 	else {
 		val = mv_pp2x_read(&(port->priv->hw),
 				   MVPP22_TXQ_SENT_REG(txq->id));
-		pr_crit("MVPP22_TXQ_SENT_REG txq(%d), val(%d)\n", txq->id, val);
 		return (val & MVPP22_TRANSMITTED_COUNT_MASK) >>
 			MVPP22_TRANSMITTED_COUNT_OFFSET;
 		}
