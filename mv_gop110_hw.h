@@ -90,8 +90,8 @@ enum mv_netc_sgmii_xmi_mode {
 };
 
 enum mv_netc_mii_mode {
-	MV_NETC_GBE_MII,
 	MV_NETC_GBE_RGMII,
+	MV_NETC_GBE_MII,
 };
 
 enum mv_netc_lanes {
