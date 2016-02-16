@@ -427,7 +427,7 @@ static struct sk_buff *mv_pp2x_skb_alloc(struct mv_pp2x_port *port,
 	phys_addr = dma_map_single(port->dev->dev.parent, skb->head,
 				   MVPP2_RX_BUF_SIZE(bm_pool->pkt_size),
 				   DMA_FROM_DEVICE);
-#if MVPP2_DEBUG
+#ifdef MVPP2_DEBUG
 	pr_crit_once("dev_ptr:%p, dev_name:%s, sizeof(dma_addr_t):%ld",
 		     port->dev->dev.parent, port->dev->dev.parent->init_name,
 		     sizeof(dma_addr_t));
@@ -2095,7 +2095,7 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 		skb = (struct sk_buff *)((uintptr_t)skb |
 			port->priv->pp2xdata->skb_base_addr);
 #endif
-#ifdef MVPP2_DEBUG
+#ifdef MVPP2_VERBOSE
 		mv_pp2x_skb_dump(skb, rx_desc->data_size, 4);
 #endif
 
@@ -2269,7 +2269,7 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 	tx_desc = mv_pp2x_txq_next_desc_get(aggr_txq);
 	tx_desc->phys_txq = txq->id;
 	tx_desc->data_size = skb_headlen(skb);
-#ifdef MVPP2_DEBUG
+#ifdef MVPP2_VERBOSE
 	pr_debug(
 		"tx_desc=%p, cmd(0x%x), pkt_offset(%d), phys_txq=%d, data_size=%d\n"
 		"rsrvd_hw_cmd1(0x%llx)\n"

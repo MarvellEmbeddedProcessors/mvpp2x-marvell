@@ -82,7 +82,7 @@
 #endif /*MVPP2_DEBUG*/
 #endif /*VERBOSE*/
 
-#if MVPP2_DEBUG
+#ifdef MVPP2_DEBUG
 #define STAT_DBG(c) c
 #else
 #define STAT_DBG(c)
@@ -158,7 +158,7 @@
 	strrchr(__FILE__, '/') + 1 : __FILE__)
 
 
-#ifdef MVPP2_DEBUG
+#ifdef MVPP2_VERBOSE
 #define MVPP2_PRINT_2LINE() \
 	pr_crit("Passed: %s(%d)\n", __FILENAME__, __LINE__)
 #define MVPP2_PRINT_LINE() \

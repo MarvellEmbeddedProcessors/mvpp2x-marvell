@@ -155,7 +155,7 @@ void mv_pp2_pool_stats_print(struct mv_pp2x *priv, int log_pool_num)
 		return;
 	}
 
-#if MVPP2_DEBUG
+#ifdef MVPP2_DEBUG
 	DBG_MSG("skb_alloc_oom    = %u\n", bm_pool->stats.skb_alloc_oom);
 	DBG_MSG("skb_alloc_ok     = %u\n", bm_pool->stats.skb_alloc_ok);
 	DBG_MSG("bm_put           = %u\n", bm_pool->stats.bm_put);
