@@ -712,12 +712,13 @@ static void mv_pp2x_defaults_set(struct mv_pp2x_port *port)
 		      MVPP2_RX_USE_PSEUDO_FOR_CSUM_MASK |
 		      MVPP2_RX_LOW_LATENCY_PKT_SIZE(256));
 
-	/* Enable Rx cache snoop */
+	/* Disable Rx cache snoop */
 	for (lrxq = 0; lrxq < port->num_rx_queues; lrxq++) {
 		queue = port->rxqs[lrxq]->id;
 		val = mv_pp2x_read(hw, MVPP2_RXQ_CONFIG_REG(queue));
-		val |= MVPP2_SNOOP_PKT_SIZE_MASK |
-		       MVPP2_SNOOP_BUF_HDR_MASK;
+
+		val &= ~MVPP2_SNOOP_PKT_SIZE_MASK;
+		val &= ~MVPP2_SNOOP_BUF_HDR_MASK;
 		mv_pp2x_write(hw, MVPP2_RXQ_CONFIG_REG(queue), val);
 	}
 

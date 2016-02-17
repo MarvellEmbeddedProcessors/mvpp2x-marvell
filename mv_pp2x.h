@@ -184,7 +184,7 @@
 	((q)->first_desc + index)
 
 /* Various constants */
-#define MVPP2_MAX_SW_THREADS	9
+#define MVPP2_MAX_SW_THREADS	4
 #define MVPP2_MAX_CPUS		4
 #define MVPP2_MAX_SHARED	1
 
@@ -207,7 +207,7 @@
 #define MVPP2_BM_LONG_BUF_NUM		256
 #define MVPP2_BM_JUMBO_BUF_NUM		256
 #else
-#define MVPP2_BM_SHORT_BUF_NUM		3076
+#define MVPP2_BM_SHORT_BUF_NUM		2048
 #define MVPP2_BM_LONG_BUF_NUM		1024
 #define MVPP2_BM_JUMBO_BUF_NUM		512
 #endif
