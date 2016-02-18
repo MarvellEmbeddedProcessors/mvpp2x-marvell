@@ -181,7 +181,7 @@ struct mv_pp2x_pool_attributes mv_pp2x_pools[] = {
 	}
 };
 
-#if defined(CONFIG_NETMAP) || defined(CONFIG_NETMAP_MODULE)
+#if defined(CONFIG_MV_PP2_FPGA) || defined(CONFIG_MV_PP2_PALLADIUM)
 void *mv_pp2x_vfpga_address_get(void)
 {
 	return mv_pp2_vfpga_address;
@@ -4720,8 +4720,6 @@ MVPP2_PRINT_LINE();
 
 	/*Init PP2 Configuration */
 	mv_pp2x_init_config(&priv->pp2_cfg, cell_index);
-	/*mv_pp2x_pp2_basic_print(pdev, priv);*/
-
 
 	/* Init PP22 rxfhindir table evenly in probe */
 	mv_pp2x_init_rxfhindir(priv);
@@ -4748,7 +4746,6 @@ MVPP2_PRINT_LINE();
 	mv_gop110_netc_init(&priv->hw.gop, net_comp_config,
 				MV_NETC_SECOND_PHASE);
 
-	/*mv_pp2x_pp2_ports_print(priv);*/
 #if defined(CONFIG_MV_PP2_POLLING)
 	init_timer(&cpu_poll_timer);
 	cpu_poll_timer.function = mv_pp22_cpu_timer_callback;
