@@ -59,28 +59,7 @@
 #define MVPP2_PRS_FL_NON_IP_UNTAG_INDEX		50
 #endif
 
-#ifndef REDEFINE_DEBUG_ONCE
-
-#define REDEFINE_DEBUG_ONCE
-#if defined(DEBUG) || defined(CONFIG_MVPP2_DEBUG)
-#undef DEBUG
-#define DEBUG	1
-#define VERBOSE	1
-#else
-#define DEBUG	0
-#define VERBOSE	0
-#endif /*DEBUG||CONFIG_MVPP2_DEBUG*/
-#endif /*REDEFINE_DEBUG_ONCE*/
-
-#if VERBOSE
-#define DBG_MSG(fmt, args...)	pr_crit(PFX fmt, ## args)
-#else
-#ifdef MVPP2_DEBUG
 #define DBG_MSG(fmt, args...)	printk(fmt, ## args)
-#else
-#define DBG_MSG(fmt, args...)	pr_debug(PFX fmt, ## args)
-#endif /*MVPP2_DEBUG*/
-#endif /*VERBOSE*/
 
 #ifdef MVPP2_DEBUG
 #define STAT_DBG(c) c

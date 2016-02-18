@@ -68,6 +68,7 @@ static struct platform_device * pp2_sysfs;
 
 
 extern void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv);
+extern void mv_pp2x_pp2_ports_print(struct mv_pp2x *priv);
 
 static int mv_pp2_sysfs_init(void)
 {
@@ -97,6 +98,7 @@ static int mv_pp2_sysfs_init(void)
 	priv = dev_get_drvdata(pp2_dev);
 	pp2_plat_dev = to_platform_device(pp2_dev);
 	mv_pp2x_pp2_basic_print(pp2_plat_dev, priv);
+	mv_pp2x_pp2_ports_print(priv);
 	sysfs_cur_priv = priv;
 	sysfs_cur_hw = &priv->hw;
 

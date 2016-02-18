@@ -880,7 +880,7 @@ static int mv_pp2x_aggr_txq_init(struct platform_device *pdev,
 			MVPP2_DESCQ_MEM_ALIGN((uintptr_t)aggr_txq->desc_mem);
 	first_desc_phy = MVPP2_DESCQ_MEM_ALIGN(aggr_txq->descs_phys);
 
-	DBG_MSG("first_desc=%p, desc_mem=%p\n",
+	pr_debug("first_desc=%p, desc_mem=%p\n",
 		aggr_txq->desc_mem, aggr_txq->first_desc);
 
 	aggr_txq->last_desc = aggr_txq->size - 1;
@@ -3832,7 +3832,7 @@ static int mv_pp2x_port_probe_fpga(struct platform_device *pdev,
 	port->mac_data.phy_mode = phy_mode;
 	port->base = ((mv_pp2_vfpga_address + MAC_PORT0_OFFSET) +
 		((port->id) * 0x1000));
-	DBG_MSG("mvpp2(%d): port_probe: id-%d vfpga_add=0x%p base=0x%p\n",
+	pr_info("mvpp2(%d): port_probe: id-%d vfpga_add=0x%p base=0x%p\n",
 		__LINE__, port->id, mv_pp2_vfpga_address, port->base);
 	MVPP2_PRINT_LINE();
 
@@ -4270,7 +4270,6 @@ static void mv_pp2x_init_rxfhindir(struct mv_pp2x *pp2)
 
 void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv)
 {
-
 	DBG_MSG("%s\n", __func__);
 
 	DBG_MSG("num_present_cpus(%d) num_act_cpus(%d) num_online_cpus(%d)\n",
@@ -4285,7 +4284,6 @@ void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv)
 		pdev->dev.bus->name, pdev->dev.bus->dev_name);
 
 	DBG_MSG("Device dma_coherent(%d)\n", pdev->dev.archdata.dma_coherent);
-
 
 	DBG_MSG("pp2_ver(%d)\n", priv->pp2_version);
 	DBG_MSG("queue_mode(%d)\n", priv->pp2_cfg.queue_mode);
@@ -4313,7 +4311,6 @@ void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv)
 		DBG_MSG("gop_addr: rfu1(%p)\n",
 			priv->hw.gop.gop_110.rfu1_base);
 	}
-
 }
 EXPORT_SYMBOL(mv_pp2x_pp2_basic_print);
 
@@ -4372,7 +4369,7 @@ void mv_pp2x_pp2_port_print(struct mv_pp2x_port *port)
 }
 EXPORT_SYMBOL(mv_pp2x_pp2_port_print);
 
-static void mv_pp2x_pp2_ports_print(struct mv_pp2x *priv)
+void mv_pp2x_pp2_ports_print(struct mv_pp2x *priv)
 {
 	int i;
 	struct mv_pp2x_port *port;
@@ -4723,7 +4720,7 @@ MVPP2_PRINT_LINE();
 
 	/*Init PP2 Configuration */
 	mv_pp2x_init_config(&priv->pp2_cfg, cell_index);
-	mv_pp2x_pp2_basic_print(pdev, priv);
+	/*mv_pp2x_pp2_basic_print(pdev, priv);*/
 
 
 	/* Init PP22 rxfhindir table evenly in probe */
@@ -4751,7 +4748,7 @@ MVPP2_PRINT_LINE();
 	mv_gop110_netc_init(&priv->hw.gop, net_comp_config,
 				MV_NETC_SECOND_PHASE);
 
-	mv_pp2x_pp2_ports_print(priv);
+	/*mv_pp2x_pp2_ports_print(priv);*/
 #if defined(CONFIG_MV_PP2_POLLING)
 	init_timer(&cpu_poll_timer);
 	cpu_poll_timer.function = mv_pp22_cpu_timer_callback;
