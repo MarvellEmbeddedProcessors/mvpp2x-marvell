@@ -85,7 +85,7 @@ u32 debug_param;
 #ifdef CONFIG_MV_PP2_PALLADIUM
 #define MV_PP2_FPGA_PERODIC_TIME 2
 #else
-#define MV_PP2_FPGA_PERODIC_TIME 10
+#define MV_PP2_FPGA_PERODIC_TIME 100
 #endif
 #endif
 #ifdef CONFIG_MV_PP2_FPGA
@@ -2909,7 +2909,7 @@ int mv_pp2x_open(struct net_device *dev)
 #if defined(CONFIG_MV_PP2_POLLING)
 	if (cpu_poll_timer_ref_cnt == 0) {
 		cpu_poll_timer.expires  =
-		jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME*1000);
+		jiffies + msecs_to_jiffies(MV_PP2_FPGA_PERODIC_TIME*100);
 		add_timer(&cpu_poll_timer);
 		cpu_poll_timer_ref_cnt++;
 	}
@@ -5066,10 +5066,7 @@ static void mv_pp22_cpu_timer_callback(unsigned long data)
 
 	PALAD(MVPP2_PRINT_2LINE());
 
-	if (debug_param)
-		timeout = debug_param;
-	else
-		timeout = MV_PP2_FPGA_PERODIC_TIME;
+	timeout = MV_PP2_FPGA_PERODIC_TIME;
 #ifdef CONFIG_MV_PP2_PALLADIUM
 	timeout = timeout*1000;
 #endif
