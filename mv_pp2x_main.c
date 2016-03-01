@@ -716,9 +716,14 @@ static void mv_pp2x_defaults_set(struct mv_pp2x_port *port)
 	for (lrxq = 0; lrxq < port->num_rx_queues; lrxq++) {
 		queue = port->rxqs[lrxq]->id;
 		val = mv_pp2x_read(hw, MVPP2_RXQ_CONFIG_REG(queue));
-
-		val &= ~MVPP2_SNOOP_PKT_SIZE_MASK;
-		val &= ~MVPP2_SNOOP_BUF_HDR_MASK;
+		if (is_device_dma_coherent(port->dev->dev.parent)) {
+			val |= MVPP2_SNOOP_PKT_SIZE_MASK;
+			val |= MVPP2_SNOOP_BUF_HDR_MASK;
+		}
+		else {
+			val &= ~MVPP2_SNOOP_PKT_SIZE_MASK;
+			val &= ~MVPP2_SNOOP_BUF_HDR_MASK;
+		}
 		mv_pp2x_write(hw, MVPP2_RXQ_CONFIG_REG(queue), val);
 	}
 
@@ -4145,9 +4150,11 @@ static int mv_pp2x_init(struct platform_device *pdev, struct mv_pp2x *priv)
 
 	MVPP2_PRINT_LINE();
 
-
-	/* Allow cache snoop when transmiting packets */
-	mv_pp2x_write(hw, MVPP2_TX_SNOOP_REG, 0x1);
+	/* Set cache snoop when transmiting packets */
+	if (is_device_dma_coherent(&pdev->dev))
+		mv_pp2x_write(hw, MVPP2_TX_SNOOP_REG, 0x1);
+	else
+		mv_pp2x_write(hw, MVPP2_TX_SNOOP_REG, 0x0);
 	MVPP2_PRINT_LINE();
 
 
