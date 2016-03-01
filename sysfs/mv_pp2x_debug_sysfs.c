@@ -42,6 +42,9 @@ static ssize_t mv_debug_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset val >mv_pp2x_reg_write    - Write mvpp2 register.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset     >mv_pp2x_reg_read     - Read mvpp2 register.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo val        >debug_param          - Set global debug_param.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "cat             debug_param           - Get global debug_param.\n");
+
 
 	return off;
 }
@@ -51,11 +54,16 @@ static ssize_t mv_debug_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
 	int off = 0;
+	const char    *name = attr->attr.name;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
-	off += mv_debug_help(buf);
+	if (!strcmp(name, "debug_param")) {
+		DBG_MSG("debug_param(%d)\n", mv_pp2x_debug_param_get());
+	}
+	else
+		off += mv_debug_help(buf);
 
 	return off;
 }
@@ -87,9 +95,6 @@ static ssize_t mv_debug_store(struct device *dev,
 
 	if (!strcmp(name, "bind_cpu")) {
 		mv_pp2x_port_bind_cpu_set(port, b);
-	}
-	else if (!strcmp(name, "debug_param")) {
-		mv_pp2x_debug_param_set(b);
 	}
 	else {
 		err = 1;
@@ -124,7 +129,10 @@ static ssize_t mv_debug_store_unsigned(struct device *dev,
 		mv_pp2x_write(sysfs_cur_hw, a, b);
 		val = mv_pp2x_read(sysfs_cur_hw, a);
 		printk("mv_pp2x_write_read(0x%x)=0x%x\n", a, val);
-	} else {
+	} else if (!strcmp(name, "debug_param")) {
+		mv_pp2x_debug_param_set(a);
+	}
+	else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
 	}
@@ -136,16 +144,17 @@ static ssize_t mv_debug_store_unsigned(struct device *dev,
 	return err ? -EINVAL : len;
 }
 
-static DEVICE_ATTR(help,	S_IRUSR, mv_debug_show, NULL);
-static DEVICE_ATTR(bind_cpu,	S_IWUSR, NULL, mv_debug_store);
-static DEVICE_ATTR(debug_param,	S_IWUSR, NULL, mv_debug_store);
+static DEVICE_ATTR(help,		S_IRUSR, mv_debug_show, NULL);
+static DEVICE_ATTR(debug_param,	(S_IRUSR|S_IWUSR), mv_debug_show,
+		   mv_debug_store_unsigned);
+static DEVICE_ATTR(bind_cpu,		S_IWUSR, NULL, mv_debug_store);
 static DEVICE_ATTR(mv_pp2x_reg_read,	S_IWUSR, NULL, mv_debug_store_unsigned);
 static DEVICE_ATTR(mv_pp2x_reg_write,	S_IWUSR, NULL, mv_debug_store_unsigned);
 
 static struct attribute *debug_attrs[] = {
 	&dev_attr_help.attr,
-	&dev_attr_bind_cpu.attr,
 	&dev_attr_debug_param.attr,
+	&dev_attr_bind_cpu.attr,
 	&dev_attr_mv_pp2x_reg_read.attr,
 	&dev_attr_mv_pp2x_reg_write.attr,
 	NULL
