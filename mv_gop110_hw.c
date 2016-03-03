@@ -2361,8 +2361,6 @@ void mv_gop110_ptp_enable(struct gop_hw *gop, int port, bool state)
 	u32 reg_data;
 
 	if (state) {
-
-
 		/* PTP enable */
 		reg_data = mv_gop110_ptp_read(gop, port,
 					      MV_PTP_GENERAL_CTRL_REG);
@@ -2375,7 +2373,6 @@ void mv_gop110_ptp_enable(struct gop_hw *gop, int port, bool state)
 		mv_gop110_ptp_write(gop, port, MV_PTP_GENERAL_CTRL_REG,
 				    reg_data);
 	} else {
-
 		reg_data = mv_gop110_ptp_read(gop, port,
 					      MV_PTP_GENERAL_CTRL_REG);
 		reg_data &= ~MV_PTP_GENERAL_CTRL_PTP_UNIT_ENABLE_MASK;

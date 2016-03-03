@@ -178,7 +178,7 @@
 #define MVPP2_TXDONE_COAL_USEC		0 /* No tx_time_coalescing */
 
 #define MVPP2_RX_COAL_PKTS		32
-#define MVPP2_RX_COAL_USEC		MVPP2_ISR_RX_THRESHOLD_MASK
+#define MVPP2_RX_COAL_USEC		64
 
 /* BM constants */
 #define MVPP2_BM_POOLS_NUM		16

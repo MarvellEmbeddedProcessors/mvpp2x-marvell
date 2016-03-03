@@ -2245,7 +2245,6 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 	if (mv_pp2x_aggr_desc_num_check(port->priv, aggr_txq, frags) ||
 	    mv_pp2x_txq_reserved_desc_num_proc(port->priv, txq,
 					     txq_pcpu, frags)) {
-
 		frags = 0;
 		MVPP2_PRINT_LINE();
 		goto out;
@@ -2874,7 +2873,7 @@ int mv_pp2x_open(struct net_device *dev)
 #endif
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	/* Port is init in uboot */
-#if 0
+#if !defined(OLD_UBOOT)
 	if (port->mac_data.phy_mode == PHY_INTERFACE_MODE_RGMII)
 		port->mac_data.flags |= MV_EMAC_F_INIT;
 #endif
@@ -3344,29 +3343,6 @@ static void mv_pp22_port_isr_rx_group_cfg(struct mv_pp2x_port *port)
 				port->q_vector[i].num_rx_queues);
 		}
 	}
-#if 0
-	if (mv_pp2x_queue_mode == MVPP2_QDIST_MULTI_MODE) {
-		/* Each cpu has num_cos_queues private rx_queues */
-		cur_rx_queue = first_log_rxq_queue;
-		for (cpu = 0; cpu < num_active_cpus(); cpu++) {
-			mv_pp22_isr_rx_group_write(hw, port->id,
-				first_addr_space + cpu, cur_rx_queue,
-				mv_pp2x_num_cos_queues);
-			cur_rx_queue += mv_pp2x_num_cos_queues;
-		}
-	} else {
-		/* Each cpu has zero private rx_queues */
-		for (cpu = 0; cpu < num_active_cpus(); cpu++) {
-			mv_pp22_isr_rx_group_write(hw, port->id,
-				first_addr_space+cpu, 0, 0);
-		}
-		/* Additional shared group */
-		mv_pp22_isr_rx_group_write(hw, port->id,
-			first_addr_space+cpu, first_log_rxq_queue,
-			port->num_rx_queues);
-
-	}
-#endif
 }
 
 

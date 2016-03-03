@@ -175,7 +175,7 @@ static inline u32 mv_gop110_serdes_read(struct gop_hw *gop, int lane_num,
 					u32 offset)
 {
 	return(mv_gop_gen_read(gop->gop_110.serdes.base,
-	       lane_num * gop->gop_110.serdes.obj_size + offset));
+		lane_num * gop->gop_110.serdes.obj_size + offset));
 }
 
 static inline void mv_gop110_serdes_write(struct gop_hw *gop, int lane_num,

@@ -61,11 +61,12 @@ EXPORT_SYMBOL(mv_pp2x_range_validate);
 
 void mv_pp2x_write(struct mv_pp2x_hw *hw, u32 offset, u32 data)
 {
+	void *reg_ptr = hw->cpu_base[smp_processor_id()] + offset;
+
 #if defined(MVPP2_DEBUG) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	static void *last_used[20] = {0};
 	static int next_write;
 	int i;
-	void *reg_ptr = hw->cpu_base[smp_processor_id()] + offset;
 
 	for (i = 0; i < MVPP2_REG_BUF_SIZE; i++) {
 		if (last_used[i] == reg_ptr)
@@ -75,7 +76,7 @@ void mv_pp2x_write(struct mv_pp2x_hw *hw, u32 offset, u32 data)
 		pr_debug("NEW REG: mv_pp2x_write(%p)\n", reg_ptr);
 		last_used[next_write] = reg_ptr;
 		next_write++;
-		next_write = next_write%MVPP2_REG_BUF_SIZE;
+		next_write = next_write % MVPP2_REG_BUF_SIZE;
 	} else {
 		/*pr_info("mv_pp2x_write(%d)=%d , caller %pS\n",
 		*	offset, data, __builtin_return_address(0));
@@ -84,7 +85,7 @@ void mv_pp2x_write(struct mv_pp2x_hw *hw, u32 offset, u32 data)
 #endif
 	if (debug_param)
 		pr_info("mv_pp2x_write: 0x%p data=0x%x\n", reg_ptr, data);
-	writel(data, hw->cpu_base[smp_processor_id()] + offset);
+	writel(data, reg_ptr);
 }
 EXPORT_SYMBOL(mv_pp2x_write);
 
