@@ -82,7 +82,8 @@ void mv_pp2x_write(struct mv_pp2x_hw *hw, u32 offset, u32 data)
 		*/
 	}
 #endif
-
+	if (debug_param)
+		pr_info("mv_pp2x_write: 0x%p data=0x%x\n", reg_ptr, data);
 	writel(data, hw->cpu_base[smp_processor_id()] + offset);
 }
 EXPORT_SYMBOL(mv_pp2x_write);
@@ -113,6 +114,10 @@ u32 mv_pp2x_read(struct mv_pp2x_hw *hw, u32 offset)
 		 *	offset, val, __builtin_return_address(0));
 		*/
 	}
+
+	if (debug_param)
+		pr_info("mv_pp2x_read: 0x%p data=0x%x\n", reg_ptr, val);
+
 #endif
 
 	return val;
@@ -3486,14 +3491,6 @@ void mv_pp2x_cls_oversize_rxq_set(struct mv_pp2x_port *port)
 	mv_pp2x_write(hw, MVPP2_CLS_OVERSIZE_RXQ_LOW_REG(port->id),
 		      port->first_rxq & MVPP2_CLS_OVERSIZE_RXQ_LOW_MASK);
 
-#if 0 /*TODO: Delete this after checking MVPP2 */
-	mv_pp2x_write(hw, MVPP2_CLS_SWFWD_P2HQ_REG(port->id),
-		      (port->first_rxq >> MVPP2_CLS_OVERSIZE_RXQ_LOW_BITS));
-
-	val = mv_pp2x_read(hw, MVPP2_CLS_SWFWD_PCTRL_REG);
-	val |= MVPP2_CLS_SWFWD_PCTRL_MASK(port->id);
-	mv_pp2x_write(hw, MVPP2_CLS_SWFWD_PCTRL_REG, val);
-#endif
 }
 
 void mv_pp21_get_mac_address(struct mv_pp2x_port *port, unsigned char *addr)
