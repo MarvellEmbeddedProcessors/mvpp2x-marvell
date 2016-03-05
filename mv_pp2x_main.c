@@ -3250,14 +3250,15 @@ static void mv_pp21_port_queue_vectors_init(struct mv_pp2x_port *port)
 	port->num_qvector = 1;
 }
 
-static int mv_pp2_num_cpu_irqs(struct mv_pp2x_port *port) {
+static int mv_pp2_num_cpu_irqs(struct mv_pp2x_port *port)
+{
 	int cpu_avail_irq;
 
 	cpu_avail_irq = port->num_irqs -
-		((mv_pp2x_queue_mode==MVPP2_QDIST_SINGLE_MODE)?1:0);
+		((mv_pp2x_queue_mode == MVPP2_QDIST_SINGLE_MODE) ? 1 : 0);
 	if (cpu_avail_irq < 0)
 		return 0;
-	return(min(num_active_cpus(), (unsigned int)cpu_avail_irq));
+	return min((num_active_cpus()), ((unsigned int)cpu_avail_irq));
 }
 
 static void mv_pp22_queue_vectors_init(struct mv_pp2x_port *port)
