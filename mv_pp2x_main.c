@@ -3749,9 +3749,13 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 				mv_pp2x_tx_proc_cb, (unsigned long)dev);
 		}
 	}
-	features = NETIF_F_SG | NETIF_F_IP_CSUM;
+	features = NETIF_F_SG;
+#if defined(__BIG_ENDIAN)
 	dev->features = features | NETIF_F_RXCSUM;
-	dev->hw_features |= features | NETIF_F_RXCSUM | NETIF_F_GRO;
+#else
+	dev->features = features | NETIF_F_RXCSUM | NETIF_F_IP_CSUM;
+#endif
+	dev->hw_features |= features | NETIF_F_RXCSUM | NETIF_F_GRO | NETIF_F_IP_CSUM;
 	/* Only when multi queue mode, rxhash is supported */
 	if (mv_pp2x_queue_mode)
 		dev->hw_features |= NETIF_F_RXHASH;
