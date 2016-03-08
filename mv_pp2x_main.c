@@ -3132,7 +3132,7 @@ int mv_pp2x_of_irq_count(struct device_node *dev)
 static int mv_pp2x_netdev_set_features(struct net_device *dev,
 	netdev_features_t features)
 {
-	u32 changed = dev->features ^ features;
+	netdev_features_t changed = dev->features ^ features;
 	struct mv_pp2x_port *port = netdev_priv(dev);
 
 	/* dev->features is not changed */
