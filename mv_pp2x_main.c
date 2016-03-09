@@ -3753,9 +3753,9 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 #if defined(__BIG_ENDIAN)
 	dev->features = features | NETIF_F_RXCSUM;
 #else
-	dev->features = features | NETIF_F_RXCSUM | NETIF_F_IP_CSUM;
+	dev->features = features | NETIF_F_RXCSUM | NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM;
 #endif
-	dev->hw_features |= features | NETIF_F_RXCSUM | NETIF_F_GRO | NETIF_F_IP_CSUM;
+	dev->hw_features |= features | NETIF_F_RXCSUM | NETIF_F_GRO | NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM;
 	/* Only when multi queue mode, rxhash is supported */
 	if (mv_pp2x_queue_mode)
 		dev->hw_features |= NETIF_F_RXHASH;
