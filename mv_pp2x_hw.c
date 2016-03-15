@@ -654,8 +654,8 @@ static void mv_pp2x_prs_tcam_data_dword_get(struct mv_pp2x_prs_entry *pe,
 	for (index = 0; index < 4; index++) {
 		offset = (offs * 4) + index;
 		mv_pp2x_prs_tcam_data_byte_get(pe, offset,  &byte, &mask);
-		((unsigned char *) word)[index] = byte;
-		((unsigned char *) enable)[index] = mask;
+		((unsigned char *) word)[HW_BYTE_OFFS(index)] = byte;
+		((unsigned char *) enable)[HW_BYTE_OFFS(index)] = mask;
 	}
 }
 
@@ -2570,8 +2570,7 @@ mv_pp2x_prs_mac_da_range_find(struct mv_pp2x_hw *hw, int pmap, const u8 *da,
 		mv_pp2x_prs_hw_read(hw, pe);
 		entry_pmap = mv_pp2x_prs_tcam_port_map_get(pe);
 
-		if (mv_pp2x_prs_mac_range_equals(pe, da, mask) &&
-		    entry_pmap == pmap)
+		if (mv_pp2x_prs_mac_range_equals(pe, da, mask))
 			return pe;
 	}
 	kfree(pe);
