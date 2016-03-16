@@ -1967,7 +1967,7 @@ static u32 mv_pp2x_skb_tx_csum(struct mv_pp2x_port *port, struct sk_buff *skb)
 		}
 
 		return mv_pp2x_txq_desc_csum(skb_network_offset(skb),
-				skb->protocol, ip_hdr_len, l4_proto);
+				ntohs(skb->protocol), ip_hdr_len, l4_proto);
 	}
 
 	return MVPP2_TXD_L4_CSUM_NOT | MVPP2_TXD_IP_CSUM_DISABLE;
@@ -3750,11 +3750,7 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 		}
 	}
 	features = NETIF_F_SG;
-#if defined(__BIG_ENDIAN)
-	dev->features = features | NETIF_F_RXCSUM;
-#else
 	dev->features = features | NETIF_F_RXCSUM | NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM;
-#endif
 	dev->hw_features |= features | NETIF_F_RXCSUM | NETIF_F_GRO | NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM;
 	/* Only when multi queue mode, rxhash is supported */
 	if (mv_pp2x_queue_mode)
