@@ -2383,11 +2383,14 @@ static inline int mv_pp2x_cause_rx_handle(struct mv_pp2x_port *port,
 			cause_rx &= ~(1 << rxq->log_id);
 		}
 	}
-	if (budget > 0) {
-		cause_rx = 0;
-		napi_complete(napi);
-		mv_pp2x_qvector_interrupt_enable(q_vec);
-	}
+		if (budget > 0) {
+			cause_rx = 0;
+			napi_complete(napi);
+#ifdef DEV_NETMAP
+		if (!(port->flags & MVPP2_F_IFCAP_NETMAP))
+#endif
+			mv_pp2x_qvector_interrupt_enable(q_vec);
+		}
 	q_vec->pending_cause_rx = cause_rx;
 
 	return rx_done;
@@ -3759,11 +3762,13 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 
 	priv->port_list[priv->num_ports] = port;
 	priv->num_ports++;
-	return 0;
-	dev_err(&pdev->dev, "%s failed for port_id(%d)\n", __func__, id);
+
 #ifdef DEV_NETMAP
 	mv_pp2x_netmap_attach(port);
 #endif /* DEV_NETMAP */
+
+	return 0;
+	dev_err(&pdev->dev, "%s failed for port_id(%d)\n", __func__, id);
 
 err_free_port_pcpu:
 	free_percpu(port->pcpu);
