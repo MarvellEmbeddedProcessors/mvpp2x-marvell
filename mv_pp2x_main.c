@@ -65,7 +65,7 @@
 
 /* Declaractions */
 u8 mv_pp2x_num_cos_queues = 4;
-static u8 mv_pp2x_queue_mode = MVPP2_QDIST_SINGLE_MODE;
+static u8 mv_pp2x_queue_mode = MVPP2_QDIST_MULTI_MODE;//VPP2_QDIST_SINGLE_MODE;
 static u8 rss_mode;
 static u8 default_cpu;
 static u8 cos_classifer;
@@ -4212,7 +4212,7 @@ static struct mv_pp2x_platform_data pp22_pdata = {
 #ifdef CONFIG_MV_PP2_POLLING
 	.interrupt_tx_done = false,
 #else
-	.interrupt_tx_done = false, /*temp. value*/
+	.interrupt_tx_done = true,//false, /*temp. value*/
 #endif
 	.multi_hw_instance = true,
 	.mv_pp2x_port_queue_vectors_init = mv_pp22_queue_vectors_init,

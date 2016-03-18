@@ -11,6 +11,7 @@ mvpp2x-objs += mv_gop110_hw.o
 ccflags-y := -I$(M)
 ccflags-y += -I${KDIR}/include
 ccflags-y += -DMVPP2_DEBUG
+ccflags-y += -DMVPP2_DEMO
 ifdef config
 ccflags-y += -D$(config)
 $(info NOTE!! : config=$(config))

@@ -3132,8 +3132,13 @@ static inline void mv_pp2x_cls_flow_rss_hash(struct mv_pp2x_hw *hw,
 		field_id[1] = MVPP2_CLS_FIELD_IP6DA;
 	}
 	/* L4 port */
+#ifndef MVPP2_DEMO
 	field_id[2] = MVPP2_CLS_FIELD_L4SIP;
 	field_id[3] = MVPP2_CLS_FIELD_L4DIP;
+#else
+	/* PP2 demo does not contain L4SIP when calculate RSS HASH value */
+	field_id[2] = MVPP2_CLS_FIELD_L4DIP;
+#endif
 
 	/* Set SW */
 	memset(fe, 0, sizeof(struct mv_pp2x_cls_flow_entry));
@@ -3143,11 +3148,18 @@ static inline void mv_pp2x_cls_flow_rss_hash(struct mv_pp2x_hw *hw,
 		mv_pp2x_cls_sw_flow_hek_set(fe, 0, field_id[0]);
 		mv_pp2x_cls_sw_flow_hek_set(fe, 1, field_id[1]);
 	} else {
+#ifndef MVPP2_DEMO
 		mv_pp2x_cls_sw_flow_hek_num_set(fe, 4);
 		mv_pp2x_cls_sw_flow_hek_set(fe, 0, field_id[0]);
 		mv_pp2x_cls_sw_flow_hek_set(fe, 1, field_id[1]);
 		mv_pp2x_cls_sw_flow_hek_set(fe, 2, field_id[2]);
 		mv_pp2x_cls_sw_flow_hek_set(fe, 3, field_id[3]);
+#else
+		mv_pp2x_cls_sw_flow_hek_num_set(fe, 3);
+		mv_pp2x_cls_sw_flow_hek_set(fe, 0, field_id[0]);
+		mv_pp2x_cls_sw_flow_hek_set(fe, 1, field_id[1]);
+		mv_pp2x_cls_sw_flow_hek_set(fe, 2, field_id[2]);
+#endif
 		mv_pp2x_cls_sw_flow_eng_set(fe, MVPP2_CLS_ENGINE_C3HB, 1);
 	}
 	mv_pp2x_cls_sw_flow_extra_set(fe,
