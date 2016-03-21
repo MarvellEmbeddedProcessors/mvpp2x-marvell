@@ -705,7 +705,7 @@ static void mv_pp2x_defaults_set(struct mv_pp2x_port *port)
 /* Check if there are enough reserved descriptors for transmission.
  * If not, request chunk of reserved descriptors and check again.
  */
-static int mv_pp2x_txq_reserved_desc_num_proc(
+int mv_pp2x_txq_reserved_desc_num_proc(
 					struct mv_pp2x *priv,
 					struct mv_pp2x_tx_queue *txq,
 					struct mv_pp2x_txq_pcpu *txq_pcpu,
@@ -2909,7 +2909,7 @@ err_cleanup_rxqs:
 	return err;
 }
 
-static int mv_pp2x_stop(struct net_device *dev)
+int mv_pp2x_stop(struct net_device *dev)
 {
 	struct mv_pp2x_port *port = netdev_priv(dev);
 	struct mv_pp2x_port_pcpu *port_pcpu;
