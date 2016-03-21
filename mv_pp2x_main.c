@@ -1289,8 +1289,7 @@ int mv_pp2x_setup_irqs(struct net_device *dev, struct mv_pp2x_port *port)
 	/* Rx/TX irq's */
 	for (qvec_id = 0; qvec_id < port->num_qvector; qvec_id++) {
 		qvec = &port->q_vector[qvec_id];
-		if (qvec->qv_type == MVPP2_PRIVATE &&
-		    port->priv->pp2xdata->interrupt_tx_done == false)
+		if (!qvec->irq)
 			continue;
 		err = request_irq(qvec->irq, mv_pp2x_isr, 0,
 				  qvec->irq_name, qvec);
@@ -3265,19 +3264,21 @@ static int mv_pp2_num_cpu_irqs(struct mv_pp2x_port *port)
 static void mv_pp22_queue_vectors_init(struct mv_pp2x_port *port)
 {
 	int cpu;
+	int sw_thread_index = first_addr_space, irq_index = first_addr_space;
 	struct queue_vector *q_vec = &port->q_vector[0];
 	struct net_device  *net_dev = port->dev;
 
-	/* Each cpu has zero private rx_queues */
+	/* Each cpu has queue_vector for private tx_done counters and/or private rx_queues */
 	for (cpu = 0; cpu < num_active_cpus(); cpu++) {
 		q_vec[cpu].parent = port;
 		q_vec[cpu].qv_type = MVPP2_PRIVATE;
-		q_vec[cpu].sw_thread_id = QV_CPU_2_THR(cpu);
+		q_vec[cpu].sw_thread_id = sw_thread_index++;
 		q_vec[cpu].sw_thread_mask = (1<<q_vec[cpu].sw_thread_id);
 		q_vec[cpu].pending_cause_rx = 0;
 #if !defined(CONFIG_MV_PP2_POLLING)
-		if (port->priv->pp2xdata->interrupt_tx_done == true)
-			q_vec[cpu].irq = port->of_irqs[first_addr_space+cpu];
+		if (port->priv->pp2xdata->interrupt_tx_done == true ||
+		    mv_pp2x_queue_mode == MVPP2_QDIST_MULTI_MODE)
+			q_vec[cpu].irq = port->of_irqs[irq_index++];
 #endif
 		netif_napi_add(net_dev, &q_vec[cpu].napi, mv_pp22_poll,
 			NAPI_POLL_WEIGHT);
@@ -3294,17 +3295,11 @@ static void mv_pp22_queue_vectors_init(struct mv_pp2x_port *port)
 	if (mv_pp2x_queue_mode == MVPP2_QDIST_SINGLE_MODE) {
 		q_vec[cpu].parent = port;
 		q_vec[cpu].qv_type = MVPP2_SHARED;
-		if (port->priv->pp2xdata->interrupt_tx_done == true)
-			q_vec[cpu].sw_thread_id = first_addr_space+cpu;
-		else
-			q_vec[cpu].sw_thread_id = first_addr_space;
+		q_vec[cpu].sw_thread_id = irq_index;
 		q_vec[cpu].sw_thread_mask = (1<<q_vec[cpu].sw_thread_id);
 		q_vec[cpu].pending_cause_rx = 0;
 #if !defined(CONFIG_MV_PP2_POLLING)
-		if (port->priv->pp2xdata->interrupt_tx_done == true)
-			q_vec[cpu].irq = port->of_irqs[first_addr_space+cpu];
-		else
-			q_vec[cpu].irq = port->of_irqs[first_addr_space];
+		q_vec[cpu].irq = port->of_irqs[irq_index];
 #endif
 		netif_napi_add(net_dev, &q_vec[cpu].napi, mv_pp22_poll,
 			NAPI_POLL_WEIGHT);
@@ -4212,7 +4207,7 @@ static struct mv_pp2x_platform_data pp22_pdata = {
 #ifdef CONFIG_MV_PP2_POLLING
 	.interrupt_tx_done = false,
 #else
-	.interrupt_tx_done = true,//false, /*temp. value*/
+	.interrupt_tx_done = false, /*temp. value*/
 #endif
 	.multi_hw_instance = true,
 	.mv_pp2x_port_queue_vectors_init = mv_pp22_queue_vectors_init,
