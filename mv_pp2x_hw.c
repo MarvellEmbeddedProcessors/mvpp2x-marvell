@@ -664,10 +664,9 @@ static void mv_pp2x_prs_tcam_data_dword_get(struct mv_pp2x_prs_entry *pe,
 static bool mv_pp2x_prs_tcam_data_cmp(struct mv_pp2x_prs_entry *pe, int offs,
 				      u16 data)
 {
-	int off = TCAM_DATA_BYTE(offs);
 	u16 tcam_data;
 
-	tcam_data = (8 << pe->tcam.byte[off + 1]) | pe->tcam.byte[off];
+	tcam_data = (pe->tcam.byte[TCAM_DATA_BYTE(offs + 1)] << 8) | pe->tcam.byte[TCAM_DATA_BYTE(offs)];
 	if (tcam_data != data)
 		return false;
 	return true;
