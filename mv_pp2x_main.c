@@ -196,7 +196,7 @@ static void mv_pp2x_txq_inc_get(struct mv_pp2x_txq_pcpu *txq_pcpu)
 		txq_pcpu->txq_get_index = 0;
 }
 
-static void mv_pp2x_txq_inc_put(enum mvppv2_version pp2_ver,
+void mv_pp2x_txq_inc_put(enum mvppv2_version pp2_ver,
 			      struct mv_pp2x_txq_pcpu *txq_pcpu,
 			      struct sk_buff *skb,
 			      struct mv_pp2x_tx_desc *tx_desc)
