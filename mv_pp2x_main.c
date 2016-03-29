@@ -2884,8 +2884,10 @@ int mv_pp2x_open(struct net_device *dev)
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	/* Port is init in uboot */
 #if !defined(OLD_UBOOT)
-	if (port->mac_data.phy_mode == PHY_INTERFACE_MODE_RGMII)
-		port->mac_data.flags |= MV_EMAC_F_INIT;
+	if (port->mac_data.phy_mode == PHY_INTERFACE_MODE_RGMII ||
+		port->mac_data.phy_mode == PHY_INTERFACE_MODE_KR ||
+		port->mac_data.phy_mode == PHY_INTERFACE_MODE_SGMII)
+			port->mac_data.flags |= MV_EMAC_F_INIT;
 #endif
 
 	if (port->priv->pp2_version == PPV22)
