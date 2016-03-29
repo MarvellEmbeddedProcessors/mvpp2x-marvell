@@ -2506,7 +2506,7 @@
 #define MVPP2_TX_FIFO_EMPTY_TIMEOUT	10000
 #define MVPP2_PORT_DISABLE_WAIT_TCLOCKS	5000
 #define MVPP2_TX_PENDING_TIMEOUT_MSEC	1000
-#define MVPP2_TX_SEND_TIMEOUT 		10000
+#define MVPP2_TX_SEND_TIMEOUT		10000
 
 /* The two bytes Marvell header. Either contains a special value used
  * by Marvell switches when a specific hardware mode is enabled (not
@@ -2704,7 +2704,7 @@ enum mv_pp2x_tag_type {
 #define MVPP2_PRINT_LINE() \
 	printf("Passed: %s(%d)\n", __FILENAME__, __LINE__)
 
-/* Masks used for pp3_emac flags */
+/* Masks used for pp2_emac flags */
 #define MV_EMAC_F_LINK_UP_BIT	0
 #define MV_EMAC_F_INIT_BIT	1
 #define MV_EMAC_F_SGMII2_5_BIT	2
@@ -2712,6 +2712,35 @@ enum mv_pp2x_tag_type {
 #define MV_EMAC_F_LINK_UP	(1 << MV_EMAC_F_LINK_UP_BIT)
 #define MV_EMAC_F_INIT		(1 << MV_EMAC_F_INIT_BIT)
 #define MV_EMAC_F_SGMII2_5	(1 << MV_EMAC_F_SGMII2_5_BIT)
+
+/* MPCS registers */
+#define PCS40G_COMMON_CONTROL					(0x014)
+
+#define FORWARD_ERROR_CORRECTION_OFFSET				10
+#define FORWARD_ERROR_CORRECTION_MASK	\
+	(0x1 << FORWARD_ERROR_CORRECTION_OFFSET)
+
+#define PCS_CLOCK_RESET						(0x14C)
+
+#define CLK_DIV_PHASE_SET_OFFSET				11
+#define CLK_DIV_PHASE_SET_MASK	\
+	(0x1 << CLK_DIV_PHASE_SET_OFFSET)
+
+#define CLK_DIVISION_RATIO_OFFSET				4
+#define CLK_DIVISION_RATIO_MASK	\
+	(0x7 << CLK_DIVISION_RATIO_OFFSET)
+
+#define MAC_CLK_RESET_OFFSET					2
+#define MAC_CLK_RESET_MASK	\
+	(0x1 << MAC_CLK_RESET_OFFSET)
+
+#define RX_SD_CLK_RESET_OFFSET					1
+#define RX_SD_CLK_RESET_MASK	\
+	(0x1 << RX_SD_CLK_RESET_OFFSET)
+
+#define TX_SD_CLK_RESET_OFFSET					0
+#define TX_SD_CLK_RESET_MASK	\
+	(0x1 << TX_SD_CLK_RESET_OFFSET)
 
 /* Definitions */
 
@@ -2830,6 +2859,8 @@ struct mv_pp2x_dev_para {
 	int phy_addr;
 	int gop_port;
 	phy_interface_t phy_type;
+	u32 *phy_handle;
+	int phy_speed;
 };
 
 struct pp21_specific_tx_desc {
@@ -3138,15 +3169,6 @@ enum mv_reset {RESET, UNRESET};
 
 enum sd_media_mode {MV_RXAUI, MV_XAUI};
 
-enum mv_port_speed {
-	MV_PORT_SPEED_AN,
-	MV_PORT_SPEED_10,
-	MV_PORT_SPEED_100,
-	MV_PORT_SPEED_1000,
-	MV_PORT_SPEED_2000,
-	MV_PORT_SPEED_10000
-};
-
 enum mv_port_duplex {
 	MV_PORT_DUPLEX_AN,
 	MV_PORT_DUPLEX_HALF,
@@ -3191,18 +3213,3 @@ enum mv_netc_lanes {
 	MV_NETC_LANE_23,
 	MV_NETC_LANE_45,
 };
-
-#ifdef CONFIG_MVPP2_FPGA
-
-#define FPGA_PORTS_BASE          0
-#define MVPP2_FPGA_PERODIC_TIME 10
-#define FPGA_PORT_0_OFFSET       0x104000
-
-void *mv_pp2x_vfpga_address;
-void __iomem *fpga_base;
-
-#endif
-
-/* Functuions */
-void mv_pp2x_write(struct mv_pp2x *pp2, u32 offset, u32 data);
-u32 mv_pp2x_read(struct mv_pp2x *pp2, u32 offset);

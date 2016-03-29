@@ -19,15 +19,6 @@
 #include "mv_pp2x.h"
 
 /* Static declaractions */
-
-#ifdef CONFIG_MVPP2_FPGA
-
-static struct pci_device_id fpga_id_table[] = {
-	{0x1234, 0x1234},
-	{}
-};
-#endif
-
 /* Number of RXQs used by single port */
 static int rxq_number = 1;
 /* Number of TXQs used by single port */
@@ -40,12 +31,12 @@ static struct buffer_location buffer_loc;
 
 
 /* Utility/helper methods */
-void mv_pp2x_write(struct mv_pp2x *pp2, u32 offset, u32 data)
+static void mv_pp2x_write(struct mv_pp2x *pp2, u32 offset, u32 data)
 {
 	writel(data, pp2->base + offset);
 }
 
-u32 mv_pp2x_read(struct mv_pp2x *pp2, u32 offset)
+static u32 mv_pp2x_read(struct mv_pp2x *pp2, u32 offset)
 {
 	return readl(pp2->base + offset);
 }
@@ -63,7 +54,7 @@ static inline int mv_pp2x_txq_phys(int port, int txq)
 }
 
 /* Update parser tcam and sram hw entries */
-int mv_pp2x_prs_hw_write(struct mv_pp2x *pp2, struct mv_pp2x_prs_entry *pe)
+static int mv_pp2x_prs_hw_write(struct mv_pp2x *pp2, struct mv_pp2x_prs_entry *pe)
 {
 	int i;
 
@@ -87,7 +78,7 @@ int mv_pp2x_prs_hw_write(struct mv_pp2x *pp2, struct mv_pp2x_prs_entry *pe)
 }
 
 /* Read tcam entry from hw */
-int mv_pp2x_prs_hw_read(struct mv_pp2x *pp2, struct mv_pp2x_prs_entry *pe)
+static int mv_pp2x_prs_hw_read(struct mv_pp2x *pp2, struct mv_pp2x_prs_entry *pe)
 {
 	int i;
 
@@ -113,13 +104,8 @@ int mv_pp2x_prs_hw_read(struct mv_pp2x *pp2, struct mv_pp2x_prs_entry *pe)
 	return 0;
 }
 
-void mv_pp2x_prs_sw_clear(struct mv_pp2x_prs_entry *pe)
-{
-	memset(pe, 0, sizeof(struct mv_pp2x_prs_entry));
-}
-
 /* Invalidate tcam hw entry */
-void mv_pp2x_prs_hw_inv(struct mv_pp2x *pp2, int index)
+static void mv_pp2x_prs_hw_inv(struct mv_pp2x *pp2, int index)
 {
 	/* Write index - indirect access */
 	mv_pp2x_write(pp2, MVPP2_PRS_TCAM_IDX_REG, index);
@@ -143,7 +129,7 @@ static void mv_pp2x_prs_shadow_ri_set(struct mv_pp2x *pp2, int index,
 }
 
 /* Update lookup field in tcam sw entry */
-void mv_pp2x_prs_tcam_lu_set(struct mv_pp2x_prs_entry *pe, unsigned int lu)
+static void mv_pp2x_prs_tcam_lu_set(struct mv_pp2x_prs_entry *pe, unsigned int lu)
 {
 	int enable_off = MVPP2_PRS_TCAM_EN_OFFS(MVPP2_PRS_TCAM_LU_BYTE);
 
@@ -152,7 +138,7 @@ void mv_pp2x_prs_tcam_lu_set(struct mv_pp2x_prs_entry *pe, unsigned int lu)
 }
 
 /* Update mask for single port in tcam sw entry */
-void mv_pp2x_prs_tcam_port_set(struct mv_pp2x_prs_entry *pe,
+static void mv_pp2x_prs_tcam_port_set(struct mv_pp2x_prs_entry *pe,
 				    unsigned int port, bool add)
 {
 	int enable_off = MVPP2_PRS_TCAM_EN_OFFS(MVPP2_PRS_TCAM_PORT_BYTE);
@@ -164,7 +150,7 @@ void mv_pp2x_prs_tcam_port_set(struct mv_pp2x_prs_entry *pe,
 }
 
 /* Update port map in tcam sw entry */
-void mv_pp2x_prs_tcam_port_map_set(struct mv_pp2x_prs_entry *pe,
+static void mv_pp2x_prs_tcam_port_map_set(struct mv_pp2x_prs_entry *pe,
 					unsigned int ports)
 {
 	unsigned char port_mask = MVPP2_PRS_PORT_MASK;
@@ -184,7 +170,7 @@ static unsigned int mv_pp2x_prs_tcam_port_map_get(struct mv_pp2x_prs_entry *pe)
 }
 
 /* Set byte of data and its enable bits in tcam sw entry */
-void mv_pp2x_prs_tcam_data_byte_set(struct mv_pp2x_prs_entry *pe,
+static void mv_pp2x_prs_tcam_data_byte_set(struct mv_pp2x_prs_entry *pe,
 					 unsigned int offs, unsigned char byte,
 					 unsigned char enable)
 {
@@ -231,7 +217,7 @@ static bool mv_pp2x_prs_tcam_data_cmp(struct mv_pp2x_prs_entry *pe, int offs,
 }
 
 /* Update ai bits in tcam sw entry */
-void mv_pp2x_prs_tcam_ai_update(struct mv_pp2x_prs_entry *pe,
+static void mv_pp2x_prs_tcam_ai_update(struct mv_pp2x_prs_entry *pe,
 				     unsigned int bits, unsigned int enable)
 {
 	int i, ai_idx = MVPP2_PRS_TCAM_AI_BYTE;
@@ -278,7 +264,7 @@ static void mv_pp2x_prs_sram_bits_clear(struct mv_pp2x_prs_entry *pe, int bit_nu
 }
 
 /* Update ri bits in sram sw entry */
-void mv_pp2x_prs_sram_ri_update(struct mv_pp2x_prs_entry *pe,
+static void mv_pp2x_prs_sram_ri_update(struct mv_pp2x_prs_entry *pe,
 				     unsigned int bits, unsigned int mask)
 {
 	unsigned int i;
@@ -306,7 +292,7 @@ static int mv_pp2x_prs_sram_ri_get(struct mv_pp2x_prs_entry *pe)
 }
 
 /* Update ai bits in sram sw entry */
-void mv_pp2x_prs_sram_ai_update(struct mv_pp2x_prs_entry *pe,
+static void mv_pp2x_prs_sram_ai_update(struct mv_pp2x_prs_entry *pe,
 				     unsigned int bits, unsigned int mask)
 {
 	unsigned int i;
@@ -343,7 +329,7 @@ static int mv_pp2x_prs_sram_ai_get(struct mv_pp2x_prs_entry *pe)
 /* In sram sw entry set lookup ID field of the tcam key to be used in the next
  * lookup interation
  */
-void mv_pp2x_prs_sram_next_lu_set(struct mv_pp2x_prs_entry *pe,
+static void mv_pp2x_prs_sram_next_lu_set(struct mv_pp2x_prs_entry *pe,
 				       unsigned int lu)
 {
 	int sram_next_off = MVPP2_PRS_SRAM_NEXT_LU_OFFS;
@@ -486,7 +472,7 @@ static void mv_pp2x_prs_mac_drop_all_set(struct mv_pp2x *pp2, int port, bool add
 }
 
 /* Set port to promiscuous mode */
-void mv_pp2x_prs_mac_promisc_set(struct mv_pp2x *pp2, int port, bool add)
+static void mv_pp2x_prs_mac_promisc_set(struct mv_pp2x *pp2, int port, bool add)
 {
 	struct mv_pp2x_prs_entry pe;
 
@@ -527,7 +513,7 @@ void mv_pp2x_prs_mac_promisc_set(struct mv_pp2x *pp2, int port, bool add)
 }
 
 /* Accept multicast */
-void mv_pp2x_prs_mac_multi_set(struct mv_pp2x *pp2, int port, int index,
+static void mv_pp2x_prs_mac_multi_set(struct mv_pp2x *pp2, int port, int index,
 				    bool add)
 {
 	struct mv_pp2x_prs_entry pe;
@@ -1171,7 +1157,7 @@ static int mv_pp2x_prs_ip6_cast(struct mv_pp2x *pp2, unsigned short l3_cast)
 }
 
 /* Parser per-port initialization */
-void mv_pp2x_prs_hw_port_init(struct mv_pp2x *pp2, int port, int lu_first,
+static void mv_pp2x_prs_hw_port_init(struct mv_pp2x *pp2, int port, int lu_first,
 				   int lu_max, int offset)
 {
 	u32 val;
@@ -1331,7 +1317,8 @@ mv_pp2x_prs_mac_da_range_find(struct mv_pp2x *pp2, int pmap, const u8 *da,
 }
 
 /* Update parser's mac da entry */
-int mv_pp2x_prs_mac_da_accept(struct mv_pp2x_port *pp, const u8 *da, bool add)
+static int mv_pp2x_prs_mac_da_accept(struct mv_pp2x_port *pp, const u8 *da,
+					bool add)
 {
 	struct mv_pp2x_prs_entry *pe;
 	unsigned int pmap, len, ri;
@@ -2108,7 +2095,7 @@ static int mv_pp2x_prs_ip6_init(struct mv_pp2x *pp2)
 	return 0;
 }
 
-int mv_pp2x_prs_tag_mode_set(struct mv_pp2x_port *pp, int type)
+static int mv_pp2x_prs_tag_mode_set(struct mv_pp2x_port *pp, int type)
 {
 	switch (type) {
 	case MVPP2_TAG_TYPE_EDSA:
@@ -2200,7 +2187,7 @@ static struct mv_pp2x_prs_entry *mv_pp2x_prs_flow_find(struct mv_pp2x *pp2,
 }
 
 /* Set prs flow for the port */
-int mv_pp2x_prs_def_flow(struct mv_pp2x_port *port)
+static int mv_pp2x_prs_def_flow(struct mv_pp2x_port *port)
 {
 	struct mv_pp2x_prs_entry *pe;
 	int tid;
@@ -2239,7 +2226,7 @@ int mv_pp2x_prs_def_flow(struct mv_pp2x_port *port)
 }
 
 /* Parser default initialization */
-int mv_pp2x_prs_default_init(struct mv_pp2x *pp2)
+static int mv_pp2x_prs_default_init(struct mv_pp2x *pp2)
 {
 	int err, index, i;
 
@@ -2329,7 +2316,7 @@ static void mv_pp2x_cls_hw_lkp_write(struct mv_pp2x *pp2,
 }
 
 /* Classifier default initialization */
-int mv_pp2x_cls_default_init(struct mv_pp2x *pp2)
+static int mv_pp2x_cls_default_init(struct mv_pp2x *pp2)
 {
 	struct mv_pp2x_cls_lkp_entry le;
 	struct mv_pp2x_cls_flow_entry fe;
@@ -2389,7 +2376,7 @@ static void mv_pp2x_cls_port_default_config(struct mv_pp2x_port *port)
 }
 
 /* Set CPU queue number for oversize packets */
-void mv_pp2x_cls_oversize_rxq_set(struct mv_pp2x_port *port)
+static void mv_pp2x_cls_oversize_rxq_set(struct mv_pp2x_port *port)
 {
 	mv_pp2x_write(port->pp2, MVPP2_CLS_OVERSIZE_RXQ_LOW_REG(port->id),
 		    port->first_rxq & MVPP2_CLS_OVERSIZE_RXQ_LOW_MASK);
@@ -2461,7 +2448,7 @@ static void mv_pp2x_bm_hw_pool_create(struct mv_pp2x *pp2)
 
 /*
  * mv_pp2x_bm_pool_init
- *   initialize BM pool to be used by all ports 
+ *   initialize BM pool to be used by all ports
  */
 
 static int mv_pp2x_bm_pool_init(struct mv_pp2x *pp2)
@@ -2566,36 +2553,6 @@ static void mv_pp2x_bm_stop(struct mv_pp2x *pp2)
 
 }
 
-/* Port configuration routines */
-
-void mv_pp2x_port_mii_set(struct mv_pp2x_port *port)
-{
-	u32 val;
-
-	val = readl(port->base + MVPP2_GMAC_CTRL_2_REG);
-
-	switch (port->mac_data.phy_mode) {
-	case PHY_INTERFACE_MODE_SGMII:
-		val |= MVPP2_GMAC_INBAND_AN_MASK;
-		break;
-	case PHY_INTERFACE_MODE_RGMII:
-		val |= MVPP2_GMAC_PORT_RGMII_MASK;
-	default:
-		val &= ~MVPP2_GMAC_PCS_ENABLE_MASK;
-	}
-
-	writel(val, port->base + MVPP2_GMAC_CTRL_2_REG);
-}
-
-void mv_pp2x_port_fc_adv_enable(struct mv_pp2x_port *port)
-{
-	u32 val;
-
-	val = readl(port->base + MVPP2_GMAC_AUTONEG_CONFIG);
-	val |= MVPP2_GMAC_FC_ADV_EN;
-	writel(val, port->base + MVPP2_GMAC_AUTONEG_CONFIG);
-}
-
 void mv_pp2x_port_enable(struct mv_pp2x_port *port)
 {
 	u32 val;
@@ -2632,7 +2589,6 @@ static void mv_pp2x_ingress_enable(struct mv_pp2x_port *pp, bool en)
 	}
 }
 
-#ifndef CONFIG_MVPP2_FPGA
 /* PP2 GOP/GMAC config */
 
 /* GOP Functions */
@@ -2697,6 +2653,19 @@ static inline void mv_gop110_serdes_write(struct gop_hw *gop,
 		lane_num * gop->gop_110.serdes.obj_size + offset, data);
 }
 
+/* MPCS Functions */
+
+static inline u32 mv_gop110_mpcs_global_read(struct gop_hw *gop, u32 offset)
+{
+	return mv_gop_gen_read(gop->gop_110.mspg_base, offset);
+}
+
+static inline void mv_gop110_mpcs_global_write(struct gop_hw *gop, u32 offset,
+					       u32 data)
+{
+	mv_gop_gen_write(gop->gop_110.mspg_base, offset, data);
+}
+
 /* XPCS Functions */
 
 static inline u32 mv_gop110_xpcs_global_read(struct gop_hw *gop, u32 offset)
@@ -2723,7 +2692,7 @@ static inline void mv_gop110_smi_write(struct gop_hw *gop, u32 offset, u32 data)
 /*
 * mv_gop_phy_addr_cfg
 */
-int mv_gop110_smi_phy_addr_cfg(struct gop_hw *gop, int port, int addr)
+static int mv_gop110_smi_phy_addr_cfg(struct gop_hw *gop, int port, int addr)
 {
 	mv_gop110_smi_write(gop, MV_SMI_PHY_ADDRESS_REG(port), addr);
 
@@ -2731,7 +2700,8 @@ int mv_gop110_smi_phy_addr_cfg(struct gop_hw *gop, int port, int addr)
 }
 
 /* Set the MAC to reset or exit from reset */
-int mv_gop110_gmac_reset(struct gop_hw *gop, int mac_num, enum mv_reset reset)
+static int mv_gop110_gmac_reset(struct gop_hw *gop, int mac_num,
+				enum mv_reset reset)
 {
 	u32 reg_addr;
 	u32 val;
@@ -2753,7 +2723,7 @@ int mv_gop110_gmac_reset(struct gop_hw *gop, int mac_num, enum mv_reset reset)
 * mv_gop110_gpcs_mode_cfg
 *Configure port to working with Gig PCS or don't.
 */
-int mv_gop110_gpcs_mode_cfg(struct gop_hw *gop, int pcs_num, bool en)
+static int mv_gop110_gpcs_mode_cfg(struct gop_hw *gop, int pcs_num, bool en)
 {
 	u32 val;
 
@@ -2769,6 +2739,24 @@ int mv_gop110_gpcs_mode_cfg(struct gop_hw *gop, int pcs_num, bool en)
 
 	return 0;
 }
+
+static int mv_gop110_bypass_clk_cfg(struct gop_hw *gop, int pcs_num, bool en)
+{
+	u32 val;
+
+	val = mv_gop110_gmac_read(gop, pcs_num, MV_GMAC_PORT_CTRL2_REG);
+
+	if (en)
+		val |= MV_GMAC_PORT_CTRL2_CLK_125_BYPS_EN_MASK;
+	else
+		val &= ~MV_GMAC_PORT_CTRL2_CLK_125_BYPS_EN_MASK;
+
+	/* enable / disable PCS on this port */
+	mv_gop110_gmac_write(gop, pcs_num, MV_GMAC_PORT_CTRL2_REG, val);
+
+	return 0;
+}
+
 
 static void mv_gop110_gmac_sgmii2_5_cfg(struct gop_hw *gop, int mac_num)
 {
@@ -2800,7 +2788,8 @@ static void mv_gop110_gmac_sgmii2_5_cfg(struct gop_hw *gop, int mac_num)
 	mv_gop110_gmac_write(gop, mac_num, MV_GMAC_PORT_CTRL0_REG, val);
 
 	/* configure AN 0x9268 */
-	an = MV_GMAC_PORT_AUTO_NEG_CFG_AN_BYPASS_EN_MASK |
+	an = MV_GMAC_PORT_AUTO_NEG_CFG_EN_PCS_AN_MASK |
+		MV_GMAC_PORT_AUTO_NEG_CFG_AN_BYPASS_EN_MASK |
 		MV_GMAC_PORT_AUTO_NEG_CFG_SET_MII_SPEED_MASK  |
 		MV_GMAC_PORT_AUTO_NEG_CFG_SET_GMII_SPEED_MASK     |
 		MV_GMAC_PORT_AUTO_NEG_CFG_ADV_PAUSE_MASK    |
@@ -2926,7 +2915,7 @@ static void mv_gop110_gmac_qsgmii_cfg(struct gop_hw *gop, int mac_num)
 	mv_gop110_gmac_write(gop, mac_num, MV_GMAC_PORT_AUTO_NEG_CFG_REG, an);
 }
 
-void mv_gop110_gmac_port_link_event_mask(struct gop_hw *gop, int mac_num)
+static void mv_gop110_gmac_port_link_event_mask(struct gop_hw *gop, int mac_num)
 {
 	u32 reg_val;
 
@@ -2938,7 +2927,7 @@ void mv_gop110_gmac_port_link_event_mask(struct gop_hw *gop, int mac_num)
 }
 
 /* Set the internal mux's to the required MAC in the GOP */
-int mv_gop110_gmac_mode_cfg(struct gop_hw *gop, struct mv_mac_data *mac)
+static int mv_gop110_gmac_mode_cfg(struct gop_hw *gop, struct mv_mac_data *mac)
 {
 	u32 reg_addr;
 	u32 val;
@@ -2988,7 +2977,7 @@ int mv_gop110_gmac_mode_cfg(struct gop_hw *gop, struct mv_mac_data *mac)
 	return 0;
 }
 
-void mv_gop110_xlg_2_gig_mac_cfg(struct gop_hw *gop, int mac_num)
+static void mv_gop110_xlg_2_gig_mac_cfg(struct gop_hw *gop, int mac_num)
 {
 	u32 reg_val;
 
@@ -3005,7 +2994,8 @@ void mv_gop110_xlg_2_gig_mac_cfg(struct gop_hw *gop, int mac_num)
 				reg_val);
 }
 
-int  mv_gop110_gpcs_reset(struct gop_hw *gop, int pcs_num, enum mv_reset act)
+static int  mv_gop110_gpcs_reset(struct gop_hw *gop, int pcs_num,
+				enum mv_reset act)
 {
 	u32 reg_data;
 
@@ -3021,7 +3011,7 @@ int  mv_gop110_gpcs_reset(struct gop_hw *gop, int pcs_num, enum mv_reset act)
 }
 
 /* Set the internal mux's to the required PCS in the PI */
-int mv_gop110_xpcs_mode(struct gop_hw *gop, int num_of_lanes)
+static int mv_gop110_xpcs_mode(struct gop_hw *gop, int num_of_lanes)
 {
 	u32 reg_addr;
 	u32 val;
@@ -3053,7 +3043,39 @@ int mv_gop110_xpcs_mode(struct gop_hw *gop, int num_of_lanes)
 	return 0;
 }
 
-void mv_gop110_xlg_port_link_event_mask(struct gop_hw *gop, int mac_num)
+static int mv_gop110_mpcs_mode(struct gop_hw *gop)
+{
+	u32 reg_addr;
+	u32 val;
+
+	/* configure PCS40G COMMON CONTROL */
+	reg_addr = PCS40G_COMMON_CONTROL;
+	val = mv_gop110_mpcs_global_read(gop, reg_addr);
+	U32_SET_FIELD(val, FORWARD_ERROR_CORRECTION_MASK,
+			0 << FORWARD_ERROR_CORRECTION_OFFSET);
+
+	mv_gop110_mpcs_global_write(gop, reg_addr, val);
+
+	/* configure PCS CLOCK RESET */
+	reg_addr = PCS_CLOCK_RESET;
+	val = mv_gop110_mpcs_global_read(gop, reg_addr);
+	U32_SET_FIELD(val, CLK_DIVISION_RATIO_MASK, 1 <<
+			CLK_DIVISION_RATIO_OFFSET);
+
+	mv_gop110_mpcs_global_write(gop, reg_addr, val);
+
+	U32_SET_FIELD(val, CLK_DIV_PHASE_SET_MASK, 0 <<
+		CLK_DIV_PHASE_SET_OFFSET);
+	U32_SET_FIELD(val, MAC_CLK_RESET_MASK, 1 << MAC_CLK_RESET_OFFSET);
+	U32_SET_FIELD(val, RX_SD_CLK_RESET_MASK, 1 << RX_SD_CLK_RESET_OFFSET);
+	U32_SET_FIELD(val, TX_SD_CLK_RESET_MASK, 1 << TX_SD_CLK_RESET_OFFSET);
+
+	mv_gop110_mpcs_global_write(gop, reg_addr, val);
+
+	return 0;
+}
+
+static void mv_gop110_xlg_port_link_event_mask(struct gop_hw *gop, int mac_num)
 {
 	u32 reg_val;
 
@@ -3064,7 +3086,7 @@ void mv_gop110_xlg_port_link_event_mask(struct gop_hw *gop, int mac_num)
 				MV_XLG_EXTERNAL_INTERRUPT_MASK_REG, reg_val);
 }
 
-int mv_gop110_port_events_mask(struct gop_hw *gop, struct mv_mac_data *mac)
+static int mv_gop110_port_events_mask(struct gop_hw *gop, struct mv_mac_data *mac)
 {
 	int port_num = mac->gop_index;
 
@@ -3077,6 +3099,7 @@ int mv_gop110_port_events_mask(struct gop_hw *gop, struct mv_mac_data *mac)
 
 	case PHY_INTERFACE_MODE_XAUI:
 	case PHY_INTERFACE_MODE_RXAUI:
+	case PHY_INTERFACE_MODE_KR:
 		mv_gop110_xlg_port_link_event_mask(gop, port_num);
 	break;
 
@@ -3089,42 +3112,50 @@ int mv_gop110_port_events_mask(struct gop_hw *gop, struct mv_mac_data *mac)
 }
 
 /* Set the internal mux's to the required MAC in the GOP */
-int mv_gop110_xlg_mac_mode_cfg(struct gop_hw *gop, int mac_num,
+static int mv_gop110_xlg_mac_mode_cfg(struct gop_hw *gop, int mac_num,
 				int num_of_act_lanes)
 {
 	u32 reg_addr;
 	u32 val;
 
-	/* Set TX FIFO thresholds */
-	reg_addr = MV_XLG_PORT_FIFOS_THRS_CFG_REG;
+	/* configure 10G MAC mode */
+	reg_addr = MV_XLG_PORT_MAC_CTRL0_REG;
 	val = mv_gop110_xlg_mac_read(gop, mac_num, reg_addr);
-	U32_SET_FIELD(val, MV_XLG_MAC_PORT_FIFOS_THRS_CFG_TXRDTHR_MASK,
-		(6 << MV_XLG_MAC_PORT_FIFOS_THRS_CFG_TXRDTHR_OFFS));
+	U32_SET_FIELD(val, MV_XLG_MAC_CTRL0_RXFCEN_MASK,
+		      (1 << MV_XLG_MAC_CTRL0_RXFCEN_OFFS));
 	mv_gop110_xlg_mac_write(gop, mac_num, reg_addr, val);
 
-	/* configure 10G MAC mode */
 	reg_addr = MV_XLG_PORT_MAC_CTRL3_REG;
 	val = mv_gop110_xlg_mac_read(gop, mac_num, reg_addr);
 	U32_SET_FIELD(val, MV_XLG_MAC_CTRL3_MACMODESELECT_MASK,
-		(1 << MV_XLG_MAC_CTRL3_MACMODESELECT_OFFS));
+		      (1 << MV_XLG_MAC_CTRL3_MACMODESELECT_OFFS));
 	mv_gop110_xlg_mac_write(gop, mac_num, reg_addr, val);
 
 	reg_addr = MV_XLG_PORT_MAC_CTRL4_REG;
 
 	/* read - modify - write */
 	val = mv_gop110_xlg_mac_read(gop, mac_num, reg_addr);
-	U32_SET_FIELD(val, 0x1F10, 0x310);
+	U32_SET_FIELD(val, MV_XLG_MAC_CTRL4_MAC_MODE_DMA_1G_MASK, 0 <<
+					MV_XLG_MAC_CTRL4_MAC_MODE_DMA_1G_OFFS);
+	U32_SET_FIELD(val, MV_XLG_MAC_CTRL4_FORWARD_PFC_EN_MASK, 1 <<
+					MV_XLG_MAC_CTRL4_FORWARD_PFC_EN_OFFS);
+	U32_SET_FIELD(val, MV_XLG_MAC_CTRL4_FORWARD_802_3X_FC_EN_MASK, 1 <<
+					MV_XLG_MAC_CTRL4_FORWARD_802_3X_FC_EN_OFFS);
 	mv_gop110_xlg_mac_write(gop, mac_num, reg_addr, val);
 
 	/* Jumbo frame support - 0x1400*2= 0x2800 bytes */
 	val = mv_gop110_xlg_mac_read(gop, mac_num, MV_XLG_PORT_MAC_CTRL1_REG);
-	U32_SET_FIELD(val, 0x1FFF, 0x1400);
+	U32_SET_FIELD(val, MV_XLG_MAC_CTRL1_FRAMESIZELIMIT_MASK, 0x1400);
 	mv_gop110_xlg_mac_write(gop, mac_num, MV_XLG_PORT_MAC_CTRL1_REG, val);
 
 	/* mask all port interrupts */
 	mv_gop110_xlg_port_link_event_mask(gop, mac_num);
 
 	/* unmask link change interrupt */
+	val = mv_gop110_xlg_mac_read(gop, mac_num, MV_XLG_INTERRUPT_MASK_REG);
+	val |= MV_XLG_INTERRUPT_LINK_CHANGE_MASK;
+	val |= 1; /* unmask summary bit */
+	mv_gop110_xlg_mac_write(gop, mac_num, MV_XLG_INTERRUPT_MASK_REG, val);
 
 	return 0;
 }
@@ -3149,7 +3180,8 @@ int mv_gop110_xpcs_reset(struct gop_hw *gop, enum mv_reset reset)
 }
 
 /* Set the MAC to reset or exit from reset */
-int mv_gop110_xlg_mac_reset(struct gop_hw *gop, int mac_num, enum mv_reset reset)
+static int mv_gop110_xlg_mac_reset(struct gop_hw *gop, int mac_num,
+			enum mv_reset reset)
 {
 	u32 reg_addr;
 	u32 val;
@@ -3167,7 +3199,7 @@ int mv_gop110_xlg_mac_reset(struct gop_hw *gop, int mac_num, enum mv_reset reset
 	return 0;
 }
 
-void mv_gop110_serdes_reset(struct gop_hw *gop, int lane, bool analog_reset,
+static void mv_gop110_serdes_reset(struct gop_hw *gop, int lane, bool analog_reset,
 				bool core_reset, bool digital_reset)
 {
 	u32 reg_val;
@@ -3191,7 +3223,7 @@ void mv_gop110_serdes_reset(struct gop_hw *gop, int lane, bool analog_reset,
 	mv_gop110_serdes_write(gop, lane, MV_SERDES_CFG_1_REG, reg_val);
 }
 
-void mv_gop110_serdes_init(struct gop_hw *gop, int lane,
+static void mv_gop110_serdes_init(struct gop_hw *gop, int lane,
 				enum sd_media_mode mode)
 {
 	u32 reg_val;
@@ -3223,7 +3255,7 @@ void mv_gop110_serdes_init(struct gop_hw *gop, int lane,
 *       Does not verify that the selected mode/port number is valid at the
 *       core level.
 */
-int mv_gop110_port_init(struct gop_hw *gop, struct mv_mac_data *mac)
+static int mv_gop110_port_init(struct gop_hw *gop, struct mv_mac_data *mac)
 {
 	int mac_num = mac->gop_index;
 	int num_of_act_lanes;
@@ -3239,6 +3271,7 @@ int mv_gop110_port_init(struct gop_hw *gop, struct mv_mac_data *mac)
 		mv_gop110_gmac_reset(gop, mac_num, RESET);
 		/* configure PCS */
 		mv_gop110_gpcs_mode_cfg(gop, mac_num, false);
+		mv_gop110_bypass_clk_cfg(gop, mac_num, true);
 
 		/* configure MAC */
 		mv_gop110_gmac_mode_cfg(gop, mac);
@@ -3262,7 +3295,6 @@ int mv_gop110_port_init(struct gop_hw *gop, struct mv_mac_data *mac)
 		/* mac unreset */
 		mv_gop110_gmac_reset(gop, mac_num, UNRESET);
 	break;
-
 	case PHY_INTERFACE_MODE_XAUI:
 		num_of_act_lanes = 4;
 		mac_num = 0;
@@ -3299,7 +3331,21 @@ int mv_gop110_port_init(struct gop_hw *gop, struct mv_mac_data *mac)
 		mv_gop110_serdes_reset(gop, 0, false, false, false);
 		mv_gop110_serdes_reset(gop, 1, false, false, false);
 	break;
+	case PHY_INTERFACE_MODE_KR:
+		num_of_act_lanes = 2;
+		mac_num = 0;
+		/* configure PCS */
+		mv_gop110_xpcs_mode(gop, num_of_act_lanes);
+		mv_gop110_mpcs_mode(gop);
+		/* configure MAC */
+		mv_gop110_xlg_mac_mode_cfg(gop, mac_num, num_of_act_lanes);
 
+		/* pcs unreset */
+		mv_gop110_xpcs_reset(gop, UNRESET);
+
+		/* mac unreset */
+		mv_gop110_xlg_mac_reset(gop, mac_num, UNRESET);
+	break;
 	default:
 		netdev_err(NULL, "%s: Requested port mode (%d) not supported",
 				__func__, mac->phy_mode);
@@ -3312,34 +3358,27 @@ int mv_gop110_port_init(struct gop_hw *gop, struct mv_mac_data *mac)
 /* Sets port speed to Auto Negotiation / 1000 / 100 / 10 Mbps.
 *  Sets port duplex to Auto Negotiation / Full / Half Duplex.
 */
-int mv_gop110_gmac_speed_duplex_set(struct gop_hw *gop,
-	int mac_num, enum mv_port_speed speed, enum mv_port_duplex duplex)
+static int mv_gop110_gmac_speed_duplex_set(struct gop_hw *gop,
+	int mac_num, int speed, enum mv_port_duplex duplex)
 {
 	u32 reg_val;
-
-	/* Check validity */
-	if ((speed == MV_PORT_SPEED_1000) && (duplex == MV_PORT_DUPLEX_HALF))
-		return -EINVAL;
 
 	reg_val = mv_gop110_gmac_read(gop, mac_num,
 					MV_GMAC_PORT_AUTO_NEG_CFG_REG);
 
 	switch (speed) {
-	case MV_PORT_SPEED_AN:
-		reg_val |= MV_GMAC_PORT_AUTO_NEG_CFG_EN_AN_SPEED_MASK;
-		/* the other bits don't matter in this case */
-		break;
-	case MV_PORT_SPEED_1000:
+	case 2500:
+	case 1000:
 		reg_val &= ~MV_GMAC_PORT_AUTO_NEG_CFG_EN_AN_SPEED_MASK;
 		reg_val |= MV_GMAC_PORT_AUTO_NEG_CFG_SET_GMII_SPEED_MASK;
 		/* the 100/10 bit doesn't matter in this case */
 		break;
-	case MV_PORT_SPEED_100:
+	case 100:
 		reg_val &= ~MV_GMAC_PORT_AUTO_NEG_CFG_EN_AN_SPEED_MASK;
 		reg_val &= ~MV_GMAC_PORT_AUTO_NEG_CFG_SET_GMII_SPEED_MASK;
 		reg_val |= MV_GMAC_PORT_AUTO_NEG_CFG_SET_MII_SPEED_MASK;
 		break;
-	case MV_PORT_SPEED_10:
+	case 10:
 		reg_val &= ~MV_GMAC_PORT_AUTO_NEG_CFG_EN_AN_SPEED_MASK;
 		reg_val &= ~MV_GMAC_PORT_AUTO_NEG_CFG_SET_GMII_SPEED_MASK;
 		reg_val &= ~MV_GMAC_PORT_AUTO_NEG_CFG_SET_MII_SPEED_MASK;
@@ -3375,16 +3414,16 @@ int mv_gop110_gmac_speed_duplex_set(struct gop_hw *gop,
 /* Sets port speed to Auto Negotiation / 1000 / 100 / 10 Mbps.
 *  Sets port duplex to Auto Negotiation / Full / Half Duplex.
 */
-int mv_gop110_xlg_mac_speed_duplex_set(struct gop_hw *gop, int mac_num,
-			enum mv_port_speed speed, enum mv_port_duplex duplex)
+static int mv_gop110_xlg_mac_speed_duplex_set(struct gop_hw *gop, int mac_num,
+			int speed, enum mv_port_duplex duplex)
 {
 	/* not supported */
 	return -1;
 }
 
 /* set port speed and duplex */
-int mv_gop110_speed_duplex_set(struct gop_hw *gop, struct mv_mac_data *mac,
-			enum mv_port_speed speed, enum mv_port_duplex duplex)
+static int mv_gop110_speed_duplex_set(struct gop_hw *gop, struct mv_mac_data *mac,
+			int speed, enum mv_port_duplex duplex)
 {
 	int port_num = mac->gop_index;
 
@@ -3397,6 +3436,7 @@ int mv_gop110_speed_duplex_set(struct gop_hw *gop, struct mv_mac_data *mac,
 
 	case PHY_INTERFACE_MODE_XAUI:
 	case PHY_INTERFACE_MODE_RXAUI:
+	case PHY_INTERFACE_MODE_KR:
 		mv_gop110_xlg_mac_speed_duplex_set(gop, port_num,
 			speed, duplex);
 	break;
@@ -3412,7 +3452,7 @@ int mv_gop110_speed_duplex_set(struct gop_hw *gop, struct mv_mac_data *mac,
 /* Sets "Force Link Pass" and "Do Not Force Link Fail" bits.
 *  This function should only be called when the port is disabled.
 */
-int mv_gop110_gmac_force_link_mode_set(struct gop_hw *gop,
+static int mv_gop110_gmac_force_link_mode_set(struct gop_hw *gop,
 			int mac_num, bool force_link_up, bool force_link_down)
 {
 	u32 reg_val;
@@ -3440,27 +3480,21 @@ int mv_gop110_gmac_force_link_mode_set(struct gop_hw *gop,
 	return 0;
 }
 
-int mv_gop110_fl_cfg(struct gop_hw *gop, struct mv_mac_data *mac)
+static int mv_gop110_fl_cfg(struct gop_hw *gop, struct mv_mac_data *mac)
 {
-	int port_num = mac->gop_index;
 
 	switch (mac->phy_mode) {
 	case PHY_INTERFACE_MODE_RGMII:
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
 		/* disable AN */
-		if (mac->speed == 2500)
-			mv_gop110_speed_duplex_set(gop, mac, MV_PORT_SPEED_2000,
+		mv_gop110_speed_duplex_set(gop, mac, mac->speed,
 							MV_PORT_DUPLEX_FULL);
-		else
-			mv_gop110_speed_duplex_set(gop, mac, MV_PORT_SPEED_1000,
-							MV_PORT_DUPLEX_FULL);
-		/* force link */
-		mv_gop110_gmac_force_link_mode_set(gop, port_num, true, false);
 	break;
 
 	case PHY_INTERFACE_MODE_XAUI:
 	case PHY_INTERFACE_MODE_RXAUI:
+	case PHY_INTERFACE_MODE_KR:
 		return 0;
 
 	default:
@@ -3472,7 +3506,7 @@ int mv_gop110_fl_cfg(struct gop_hw *gop, struct mv_mac_data *mac)
 }
 
 /* Enable port and MIB counters */
-void mv_gop110_gmac_port_enable(struct gop_hw *gop, int mac_num)
+static void mv_gop110_gmac_port_enable(struct gop_hw *gop, int mac_num)
 {
 	u32 reg_val;
 
@@ -3484,7 +3518,7 @@ void mv_gop110_gmac_port_enable(struct gop_hw *gop, int mac_num)
 }
 
 /* Disable port */
-void mv_gop110_gmac_port_disable(struct gop_hw *gop, int mac_num)
+static void mv_gop110_gmac_port_disable(struct gop_hw *gop, int mac_num)
 {
 	u32 reg_val;
 
@@ -3498,7 +3532,7 @@ void mv_gop110_gmac_port_disable(struct gop_hw *gop, int mac_num)
 }
 
 /* Enable port and MIB counters update */
-void mv_gop110_xlg_mac_port_enable(struct gop_hw *gop, int mac_num)
+static void mv_gop110_xlg_mac_port_enable(struct gop_hw *gop, int mac_num)
 {
 	u32 reg_val;
 
@@ -3512,7 +3546,7 @@ void mv_gop110_xlg_mac_port_enable(struct gop_hw *gop, int mac_num)
 }
 
 /* Disable port */
-void mv_gop110_xlg_mac_port_disable(struct gop_hw *gop, int mac_num)
+static void mv_gop110_xlg_mac_port_disable(struct gop_hw *gop, int mac_num)
 {
 	u32 reg_val;
 
@@ -3527,7 +3561,7 @@ void mv_gop110_xlg_mac_port_disable(struct gop_hw *gop, int mac_num)
 				reg_val);
 }
 
-void mv_gop110_port_enable(struct gop_hw *gop, struct mv_mac_data *mac)
+static void mv_gop110_port_enable(struct gop_hw *gop, struct mv_mac_data *mac)
 {
 	int port_num = mac->gop_index;
 
@@ -3540,6 +3574,7 @@ void mv_gop110_port_enable(struct gop_hw *gop, struct mv_mac_data *mac)
 
 	case PHY_INTERFACE_MODE_XAUI:
 	case PHY_INTERFACE_MODE_RXAUI:
+	case PHY_INTERFACE_MODE_KR:
 		mv_gop110_xlg_mac_port_enable(gop, port_num);
 
 	break;
@@ -3550,7 +3585,7 @@ void mv_gop110_port_enable(struct gop_hw *gop, struct mv_mac_data *mac)
 	}
 }
 
-void mv_gop110_port_disable(struct gop_hw *gop, struct mv_mac_data *mac)
+static void mv_gop110_port_disable(struct gop_hw *gop, struct mv_mac_data *mac)
 {
 	int port_num = mac->gop_index;
 
@@ -3563,6 +3598,7 @@ void mv_gop110_port_disable(struct gop_hw *gop, struct mv_mac_data *mac)
 
 	case PHY_INTERFACE_MODE_XAUI:
 	case PHY_INTERFACE_MODE_RXAUI:
+	case PHY_INTERFACE_MODE_KR:
 		mv_gop110_xlg_mac_port_disable(gop, port_num);
 	break;
 
@@ -3573,35 +3609,11 @@ void mv_gop110_port_disable(struct gop_hw *gop, struct mv_mac_data *mac)
 	}
 }
 
-/*
-* mv_gop110_smi_init
-*/
-int mv_gop110_smi_init(struct gop_hw *gop)
-{
-	u32 val;
-
-	/* not invert MDC */
-	val = mv_gop110_smi_read(gop, MV_SMI_MISC_CFG_REG);
-	val &= ~MV_SMI_MISC_CFG_INVERT_MDC_MASK;
-	mv_gop110_smi_write(gop, MV_SMI_MISC_CFG_REG, val);
-
-	return 0;
-}
-#endif
-
 /* Set defaults to the MVPP2 port */
 static void mv_pp2x_defaults_set(struct mv_pp2x_port *port)
 {
 	int tx_port_num, val, queue, ptxq;
 
-#ifdef CONFIG_MVPP2_FPGA
-	writel(0x8be4, port->base);
-	writel(0xc200, port->base + 0x8);
-	writel(0x3, port->base + 0x90);
-
-	writel(0x902A, port->base + 0xC);    /*force link to 100Mb*/
-	writel(0x8be5, port->base);          /*enable port        */
-#endif
 	/* Disable Legacy WRR, Disable EJP, Release from reset */
 	tx_port_num = mv_pp2x_egress_port(port);
 	mv_pp2x_write(port->pp2, MVPP2_TXP_SCHED_PORT_INDEX_REG,
@@ -3639,7 +3651,7 @@ static void mv_pp2x_defaults_set(struct mv_pp2x_port *port)
 }
 
 /* Enable/disable fetching descriptors from initialized TXQs */
-void mv_pp2x_egress_enable(struct mv_pp2x_port *port)
+static void mv_pp2x_egress_enable(struct mv_pp2x_port *port)
 {
 	u32 qmap;
 	int queue;
@@ -3661,7 +3673,7 @@ void mv_pp2x_egress_enable(struct mv_pp2x_port *port)
 /* Disable transmit via physical egress queue
  * - HW doesn't take descriptors from DRAM
  */
-void mv_pp2x_egress_disable(struct mv_pp2x_port *port)
+static void mv_pp2x_egress_disable(struct mv_pp2x_port *port)
 {
 	u32 reg_data;
 	int delay;
@@ -3688,57 +3700,6 @@ void mv_pp2x_egress_disable(struct mv_pp2x_port *port)
 		 */
 		reg_data = mv_pp2x_read(port->pp2, MVPP2_TXP_SCHED_Q_CMD_REG);
 	} while (reg_data & MVPP2_TXP_SCHED_ENQ_MASK);
-}
-
-/* Set IEEE 802.3x Flow Control Xon Packet Transmission Mode */
-void mv_pp2x_port_periodic_xon_disable(struct mv_pp2x_port *port)
-{
-	u32 val;
-
-	val = readl(port->base + MVPP2_GMAC_CTRL_1_REG) &
-		    ~MVPP2_GMAC_PERIODIC_XON_EN_MASK;
-	writel(val, port->base + MVPP2_GMAC_CTRL_1_REG);
-}
-
-/* Configure loopback port */
-void mv_pp2x_port_loopback_set(struct mv_pp2x_port *port)
-{
-	u32 val;
-
-	val = readl(port->base + MVPP2_GMAC_CTRL_1_REG);
-
-	if (port->mac_data.speed == 1000)
-		val |= MVPP2_GMAC_GMII_LB_EN_MASK;
-	else
-		val &= ~MVPP2_GMAC_GMII_LB_EN_MASK;
-
-	if (port->mac_data.phy_mode == PHY_INTERFACE_MODE_SGMII)
-		val |= MVPP2_GMAC_PCS_LB_EN_MASK;
-	else
-		val &= ~MVPP2_GMAC_PCS_LB_EN_MASK;
-
-	writel(val, port->base + MVPP2_GMAC_CTRL_1_REG);
-}
-
-void mv_pp2x_port_reset(struct mv_pp2x_port *port)
-{
-	u32 val;
-
-	val = readl(port->base + MVPP2_GMAC_CTRL_2_REG) &
-		    ~MVPP2_GMAC_PORT_RESET_MASK;
-	writel(val, port->base + MVPP2_GMAC_CTRL_2_REG);
-
-	while (readl(port->base + MVPP2_GMAC_CTRL_2_REG) &
-	       MVPP2_GMAC_PORT_RESET_MASK)
-		continue;
-}
-
-void mv_pp2x1_port_power_up(struct mv_pp2x_port *port)
-{
-	mv_pp2x_port_mii_set(port);
-	mv_pp2x_port_periodic_xon_disable(port);
-	mv_pp2x_port_fc_adv_enable(port);
-	mv_pp2x_port_reset(port);
 }
 
 /* Update HW with number of RX descriptors processed by SW:
@@ -3831,7 +3792,7 @@ static u32 mv_pp2x_aggr_txq_pend_desc_num_get(struct mv_pp2x *pp2, int cpu)
 /* Set the number of packets that will be received before Rx interrupt
  * will be generated by HW.
  */
-void mv_pp2x_rx_pkts_coal_set(struct mv_pp2x_port *pp,
+static void mv_pp2x_rx_pkts_coal_set(struct mv_pp2x_port *pp,
 				   struct mv_pp2x_rx_queue *rxq, u32 pkts)
 {
 	u32 val;
@@ -3843,7 +3804,8 @@ void mv_pp2x_rx_pkts_coal_set(struct mv_pp2x_port *pp,
 	rxq->pkts_coal = pkts;
 }
 
-int mv_pp2x_rxq_bm_long_pool_set(struct mv_pp2x_port *pp, int rxq, int longPool)
+static int mv_pp2x_rxq_bm_long_pool_set(struct mv_pp2x_port *pp,
+					int rxq, int longPool)
 {
 	u32 regVal = 0;
 	int prxq = pp->first_rxq + rxq;
@@ -3858,7 +3820,8 @@ int mv_pp2x_rxq_bm_long_pool_set(struct mv_pp2x_port *pp, int rxq, int longPool)
 	return 0;
 }
 
-int mv_pp2x_rxq_bm_short_pool_set(struct mv_pp2x_port *pp, int rxq, int shortPool)
+static int mv_pp2x_rxq_bm_short_pool_set(struct mv_pp2x_port *pp,
+					int rxq, int shortPool)
 {
 	u32 regVal = 0;
 	int prxq = pp->first_rxq + rxq;
@@ -4172,7 +4135,7 @@ static void mv_pp2x_start_dev(struct mv_pp2x_port *pp)
 	/* Config classifier decoding table */
 	mv_pp2x_cls_port_default_config(pp);
 	mv_pp2x_cls_oversize_rxq_set(pp);
-#if defined(CONFIG_MVPP2_FPGA) || defined(CONFIG_MVPPV21)
+#if defined(CONFIG_MVPPV21)
 	/* start the Rx/Tx activity */
 	mv_pp2x_port_enable(pp);
 #else
@@ -4235,15 +4198,11 @@ static int mv_pp2x_port_init(struct mv_pp2x_port *pp)
 
 	/* Disable port */
 	mv_pp2x_egress_disable(pp);
-#ifdef CONFIG_MVPP2_FPGA
-	mv_pp2x_port_disable(pp);
-#else
 #ifdef CONFIG_MVPPV21
 	mv_pp2x_port_disable(pp);
 #else
 	mv_gop110_port_events_mask(&pp->pp2->gop, &pp->mac_data);
 	mv_gop110_port_disable(&pp->pp2->gop, &pp->mac_data);
-#endif
 #endif
 
 	pp->txqs = kzalloc(txq_number * sizeof(struct mv_pp2x_tx_queue),
@@ -4318,7 +4277,6 @@ static int mv_pp2x_probe(struct eth_device *dev)
 		return err;
 	}
 
-#ifndef CONFIG_MVPP2_FPGA
 	mv_pp2x_write(pp->pp2, MVPP22_AXI_BM_WR_ATTR_REG,
 				MVPP22_AXI_ATTR_SNOOP_CNTRL_BIT);
 	mv_pp2x_write(pp->pp2, MVPP22_AXI_BM_RD_ATTR_REG,
@@ -4335,10 +4293,9 @@ static int mv_pp2x_probe(struct eth_device *dev)
 				MVPP22_AXI_ATTR_SNOOP_CNTRL_BIT);
 	mv_pp2x_write(pp->pp2, MVPP22_AXI_TX_DATA_RD_ATTR_REG,
 				MVPP22_AXI_ATTR_SNOOP_CNTRL_BIT);
-#endif
 
 	/* Enable HW PHY polling */
-#if !defined(CONFIG_MVPP2_FPGA) && defined(CONFIG_MVPPV21)
+#if defined(CONFIG_MVPPV21)
 	u32 val;
 
 	val = readl(pp->pp2->lms_base + MVPP2_PHY_AN_CFG0_REG);
@@ -4374,10 +4331,6 @@ static int mv_pp2x_init_u_boot(struct eth_device *dev, bd_t *bis)
 {
 struct mv_pp2x_port *pp = dev->priv;
 
-#ifdef CONFIG_PALLADIUM
-	unsigned long auto_neg_value;
-#endif /* CONFIG_PALLADIUM */
-
 	if (!pp->init/* || pp->link == 0*/) {
 		mv_pp2x_bm_start(pp->pp2);
 		/* Full init on first call */
@@ -4397,7 +4350,7 @@ struct mv_pp2x_port *pp = dev->priv;
 		/* Upon all following calls, this is enough */
 		mv_pp2x_bm_start(pp->pp2);
 		mv_pp2x_txq_drain_set(pp, 0, false);
-#if defined(CONFIG_MVPP2_FPGA) || defined(CONFIG_MVPPV21)
+#if defined(CONFIG_MVPPV21)
 		/* start the Rx/Tx activity */
 		mv_pp2x_port_enable(pp);
 #else
@@ -4421,7 +4374,7 @@ static void mv_pp2x_halt(struct eth_device *dev)
 	mv_pp2x_ingress_enable(pp, false);
 	mv_pp2x_egress_disable(pp);
 
-#if defined(CONFIG_MVPP2_FPGA) || defined(CONFIG_MVPPV21)
+#if defined(CONFIG_MVPPV21)
 	mv_pp2x_port_disable(pp);
 #else
 	mv_gop110_port_events_mask(&pp->pp2->gop, &pp->mac_data);
@@ -4585,7 +4538,7 @@ static void mv_pp2x_mac_str_to_hex(const char *mac_str, unsigned char *mac_hex)
 	}
 }
 
-int mv_pp2x_phylib_init(struct eth_device *dev, int phyid, int gop_index)
+static int mv_pp2x_phylib_init(struct eth_device *dev, int phyid, int gop_index)
 {
 	struct mii_dev *bus;
 	struct phy_device *phydev;
@@ -4611,8 +4564,6 @@ int mv_pp2x_phylib_init(struct eth_device *dev, int phyid, int gop_index)
 		return -ENODEV;
 	}
 	phy_config(phydev);
-	phy_startup(phydev);
-	return 1;
 #elif defined(CONFIG_MII) || defined(CONFIG_CMD_MII)
 			miiphy_register(dev->name, bus->read, bus->write);
 			/* Set phy address of the port */
@@ -4623,7 +4574,6 @@ int mv_pp2x_phylib_init(struct eth_device *dev, int phyid, int gop_index)
 				return 1;
 			}
 #endif
-
 	return 0;
 }
 
@@ -4646,28 +4596,28 @@ static inline void mv_gop110_rfu1_print(struct gop_hw *gop, char *reg_name,
 	mv_gop110_rfu1_read(gop, reg));
 }
 
-static u32 mvp_pp2x_gop110_netc_cfg_create(struct mv_pp2x_port *pp2_port)
+static u32 mvp_pp2x_gop110_netc_cfg_create(struct mv_pp2x_dev_para *para)
 {
 	u32 val = 0;
 
-		if (pp2_port->mac_data.gop_index == 0) {
-			if (pp2_port->mac_data.phy_mode ==
+		if (para->gop_port == 0) {
+			if (para->phy_type ==
 				PHY_INTERFACE_MODE_XAUI)
 				val |= MV_NETC_GE_MAC0_XAUI;
-			else if (pp2_port->mac_data.phy_mode ==
+			else if (para->phy_type ==
 				PHY_INTERFACE_MODE_RXAUI)
 				val |= MV_NETC_GE_MAC0_RXAUI_L23;
 		}
-		if (pp2_port->mac_data.gop_index == 2) {
-			if (pp2_port->mac_data.phy_mode ==
+		if (para->gop_port == 2) {
+			if (para->phy_type ==
 				PHY_INTERFACE_MODE_SGMII)
 				val |= MV_NETC_GE_MAC2_SGMII;
 		}
-		if (pp2_port->mac_data.gop_index == 3) {
-			if (pp2_port->mac_data.phy_mode ==
+		if (para->gop_port == 3) {
+			if (para->phy_type ==
 				PHY_INTERFACE_MODE_SGMII)
 				val |= MV_NETC_GE_MAC3_SGMII;
-			else if (pp2_port->mac_data.phy_mode ==
+			else if (para->phy_type ==
 				PHY_INTERFACE_MODE_RGMII)
 				val |= MV_NETC_GE_MAC3_RGMII;
 		}
@@ -4675,7 +4625,7 @@ static u32 mvp_pp2x_gop110_netc_cfg_create(struct mv_pp2x_port *pp2_port)
 	return val;
 }
 
-void mv_gop110_netc_active_port(struct gop_hw *gop, u32 port, u32 val)
+static void mv_gop110_netc_active_port(struct gop_hw *gop, u32 port, u32 val)
 {
 	u32 reg;
 
@@ -4928,7 +4878,7 @@ static void mv_gop110_netc_mac_to_xaui(struct gop_hw *gop, u32 port,
 	}
 }
 
-int mv_gop110_netc_init(struct gop_hw *gop,
+static int mv_gop110_netc_init(struct gop_hw *gop,
 			u32 net_comp_config, enum mv_netc_phase phase)
 {
 	u32 c = net_comp_config;
@@ -4975,11 +4925,16 @@ static int mvcpn110_mac_hw_init(struct mv_pp2x_port *port)
 {
 	struct gop_hw *gop = &port->pp2->gop;
 	struct mv_mac_data *mac = &port->mac_data;
+	int port_num = mac->gop_index;
 
 	mv_gop110_port_init(gop, mac);
+	
+	if (mac->speed == 2500 || mac->speed == 1000 || mac->speed == 100
+		|| mac->speed == 10)
+		mv_gop110_fl_cfg(gop, mac);
 
 	if (mac->force_link)
-		mv_gop110_fl_cfg(gop, mac);
+		mv_gop110_gmac_force_link_mode_set(gop, port_num, true, false);
 
 	mac->flags |= MV_EMAC_F_INIT;
 
@@ -4987,7 +4942,7 @@ static int mvcpn110_mac_hw_init(struct mv_pp2x_port *port)
 }
 #endif
 
-void mv_pp2x_axi_config(struct mv_pp2x *pp2)
+static void mv_pp2x_axi_config(struct mv_pp2x *pp2)
 {
 	/* Config AXI Read&Write Normal and Soop mode  */
 	mv_pp2x_write(pp2, MVPP22_AXI_RD_NORMAL_CODE_REG,
@@ -4997,8 +4952,6 @@ void mv_pp2x_axi_config(struct mv_pp2x *pp2)
 				MVPP22_AXI_WR_CODE_MASK);
 	mv_pp2x_write(pp2, MVPP22_AXI_WR_SNP_CODE_REG, MVPP22_AXI_WR_CODE_MASK);
 }
-
-#ifdef CONFIG_OF_CONTROL
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -5024,7 +4977,7 @@ struct mv_pp2x_reg_info {
 	u32 size;
 };
 
-int mv_pp2x_initialize_dev(bd_t *bis, struct mv_pp2x *pp2,
+static int mv_pp2x_initialize_dev(bd_t *bis, struct mv_pp2x *pp2,
 						struct mv_pp2x_dev_para *para)
 {
 	struct eth_device *dev;
@@ -5032,7 +4985,6 @@ int mv_pp2x_initialize_dev(bd_t *bis, struct mv_pp2x *pp2,
 	void *bd_space;
 	char *enet_addr;
 	char enetvar[9];
-	u32 net_comp_config;
 
 	dev = calloc(1, sizeof(*dev));
 	if (dev == NULL)
@@ -5049,6 +5001,7 @@ int mv_pp2x_initialize_dev(bd_t *bis, struct mv_pp2x *pp2,
 	dev->priv = pp2_port;
 	pp2_port->mac_data.gop_index = para->gop_port;
 	pp2_port->mac_data.phy_mode = para->phy_type;
+	pp2_port->mac_data.speed = para->phy_speed;
 
 	/*
 	 * Allocate buffer area for tx/rx descs and rx_buffers. This is only
@@ -5062,10 +5015,6 @@ int mv_pp2x_initialize_dev(bd_t *bis, struct mv_pp2x *pp2,
 		if (bd_space == NULL)
 			return -ENOMEM;
 
-#ifndef CONFIG_SYS_DCACHE_OFF /* Uboot cache always off */
-		mmu_set_region_dcache_behaviour((u32)bd_space, BD_SPACE,
-						DCACHE_OFF);
-#endif
 		buffer_loc.tx_descs = (struct mv_pp2x_tx_desc *)bd_space;
 
 		buffer_loc.aggr_tx_descs = (struct mv_pp2x_tx_desc *)
@@ -5098,13 +5047,7 @@ int mv_pp2x_initialize_dev(bd_t *bis, struct mv_pp2x *pp2,
 	dev->recv = mv_pp2x_recv;
 	dev->write_hwaddr = NULL;
 	dev->index = pp2_port->id;
-#ifdef CONFIG_PALLADIUM
-	/* on Palladium, there is no mac address in env,
-	 * so put a value to skip the validation  otherwise
-	 *u-boot would fail at common net driver validation.
-	 */
-	dev->enetaddr[1] = 51;
-#endif
+
 	/*
 	 * The PHY interface type is configured via the
 	 * board specific CONFIG_SYS_NETA_INTERFACE_TYPE
@@ -5115,16 +5058,10 @@ int mv_pp2x_initialize_dev(bd_t *bis, struct mv_pp2x *pp2,
 
 	eth_register(dev);
 
-	/* netcomp  Init  */
-	net_comp_config = mvp_pp2x_gop110_netc_cfg_create(pp2_port);
-	mv_gop110_netc_init(&pp2_port->pp2->gop, net_comp_config,
-				MV_NETC_FIRST_PHASE);
-	mv_gop110_netc_init(&pp2_port->pp2->gop, net_comp_config,
-				MV_NETC_SECOND_PHASE);
-
 	/* GOP Init  */
 	mvcpn110_mac_hw_init(pp2_port);
-	mv_pp2x_phylib_init(dev, para->phy_addr, para->gop_port);
+	if (para->phy_handle)
+		mv_pp2x_phylib_init(dev, para->phy_addr, para->gop_port);
 
 	return 1;
 }
@@ -5133,13 +5070,14 @@ int mv_pp2x_initialize_dev(bd_t *bis, struct mv_pp2x *pp2,
 int mv_pp2x_initialize(bd_t *bis)
 {
 	int mv_pp2x_node_list[CONFIG_MAX_MVPP2X_NUM], node, port_node;
-	int pp2_count, emac_off, phy_off, port_id, gop_port, mdio_phy;
+	int pp2_count, emac_off, phy_off, port_id, gop_port, mdio_phy, speed;
 	int phy_mode = 0;
 	struct mv_pp2x *pp2;
 	struct mv_pp2x_dev_para dev_para[CONFIG_MAX_PP2_PORT_NUM];
 	int err;
 	u32 *emac_handle, *phy_handle;
 	char *phy_mode_str;
+	u32 net_comp_config = 0;
 
 	/* in dts file, go through all the 'pp2' nodes.
 	 */
@@ -5288,26 +5226,33 @@ int mv_pp2x_initialize(bd_t *bis)
 
 			phy_mode_str = (void *)fdt_getprop(gd->fdt_blob, emac_off,
 						   "phy-mode", NULL);
+
 			if (strncmp(phy_mode_str, "sgmii", 5) == 0)
 				phy_mode = PHY_INTERFACE_MODE_SGMII;
 			else if (strncmp(phy_mode_str, "rgmii", 5) == 0)
 				phy_mode = PHY_INTERFACE_MODE_RGMII;
 
+			else if (strncmp(phy_mode_str, "kr", 2) == 0)
+				phy_mode = PHY_INTERFACE_MODE_KR;
+
 			if (phy_mode != PHY_INTERFACE_MODE_SGMII &&
-				phy_mode != PHY_INTERFACE_MODE_RGMII) {
+				phy_mode != PHY_INTERFACE_MODE_RGMII &&
+				phy_mode != PHY_INTERFACE_MODE_KR) {
 				printf(
 				"could not find phy-mode in pp2 node, init skipped!\n");
 			}
 
-			/*skip if port is configured not to use */
-			if (phy_mode == PHY_INTERFACE_MODE_RGMII) {
-				phy_handle = (u32 *)fdt_getprop(gd->fdt_blob,
-							emac_off, "phy", NULL);
-				if (!phy_handle) {
-					printf("no phy property\n");
-					return -1;
-				}
+			if (phy_mode == PHY_INTERFACE_MODE_SGMII) {
+				speed = (uintptr_t)fdtdec_get_int(gd->fdt_blob,
+						emac_off, "phy-speed", 0);
+				dev_para[port_id].phy_speed = speed;
+			}
 
+			phy_handle = (u32 *)fdt_getprop(gd->fdt_blob,
+							emac_off, "phy", NULL);
+
+			/*skip if port is configured not to use */
+			if (phy_handle) {
 				phy_off = fdt_node_offset_by_phandle(gd->fdt_blob,
 					  fdt32_to_cpu(*phy_handle));
 				if (phy_off < 0) {
@@ -5321,21 +5266,25 @@ int mv_pp2x_initialize(bd_t *bis)
 					printf("could not find mdio phy address\n");
 					return -1;
 				}
-				dev_para[port_id].dev_num = port_id;
-				dev_para[port_id].base = pp2->base;
 				dev_para[port_id].phy_addr = mdio_phy;
-				dev_para[port_id].phy_type = phy_mode;
-				dev_para[port_id].gop_port = gop_port;
-				if (1 != mv_pp2x_initialize_dev(bis,
-					pp2, &dev_para[port_id])) {
-					printf(
-					"mv_pp2x_initialize_dev failed, initialization skipped!\n");
-					return -1;
-				}
+
+			}
+			dev_para[port_id].phy_handle = phy_handle;
+			dev_para[port_id].dev_num = port_id;
+			dev_para[port_id].base = pp2->base;
+			dev_para[port_id].phy_type = phy_mode;
+			dev_para[port_id].gop_port = gop_port;
+			net_comp_config |=
+				mvp_pp2x_gop110_netc_cfg_create(&dev_para[port_id]);
+			if (1 != mv_pp2x_initialize_dev(bis,
+				pp2, &dev_para[port_id])) {
+				printf(
+				"mv_pp2x_initialize_dev failed, initialization skipped!\n");
+				return -1;
 			}
 		}
+	mv_gop110_netc_init(&pp2->gop, net_comp_config,	MV_NETC_FIRST_PHASE);
+	mv_gop110_netc_init(&pp2->gop, net_comp_config,	MV_NETC_SECOND_PHASE);
 
 	return 0;
 }
-
-#endif /* CONFIG_MVPP2_FPGA */
