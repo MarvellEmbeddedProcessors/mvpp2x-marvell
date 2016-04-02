@@ -2848,12 +2848,6 @@ int mv_pp2x_open(struct net_device *dev)
 	struct mv_pp2x_port *port = netdev_priv(dev);
 	int err;
 
-
-	err = mv_pp2x_open_cls(dev);
-	if (err)
-		return err;
-
-
 	/* Allocate the Rx/Tx queues */
 	err = mv_pp2x_setup_rxqs(port);
 	if (err) {
@@ -2923,9 +2917,15 @@ int mv_pp2x_open(struct net_device *dev)
 	netif_tx_start_all_queues(port->dev);
 
 #endif
+	/* Before rxq and port init, all ingress packets should be blocked in classifier */
+	err = mv_pp2x_open_cls(dev);
+	if (err)
+		goto err_free_all;
+
 	MVPP2_PRINT_2LINE();
 	return 0;
 
+err_free_all:
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 err_free_irq:
 	mv_pp2x_cleanup_irqs(port);
