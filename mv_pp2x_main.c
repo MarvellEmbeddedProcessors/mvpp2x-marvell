@@ -4684,6 +4684,9 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 	}
 	priv->cpu_map = cpu_map;
 
+	/*Init PP2 Configuration */
+	mv_pp2x_init_config(&priv->pp2_cfg, cell_index);
+
 	/* Initialize network controller */
 	err = mv_pp2x_init(pdev, priv);
 	if (err < 0) {
@@ -4710,9 +4713,6 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 		err = -ENOMEM;
 		goto err_clk;
 	}
-
-	/*Init PP2 Configuration */
-	mv_pp2x_init_config(&priv->pp2_cfg, cell_index);
 
 	/* Init PP22 rxfhindir table evenly in probe */
 	mv_pp2x_init_rxfhindir(priv);
