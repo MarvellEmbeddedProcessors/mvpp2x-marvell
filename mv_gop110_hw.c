@@ -2330,7 +2330,7 @@ static void mv_gop110_mib_print(struct gop_hw *gop, int port, u32 offset,
 	u64 val;
 
 	val = mv_gop110_mib_read64(gop, port, offset);
-	pr_info("  %-32s: 0x%02x = 0x%08llx\n", mib_name, offset, val);
+	pr_info("  %-32s: 0x%02x = %lld\n", mib_name, offset, val);
 }
 
 void mv_gop110_mib_counters_show(struct gop_hw *gop, int port)
