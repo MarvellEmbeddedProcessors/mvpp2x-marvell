@@ -65,7 +65,7 @@
 
 /* Declaractions */
 u8 mv_pp2x_num_cos_queues = 4;
-static u8 mv_pp2x_queue_mode = MVPP2_QDIST_MULTI_MODE;//VPP2_QDIST_SINGLE_MODE;
+static u8 mv_pp2x_queue_mode = MVPP2_QDIST_SINGLE_MODE;
 static u8 rss_mode;
 static u8 default_cpu;
 static u8 cos_classifer;
@@ -197,9 +197,9 @@ static void mv_pp2x_txq_inc_get(struct mv_pp2x_txq_pcpu *txq_pcpu)
 }
 
 void mv_pp2x_txq_inc_put(enum mvppv2_version pp2_ver,
-			      struct mv_pp2x_txq_pcpu *txq_pcpu,
-			      struct sk_buff *skb,
-			      struct mv_pp2x_tx_desc *tx_desc)
+			 struct mv_pp2x_txq_pcpu *txq_pcpu,
+			 struct sk_buff *skb,
+			 struct mv_pp2x_tx_desc *tx_desc)
 {
 	txq_pcpu->tx_skb[txq_pcpu->txq_put_index] = skb;
 	if (skb)
@@ -720,10 +720,9 @@ int mv_pp2x_txq_reserved_desc_num_proc(
 	 * count and check again.
 	 */
 
-	/* [AW] All txq_size is used. TBD when HWF is implemented */
-	/* if req is less or equal to MVPP2_CPU_DESC_CHUNK then request one CHUNK. */
-	/* There will always be at least one CHUNK available */
-	/* if req is greater than CHUNK then check and reserve only if space is available */
+	/* Entire txq_size is used for SWF . Must be changed when HWF is implemented.
+	 * There will always be at least one CHUNK available
+	 */
 
 	req = MVPP2_CPU_DESC_CHUNK;
 
@@ -2113,7 +2112,8 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 #endif
 
 		dma_sync_single_for_cpu(dev->dev.parent, buf_phys_addr,
-			MVPP2_RX_BUF_SIZE(rx_desc->data_size), DMA_FROM_DEVICE);
+					MVPP2_RX_BUF_SIZE(rx_desc->data_size),
+					DMA_FROM_DEVICE);
 
 		/* In case of an error, release the requested buffer pointer
 		 * to the Buffer Manager. This request process is controlled
@@ -2412,14 +2412,14 @@ static inline int mv_pp2x_cause_rx_handle(struct mv_pp2x_port *port,
 			cause_rx &= ~(1 << rxq->log_id);
 		}
 	}
-		if (budget > 0) {
-			cause_rx = 0;
-			napi_complete(napi);
+	if (budget > 0) {
+		cause_rx = 0;
+		napi_complete(napi);
 #ifdef DEV_NETMAP
-		if (!(port->flags & MVPP2_F_IFCAP_NETMAP))
+	if (!(port->flags & MVPP2_F_IFCAP_NETMAP))
 #endif
-			mv_pp2x_qvector_interrupt_enable(q_vec);
-		}
+		mv_pp2x_qvector_interrupt_enable(q_vec);
+	}
 	q_vec->pending_cause_rx = cause_rx;
 
 	return rx_done;
@@ -2916,9 +2916,9 @@ int mv_pp2x_open(struct net_device *dev)
 	/* Port is init in uboot */
 #if !defined(OLD_UBOOT)
 	if (port->mac_data.phy_mode == PHY_INTERFACE_MODE_RGMII ||
-		port->mac_data.phy_mode == PHY_INTERFACE_MODE_KR ||
-		port->mac_data.phy_mode == PHY_INTERFACE_MODE_SGMII)
-			port->mac_data.flags |= MV_EMAC_F_INIT;
+	    port->mac_data.phy_mode == PHY_INTERFACE_MODE_KR ||
+	    port->mac_data.phy_mode == PHY_INTERFACE_MODE_SGMII)
+		port->mac_data.flags |= MV_EMAC_F_INIT;
 #endif
 
 	if (port->priv->pp2_version == PPV22)
@@ -4037,6 +4037,23 @@ static void mv_pp2x_conf_mbus_windows(const struct mbus_dram_target_info *dram,
 	mv_pp2x_write(hw, MVPP2_BASE_ADDR_ENABLE, win_enable);
 }
 
+/* Initialize Rx FIFO's */
+static void mv_pp2x_rx_fifo_init(struct mv_pp2x_hw *hw)
+{
+	int port;
+
+	for (port = 0; port < MVPP2_MAX_PORTS; port++) {
+		mv_pp2x_write(hw, MVPP2_RX_DATA_FIFO_SIZE_REG(port),
+			    MVPP2_RX_FIFO_PORT_DATA_SIZE);
+		mv_pp2x_write(hw, MVPP2_RX_ATTR_FIFO_SIZE_REG(port),
+			    MVPP2_RX_FIFO_PORT_ATTR_SIZE);
+	}
+
+	mv_pp2x_write(hw, MVPP2_RX_MIN_PKT_SIZE_REG,
+		    MVPP2_RX_FIFO_PORT_MIN_PKT);
+	mv_pp2x_write(hw, MVPP2_RX_FIFO_INIT_REG, 0x1);
+}
+
 /* Initialize network controller common part HW */
 static int mv_pp2x_init(struct platform_device *pdev, struct mv_pp2x *priv)
 {
@@ -4162,9 +4179,7 @@ static int mv_pp2x_init(struct platform_device *pdev, struct mv_pp2x *priv)
 		i++;
 	}
 
-	/* Rx Fifo Init, it is done in uboot because FIFO init is not allowed to interfere  by traffic */
-	/*mv_pp2x_rx_fifo_init(hw);*/
-
+	/* Rx Fifo Init is done only in uboot */
 
 	/* Set cache snoop when transmiting packets */
 	if (is_device_dma_coherent(&pdev->dev))

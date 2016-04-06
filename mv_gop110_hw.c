@@ -1782,7 +1782,7 @@ int mv_gop110_xlg_mac_mode_cfg(struct gop_hw *gop, int mac_num,
 	/* configure 10G MAC mode */
 	reg_addr = MV_XLG_PORT_MAC_CTRL0_REG;
 	val = mv_gop110_xlg_mac_read(gop, mac_num, reg_addr);
-	U32_SET_FIELD(val,MV_XLG_MAC_CTRL0_RXFCEN_MASK,
+	U32_SET_FIELD(val, MV_XLG_MAC_CTRL0_RXFCEN_MASK,
 		      (1 << MV_XLG_MAC_CTRL0_RXFCEN_OFFS));
 	mv_gop110_xlg_mac_write(gop, mac_num, reg_addr, val);
 
@@ -2289,7 +2289,7 @@ int mv_gop110_mpcs_mode(struct gop_hw *gop)
 	reg_addr = PCS40G_COMMON_CONTROL;
 	val = mv_gop110_mpcs_global_read(gop, reg_addr);
 	U32_SET_FIELD(val, FORWARD_ERROR_CORRECTION_MASK,
-					0 << FORWARD_ERROR_CORRECTION_OFFSET);
+		      0 << FORWARD_ERROR_CORRECTION_OFFSET);
 
 	mv_gop110_mpcs_global_write(gop, reg_addr, val);
 

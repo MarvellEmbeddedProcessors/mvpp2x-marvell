@@ -463,7 +463,7 @@ static int mv_pp2x_ethtool_get_rxnfc(struct net_device *dev,
 }
 
 static int mv_pp2x_ethtool_get_rxfh(struct net_device *dev, u32 *indir, u8 *key,
-				   u8 *hfunc)
+				    u8 *hfunc)
 {
 	size_t copy_size;
 	struct mv_pp2x_port *port = netdev_priv(dev);
@@ -485,7 +485,7 @@ static int mv_pp2x_ethtool_get_rxfh(struct net_device *dev, u32 *indir, u8 *key,
 }
 
 static int mv_pp2x_ethtool_set_rxfh(struct net_device *dev, const u32 *indir,
-				   const u8 *key, const u8 hfunc)
+				    const u8 *key, const u8 hfunc)
 {
 	int i, err;
 	struct mv_pp2x_port *port = netdev_priv(dev);
@@ -509,8 +509,8 @@ static int mv_pp2x_ethtool_set_rxfh(struct net_device *dev, const u32 *indir,
 
 	err =  mv_pp22_rss_rxfh_indir_set(port);
 	if (err) {
-		 netdev_err(dev, "fail to change rxfh indir table");
-		 return err;
+		netdev_err(dev, "fail to change rxfh indir table");
+		return err;
 	}
 
 	return 0;
@@ -525,7 +525,6 @@ static const struct ethtool_ops mv_pp2x_eth_tool_ops = {
 	.get_drvinfo		= mv_pp2x_ethtool_get_drvinfo,
 	.get_ringparam		= mv_pp2x_ethtool_get_ringparam,
 	.set_ringparam		= mv_pp2x_ethtool_set_ringparam,
-	/* For rxfh relevant command, verified in LK-4.4.1 */
 	.get_rxfh_indir_size	= mv_pp2x_ethtool_get_rxfh_indir_size,
 	.get_rxnfc		= mv_pp2x_ethtool_get_rxnfc,
 	.get_rxfh		= mv_pp2x_ethtool_get_rxfh,

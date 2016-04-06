@@ -632,13 +632,13 @@ static void mv_pp2x_prs_tcam_data_dword_set(struct mv_pp2x_prs_entry *pe,
 					    unsigned int enable)
 {
 	int index, offset;
-	unsigned char byte, byteMask;
+	unsigned char byte, byte_mask;
 
 	for (index = 0; index < 4; index++) {
 		offset = (offs * 4) + index;
-		byte = ((unsigned char *) &word)[HW_BYTE_OFFS(index)];
-		byteMask = ((unsigned char *) &enable)[HW_BYTE_OFFS(index)];
-		mv_pp2x_prs_tcam_data_byte_set(pe, offset, byte, byteMask);
+		byte = ((unsigned char *)&word)[HW_BYTE_OFFS(index)];
+		byte_mask = ((unsigned char *)&enable)[HW_BYTE_OFFS(index)];
+		mv_pp2x_prs_tcam_data_byte_set(pe, offset, byte, byte_mask);
 	}
 }
 
@@ -654,8 +654,8 @@ static void mv_pp2x_prs_tcam_data_dword_get(struct mv_pp2x_prs_entry *pe,
 	for (index = 0; index < 4; index++) {
 		offset = (offs * 4) + index;
 		mv_pp2x_prs_tcam_data_byte_get(pe, offset,  &byte, &mask);
-		((unsigned char *) word)[HW_BYTE_OFFS(index)] = byte;
-		((unsigned char *) enable)[HW_BYTE_OFFS(index)] = mask;
+		((unsigned char *)word)[HW_BYTE_OFFS(index)] = byte;
+		((unsigned char *)enable)[HW_BYTE_OFFS(index)] = mask;
 	}
 }
 
