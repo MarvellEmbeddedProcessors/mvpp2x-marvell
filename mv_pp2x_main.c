@@ -4038,6 +4038,7 @@ static void mv_pp2x_conf_mbus_windows(const struct mbus_dram_target_info *dram,
 }
 
 /* Initialize Rx FIFO's */
+/*
 static void mv_pp2x_rx_fifo_init(struct mv_pp2x_hw *hw)
 {
 	int port;
@@ -4053,6 +4054,7 @@ static void mv_pp2x_rx_fifo_init(struct mv_pp2x_hw *hw)
 		    MVPP2_RX_FIFO_PORT_MIN_PKT);
 	mv_pp2x_write(hw, MVPP2_RX_FIFO_INIT_REG, 0x1);
 }
+*/
 
 /* Initialize network controller common part HW */
 static int mv_pp2x_init(struct platform_device *pdev, struct mv_pp2x *priv)
