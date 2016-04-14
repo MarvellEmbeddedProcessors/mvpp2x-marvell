@@ -4634,7 +4634,6 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 	u16 cpu_map;
 	u32 cell_index = 0;
 	u32 net_comp_config;
-	u32 dma_coherent;
 
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	struct device_node *dn = pdev->dev.of_node;
@@ -4667,16 +4666,9 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 		pr_crit("mvpp2: cannot set dma_mask\n");
 		goto err_clk;
 	}
-	/*Set dma_coherency */
+	/*Disable dma_coherency in FPGA*/
 #ifdef CONFIG_MV_PP2_FPGA
 	pdev->dev.archdata.dma_coherent = 0;
-#else
-	if (of_property_read_u32(dn, "dma_coherent", &dma_coherent)) {
-		DBG_MSG("dma_coherent missing. Default to sw coherent\n");
-		pdev->dev.archdata.dma_coherent = 0; /* SW_COHERENT */
-	} else {
-		pdev->dev.archdata.dma_coherent = dma_coherent;
-	}
 #endif
 
 #ifdef CONFIG_64BIT
