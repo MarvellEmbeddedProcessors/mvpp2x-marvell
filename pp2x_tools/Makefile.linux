@@ -1,0 +1,104 @@
+# Project: PncTool
+
+CC   = gcc -D__DEBUG__ -DARCH_X86 -D__LINUX__ -g -Wall $(INCS)
+#CC = ~/armsdk/bin/arm-mv5sft-linux-gnueabi-gcc -D__DEBUG__ -U__WINDOWS__ -D__LINUX__ -g -Wall -Wno-pointer-sign $(INCS)
+RES  = 
+OBJ  = src/main.o		\
+	src/DataDictionary.o	\
+	src/PncParse.o		\
+	src/parse_c2.o		\
+	src/parse_c4.o		\
+	src/parse_c3.o		\
+	src/parse_mc.o		\
+	src/parse_mod.o		\
+	src/parse_mod_tbl.o	\
+	src/parse_console.o	\
+	src/PncDb.o		\
+	src/ParseUtils.o	\
+	src/PacketParse.o	\
+	src/SubfieldParse.o	\
+	src/SramParse.o		\
+	src/TcamParse.o		\
+	src/PncShellCommand.o	\
+	src/parse_cls.o         \
+	src/parse_PRS.o         \
+	src/parse_config.o      \
+	src/ezxml.o $(RES)
+
+LINKOBJ = $(OBJ)
+INCS = -I ./inc 
+BIN  = ppv2tool
+CXXFLAGS = $(CXXINCS)   -g3
+CFLAGS = $(INCS) -g    -g3
+RM = rm -f
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: all-before ppv2tool all-after
+
+clean: clean-custom
+	${RM} $(OBJ) $(BIN)
+
+$(BIN): $(OBJ)
+	$(CC) $(LINKOBJ) -o "ppv2tool" $(LIBS)
+
+src/main.o: src/main.c
+	$(CC) -c src/main.c -o src/main.o $(CFLAGS)
+
+src/DataDictionary.o: src/DataDictionary.c
+	$(CC) -c src/DataDictionary.c -o src/DataDictionary.o $(CFLAGS)
+
+src/PncParse.o: src/PncParse.c
+	$(CC) -c src/PncParse.c -o src/PncParse.o $(CFLAGS)
+
+src/parse_c2.o: src/parse_c2.c
+	$(CC) -c src/parse_c2.c -o src/parse_c2.o $(CFLAGS)
+
+src/parse_c4.o: src/parse_c4.c
+	$(CC) -c src/parse_c4.c -o src/parse_c4.o $(CFLAGS)
+
+src/parseC3.o: src/parse_c3.c
+	$(CC) -c src/parse_c3.c -o src/parse_c3.o $(CFLAGS)
+
+src/parse_mod.o: src/parse_mod.c
+	$(CC) -c src/parse_mod.c -o src/parse_mod.o $(CFLAGS)
+
+src/parse_mod_tbl.o: src/parse_mod_tbl.c
+	$(CC) -c src/parse_mod_tbl.c -o src/parse_mod_tbl.o $(CFLAGS)
+
+src/parse_cls.o: src/parse_cls.c
+	$(CC) -c src/parse_cls.c -o src/parse_cls.o $(CFLAGS)
+
+src/parse_console.o: src/parse_console.c
+	$(CC) -c src/parse_console.c -o src/parse_console.o $(CFLAGS)
+
+src/parse_PRS.o: src/parse_PRS.c
+	$(CC) -c src/parse_PRS.c -o src/parse_PRS.o $(CFLAGS)
+
+src/parse_config.o: src/parse_config.c
+	$(CC) -c src/parse_config.c -o src/parse_config.o $(CFLAGS)
+
+src/PncDb.o: src/PncDb.c
+	$(CC) -c src/PncDb.c -o src/PncDb.o $(CFLAGS)
+
+src/ParseUtils.o: src/ParseUtils.c
+	$(CC) -c src/ParseUtils.c -o src/ParseUtils.o $(CFLAGS)
+
+src/PacketParse.o: src/PacketParse.c
+	$(CC) -c src/PacketParse.c -o src/PacketParse.o $(CFLAGS)
+
+src/SubfieldParse.o: src/SubfieldParse.c
+	$(CC) -c src/SubfieldParse.c -o src/SubfieldParse.o $(CFLAGS)
+
+src/SramParse.o: src/SramParse.c
+	$(CC) -c src/SramParse.c -o src/SramParse.o $(CFLAGS)
+
+src/TcamParse.o: src/TcamParse.c
+	$(CC) -c src/TcamParse.c -o src/TcamParse.o $(CFLAGS)
+
+src/PncShellCommand.o: src/PncShellCommand.c
+	$(CC) -c src/PncShellCommand.c -o src/PncShellCommand.o $(CFLAGS)
+
+src/ezxml.o: src/ezxml.c
+	$(CC) -c src/ezxml.c -o src/ezxml.o $(CFLAGS)
+

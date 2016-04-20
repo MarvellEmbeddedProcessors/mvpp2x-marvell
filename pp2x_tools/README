@@ -1,0 +1,35 @@
+ppv2tool Build
+==============
+
+* Makefiles:
+    Makefile.win	Used for compilation of tool on Windows
+    Makefile.linux	Used for x86 linux compilation
+    Makefile.linux.arm	Used for cross-compilation of tool on Linux for ARM target
+
+* Toolchains:
+    Windows: 	Dev-C++ v4.9.9.2 available as GPL software from www.bloodshed.net
+    Linux-ARM:	Cross compiler toolchain for PPv2
+    Linux:	native x86 GCC compiler
+    
+* The two main build targets are: 
+   clean - to remove results of previous compilations
+   all   - to build the executable
+   e.g. make -f Makefile.win clean
+        make -f makefile.linux all    
+    
+* Make sure that the above-mentioned makefiles match your compilation environment.
+* Run the env.sh script before make, it will set the cross WIN compiler paths, if your paths differ change accordingly.
+
+win build HOWTO:
+================
+1) download toochain from: http://prdownloads.sourceforge.net/dev-cpp/devcpp-4.9.9.2_setup.exe 
+2) install to c:\Programs\Dev-Cpp
+3) update windows PATH environemnt:
+3.1) Start --> right click on "My Computer" --> select "Properties" from the menu --> click on "Advanced" tab --> "Environment Variables" tab near the bottom --> click on "Path" in the "System Variables" window panel near the bottom -> click on the "Edit" button.
+     VERY IMPORTANT: Press the "End" key on your keyboard to go to the end of what is already on your PATH.
+	 Do not delete the existing content of your PATH variable. If you accidentally do so, click "Cancel", and press "Edit" again.
+3.2) Add the following at the end of what is already the value of the PATH variable:
+      ;C:\Programs\Dev-Cpp\bin;C:\Programs\Dev-Cpp
+4) open cmd.exe in the source code root directory and perform the following to clean/build
+4.1) make -f Makefile.win clean
+4.2) make -f Makefile.win all
