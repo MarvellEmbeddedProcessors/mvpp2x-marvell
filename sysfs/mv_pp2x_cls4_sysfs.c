@@ -31,14 +31,9 @@ disclaimer.
 #include <linux/capability.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
-#include "mvOs.h"
-#include "mvCommon.h"
-#include "cls/mvPp2Cls4Hw.h"
+#include "mv_pp2x_sysfs.h"
 
-
-static MV_PP2_CLS_C4_ENTRY		C4;
-
-
+static struct mv_pp2x_cls_c4_entry C4;
 
 static ssize_t mv_cls_help(char *buf)
 {
@@ -89,7 +84,6 @@ static ssize_t mv_cls_help(char *buf)
 	return off;
 }
 
-
 static ssize_t mv_cls_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
@@ -102,12 +96,11 @@ static ssize_t mv_cls_show(struct device *dev,
 	if (!strcmp(name, "sw_dump"))
 		mvPp2ClsC4SwDump(&C4);
 	else if (!strcmp(name, "hw_regs"))
-		mvPp2ClsC4RegsDump();
+		mvPp2ClsC4RegsDump(sysfs_cur_hw);
 	else if (!strcmp(name, "hw_dump"))
-		mvPp2ClsC4HwDumpAll();
+		mvPp2ClsC4HwDumpAll(sysfs_cur_hw);
 	else if (!strcmp(name, "hw_hits"))
-		mvPp2V1ClsC4HwHitsDump();
-
+		mvPp2ClsC4HwHitsDump(sysfs_cur_hw);
 	else
 		off += mv_cls_help(buf);
 
@@ -130,17 +123,17 @@ static ssize_t mv_cls_store(struct device *dev,
 	local_irq_save(flags);
 
 	if (!strcmp(name, "hw_port_rules"))
-		mvPp2ClsC4HwPortToRulesSet(a, b, c);
+		mvPp2ClsC4HwPortToRulesSet(sysfs_cur_hw, a, b, c);
 	else if (!strcmp(name, "hw_uni_rules"))
-		mvPp2ClsC4HwUniToRulesSet(a, b, c);
+		mvPp2ClsC4HwUniToRulesSet(sysfs_cur_hw, a, b, c);
 	else if (!strcmp(name, "hw_read"))
-		mvPp2ClsC4HwRead(&C4, b, a);
+		mvPp2ClsC4HwRead(sysfs_cur_hw, &C4, b, a);
 	else if (!strcmp(name, "hw_write"))
-		mvPp2ClsC4HwWrite(&C4, b, a);
+		mvPp2ClsC4HwWrite(sysfs_cur_hw, &C4, b, a);
 	else if (!strcmp(name, "sw_clear"))
 		mvPp2ClsC4SwClear(&C4);
 	else if (!strcmp(name, "hw_clear_all"))
-		mvPp2ClsC4HwClearAll();
+		mvPp2ClsC4HwClearAll(sysfs_cur_hw);
 	else if (!strcmp(name, "rule_two_b"))
 		mvPp2ClsC4FieldsShortSet(&C4, a, b, (unsigned short) c);
 	else if (!strcmp(name, "rule_params"))
@@ -256,6 +249,8 @@ static struct attribute_group cls4_group = {
 int mv_pp2_cls4_sysfs_init(struct kobject *pp2_kobj)
 {
 	int err = 0;
+
+	mvPp2ClsC4HwClearAll(sysfs_cur_hw);
 
 	err = sysfs_create_group(pp2_kobj, &cls4_group);
 	if (err)

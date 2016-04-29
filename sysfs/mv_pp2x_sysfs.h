@@ -73,8 +73,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mv_pp2x_hw.h"
 #include "mv_pp2x_debug.h"
 #include "mv_gop110_hw.h"
-
-
+#ifdef MVPP2_SOC_TEST
+#include "mv_pp2x_soc_test.h"
+#endif
 
 
 extern struct mv_pp2x_hw *sysfs_cur_hw;

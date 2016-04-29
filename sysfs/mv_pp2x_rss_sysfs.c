@@ -33,6 +33,7 @@ disclaimer.
 #include <linux/platform_device.h>
 #include "mv_pp2x_sysfs.h"
 
+static struct mv_pp22_rss_entry  rss_entry;
 
 static ssize_t mv_rss_help(char *buf)
 {
@@ -44,7 +45,17 @@ static ssize_t mv_rss_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE,  "                 - 1 - 5-Tuple\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name] [cpu]     >  rss_dflt_cpu - Set cpu to handle the non-IP packet\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
-
+#ifdef MVPP2_SOC_TEST
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo [rss_sel]           >  rss_hash_sel ");
+	off += scnprintf(buf + off, PAGE_SIZE,  "                                         ");
+	off += scnprintf(buf + off, PAGE_SIZE,  "- Select bits of HASH value used, 0: [0:4], 1: [5:9]\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo [rxq]  [tbl]        >  rss_tbl_rxq_bind ");
+	off += scnprintf(buf + off, PAGE_SIZE,  "- bind the rxq and rss table\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo [tbl] [line] [rxq] [width] >  rss_tbl_entry_set ");
+	off += scnprintf(buf + off, PAGE_SIZE,  "- set the rss table entry\n");
+#endif
 	return off;
 }
 
@@ -106,18 +117,60 @@ static ssize_t mv_rss_store(struct device *dev,
 	return err ? -EINVAL : len;
 }
 
+#ifdef MVPP2_SOC_TEST
+static ssize_t mv_rss_store4(struct device *dev,
+			struct device_attribute *attr, const char *buf, size_t len)
+{
+	const char    *name = attr->attr.name;
+	unsigned int  err = 0, t = 0, i = 0, v = 0, d = 0;
+	unsigned long flags;
 
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
+
+	if (sscanf(buf, "%d %d %d %d", &t, &i, &v, &d) < 0)
+		return -EPERM;
+
+	local_irq_save(flags);
+
+	if (!strcmp(name, "rss_hash_sel"))
+		mvpp2_rss_hash_sel_set(sysfs_cur_hw, t);
+	else if (!strcmp(name, "rss_tbl_rxq_bind"))
+		err = mvpp2_rss_tbl_rxq_bind(sysfs_cur_hw, &rss_entry, t, i);
+	else if (!strcmp(name, "rss_tbl_entry_set"))
+		err = mvpp2_rss_tbl_entry_set(sysfs_cur_hw, &rss_entry, t, i, v, d);
+	else
+		pr_err("%s: illegal operation <%s>\n", __func__, name);
+
+	local_irq_restore(flags);
+
+	if (err)
+		pr_err("%s: <%s>, error %d\n", __func__, attr->attr.name, err);
+
+	return err ? -EINVAL : len;
+}
+#endif
 
 static DEVICE_ATTR(rss_hw_dump,		S_IRUSR, mv_rss_show, NULL);
 static DEVICE_ATTR(help,		S_IRUSR, mv_rss_show, NULL);
 static DEVICE_ATTR(rss_mode,		S_IWUSR, NULL, mv_rss_store);
 static DEVICE_ATTR(rss_dflt_cpu,	S_IWUSR, NULL, mv_rss_store);
+#ifdef MVPP2_SOC_TEST
+static DEVICE_ATTR(rss_hash_sel,	S_IWUSR, NULL, mv_rss_store4);
+static DEVICE_ATTR(rss_tbl_rxq_bind,	S_IWUSR, NULL, mv_rss_store4);
+static DEVICE_ATTR(rss_tbl_entry_set,	S_IWUSR, NULL, mv_rss_store4);
+#endif
 
 static struct attribute *rss_attrs[] = {
 	&dev_attr_rss_hw_dump.attr,
 	&dev_attr_help.attr,
 	&dev_attr_rss_mode.attr,
 	&dev_attr_rss_dflt_cpu.attr,
+#ifdef MVPP2_SOC_TEST
+	&dev_attr_rss_hash_sel.attr,
+	&dev_attr_rss_tbl_rxq_bind.attr,
+	&dev_attr_rss_tbl_entry_set.attr,
+#endif
 	NULL
 };
 

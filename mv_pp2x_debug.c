@@ -1077,7 +1077,7 @@ void mvPp2AddrDecodeRegs(struct mv_pp2x_hw *hw)
 	mv_pp2x_print_reg(ETH_TARGET_DEF_ADDR_REG, "ETH_TARGET_DEF_ADDR_REG");
 	mv_pp2x_print_reg(ETH_TARGET_DEF_ID_REG, "ETH_TARGET_DEF_ID_REG");
 
-	regValue = mvPp2RdReg(ETH_BASE_ADDR_ENABLE_REG);
+	regValue = mv_pp2x_read(ETH_BASE_ADDR_ENABLE_REG);
 	for (win = 0; win < ETH_MAX_DECODE_WIN; win++) {
 		if ((regValue & (1 << win)) == 0)
 			continue; /* window is disable */
@@ -1101,7 +1101,7 @@ void mvPp2TxSchedRegs(struct mv_pp2x_hw *hw, int port, int txp)
 	DBG_MSG("\n[TXP Scheduler registers: port=%d, txp=%d, physPort=%d]\n",
 		port, txp, physTxp);
 
-	mvPp2WrReg(MVPP2_TXP_SCHED_PORT_INDEX_REG, physTxp);
+	mv_pp2x_write(MVPP2_TXP_SCHED_PORT_INDEX_REG, physTxp);
 	mv_pp2x_print_reg(MVPP2_TXP_SCHED_PORT_INDEX_REG,
 		"MVPP2_TXP_SCHED_PORT_INDEX_REG");
 	mv_pp2x_print_reg(MVPP2_TXP_SCHED_Q_CMD_REG,
@@ -1228,7 +1228,7 @@ void mvPp2V1DropCntrs(struct mv_pp2x_hw *hw, int port)
 			DBG_MSG(
 				"\n------ [Port #%d txp #%d txq #%d counters] -----\n",
 				port, txp, q);
-			mvPp2WrReg(MVPP2_V1_CNT_IDX_REG, TX_CNT_IDX(port,
+			mv_pp2x_write(MVPP2_V1_CNT_IDX_REG, TX_CNT_IDX(port,
 				txp, q));
 			mvPp2RegPrintNonZero(MVPP2_V1_TX_PKT_FULLQ_DROP_REG,
 				"MVPP2_V1_TX_PKT_FULLQ_DROP_REG");
@@ -1245,7 +1245,7 @@ void mvPp2V1DropCntrs(struct mv_pp2x_hw *hw, int port)
 		DBG_MSG("\n------ [Port #%d, rxq #%d counters] -----\n",
 			port, q);
 		phyRxq = mvPp2LogicRxqToPhysRxq(port, q);
-		mvPp2WrReg(MVPP2_V1_CNT_IDX_REG, phyRxq);
+		mv_pp2x_write(MVPP2_V1_CNT_IDX_REG, phyRxq);
 		mvPp2RegPrintNonZero(MVPP2_V1_RX_PKT_FULLQ_DROP_REG,
 			"MVPP2_V1_RX_PKT_FULLQ_DROP_REG");
 		mvPp2RegPrintNonZero(MVPP2_V1_RX_PKT_EARLY_DROP_REG,
@@ -2358,4 +2358,6 @@ int	mv_pp2x_cls_c2_hw_dump(struct mv_pp2x_hw *hw)
 EXPORT_SYMBOL(mv_pp2x_cls_c2_hw_dump);
 
 /*----------------------------------------------------------------------*/
+
+
 

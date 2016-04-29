@@ -31,12 +31,10 @@ disclaimer.
 #include <linux/capability.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
-#include "mvOs.h"
-#include "mvCommon.h"
-#include "cls/mvPp2ClsMcHw.h"
+#include "mv_pp2x_sysfs.h"
 
 
-static MV_PP2_MC_ENTRY		mc;
+static struct mv_pp2x_mc_entry		mc;
 
 static ssize_t mv_mc_help(char *buf)
 {
@@ -75,7 +73,7 @@ static ssize_t mv_mc_show(struct device *dev,
 	if (!strcmp(name, "sw_dump"))
 		mvPp2McSwDump(&mc);
 	else if (!strcmp(name, "hw_dump"))
-		mvPp2McHwDump();
+		mvPp2McHwDump(sysfs_cur_hw);
 	else
 		off += mv_mc_help(buf);
 
@@ -98,13 +96,13 @@ static ssize_t mv_mc_store(struct device *dev,
 	local_irq_save(flags);
 
 	if (!strcmp(name, "hw_read"))
-		mvPp2McHwRead(&mc, a);
+		mvPp2McHwRead(sysfs_cur_hw, &mc, a);
 	else if (!strcmp(name, "hw_write"))
-		mvPp2McHwWrite(&mc, a);
+		mvPp2McHwWrite(sysfs_cur_hw, &mc, a);
 	else if (!strcmp(name, "sw_clear"))
 		mvPp2McSwClear(&mc);
 	else if (!strcmp(name, "hw_clear_all"))
-		mvPp2McHwClearAll();
+		mvPp2McHwClearAll(sysfs_cur_hw);
 	else if (!strcmp(name, "mc_sw_prio"))
 		mvPp2McSwPrioSet(&mc, a, b);
 	else if (!strcmp(name, "mc_sw_dscp"))
@@ -174,6 +172,8 @@ static struct attribute_group mc_group = {
 int mv_pp2_mc_sysfs_init(struct kobject *pp2_kobj)
 {
 	int err = 0;
+
+	mvPp2McHwClearAll(sysfs_cur_hw);
 
 	err = sysfs_create_group(pp2_kobj, &mc_group);
 	if (err)

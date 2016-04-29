@@ -1,3 +1,6 @@
+#
+# NOTE: If compile driver for pp2x soc test, please run like "make TARGET=SOC_TEST"
+#
 M:=$(CURDIR)
 
 ifndef KDIR
@@ -8,6 +11,10 @@ endif
 obj-m := mvpp2x.o
 mvpp2x-objs := mv_pp2x_ethtool.o mv_pp2x_hw.o mv_pp2x_main.o mv_pp2x_debug.o
 mvpp2x-objs += mv_gop110_hw.o
+ifeq (SOC_TEST,$(TARGET))
+mvpp2x-objs += mv_pp2x_soc_test.o
+ccflags-y += -DMVPP2_SOC_TEST
+endif
 ccflags-y := -I$(M)
 ccflags-y += -I${KDIR}/include
 ccflags-y += -DMVPP2_DEBUG

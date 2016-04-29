@@ -1,5 +1,6 @@
 #
 # Makefile for the Marvell Gigabit Ethernet driver
+# NOTE: If compile driver for pp2x soc test, please run like "make TARGET=SOC_TEST"
 #
 
 M:=$(CURDIR)
@@ -33,7 +34,10 @@ ccflags-y += -DMVPP2_DEBUG
 mvpp2x_sysfs-y := mv_pp2x_sysfs_main.o mv_pp2x_prs_high_sysfs.o mv_pp2x_prs_low_sysfs.o mv_pp2x_cls_sysfs.o mv_pp2x_cls2_sysfs.o
 mvpp2x_sysfs-y += mv_pp2x_eth_bm_sysfs.o mv_pp2x_eth_rx_sysfs.o mv_pp2x_eth_tx_sysfs.o mv_pp2x_rss_sysfs.o mv_pp2x_cos_sysfs.o mv_pp2x_debug_sysfs.o
 mvpp2x_sysfs-y += mv_pp2x_eth_tx_sched_sysfs.o mv_pp2x_eth_sysfs.o mv_pp2x_eth_gop_sysfs.o
-
+ifeq (SOC_TEST,$(TARGET))
+mvpp2x_sysfs-y += mv_pp2x_cls3_sysfs.o mv_pp2x_cls4_sysfs.o mv_pp2x_pme_sysfs.o mv_pp2x_cls_mc_sysfs.o
+ccflags-y += -DMVPP2_SOC_TEST
+endif
 
 #PLAT_DIR 	:= $(MV_EBU_NET_DIR)
 #export PLAT_DIR

@@ -31,11 +31,9 @@ disclaimer.
 #include <linux/capability.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
-#include "mvOs.h"
-#include "mvCommon.h"
-#include "cls/mvPp2Cls3Hw.h"
+#include "mv_pp2x_sysfs.h"
 
-static MV_PP2_CLS_C3_ENTRY		c3;
+static struct mv_pp2x_cls_c3_entry c3;
 
 
 static ssize_t mv_cls3_help(char *buf)
@@ -83,6 +81,8 @@ static ssize_t mv_cls3_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE, "echo id cnt      > act_sw_dup   - Set packet duplication parameters <id, cnt> to action SW entry.\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "echo id off bits > act_sw_sq    - Write sequence id <id> to offset <off> (in bits), id bits size <bits>\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "                                  to action SW entry\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo cmd rss_en  > act_sw_rss   ");
+	off += scnprintf(buf + off, PAGE_SIZE, "- set RSS command <cmd> and enable RSS.\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "\n");
@@ -113,21 +113,21 @@ static ssize_t mv_cls3_show(struct device *dev,
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
 	if (!strcmp(name, "hw_dump"))
-		mvPp2ClsC3HwDump();
+		mvPp2ClsC3HwDump(sysfs_cur_hw);
 	else if (!strcmp(name, "hw_ms_dump"))
-		mvPp2ClsC3HwMissDump();
+		mvPp2ClsC3HwMissDump(sysfs_cur_hw);
 	else if (!strcmp(name, "hw_ext_dump"))
-		mvPp2ClsC3HwExtDump();
+		mvPp2ClsC3HwExtDump(sysfs_cur_hw);
 	else if (!strcmp(name, "sw_dump"))
 		mvPp2ClsC3SwDump(&c3);
 	else if (!strcmp(name, "sc_res_dump"))
-		mvPp2ClsC3ScanResDump();
+		mvPp2ClsC3ScanResDump(sysfs_cur_hw);
 	else if (!strcmp(name, "sc_regs"))
-		mvPp2ClsC3ScanRegs();
+		mvPp2ClsC3ScanRegs(sysfs_cur_hw);
 	else if (!strcmp(name, "hw_query"))
-		mvPp2ClsC3HwQuery(&c3, NULL, NULL);
+		mvPp2ClsC3HwQuery(sysfs_cur_hw, &c3, NULL, NULL);
 	else if (!strcmp(name, "cnt_read_all"))
-		mvPp2ClsC3HitCntrsReadAll();
+		mvPp2ClsC3HitCntrsReadAll(sysfs_cur_hw);
 	else
 		off += mv_cls3_help(buf);
 
@@ -151,17 +151,17 @@ static ssize_t mv_cls3_store(struct device *dev,
 	local_irq_save(flags);
 
 	if (!strcmp(name, "hw_read"))
-		mvPp2ClsC3HwRead(&c3, a);
+		mv_pp2x_cls_c3_hw_read(sysfs_cur_hw, &c3, a);
 	else if (!strcmp(name, "hw_query_add"))
-		mvPp2ClsC3HwQueryAdd(&c3, a, NULL);
+		mvPp2ClsC3HwQueryAdd(sysfs_cur_hw, &c3, a, NULL);
 	else if (!strcmp(name, "hw_add"))
-		mvPp2ClsC3HwAdd(&c3, a, b);
-	else if (!strcmp(name, "hw_ms_add"))/*PPv2.1 new feature MAS 3.12*/
-		mvPp2ClsC3HwMissAdd(&c3, a);
+		mvPp2ClsC3HwAdd(sysfs_cur_hw, &c3, a, b);
+	else if (!strcmp(name, "hw_ms_add"))
+		mvPp2ClsC3HwMissAdd(sysfs_cur_hw, &c3, a);
 	else if (!strcmp(name, "hw_del"))
-		mvPp2ClsC3HwDel(a);
+		mvPp2ClsC3HwDel(sysfs_cur_hw, a);
 	else if (!strcmp(name, "hw_del_all"))
-		mvPp2ClsC3HwDelAll();
+		mvPp2ClsC3HwDelAll(sysfs_cur_hw);
 	else if (!strcmp(name, "sw_clear"))
 		mvPp2ClsC3SwClear(&c3);
 	else if (!strcmp(name, "sw_init_cnt"))
@@ -200,26 +200,28 @@ static ssize_t mv_cls3_store(struct device *dev,
 		mvPp2ClsC3DupSet(&c3, a, b);
 	else if (!strcmp(name, "act_sw_sq"))/*PPv2.1 new feature MAS 3.4*/
 		mvPp2ClsC3SeqSet(&c3, a, b, c);
+	else if (!strcmp(name, "act_sw_rss"))
+		mv_pp2x_cls_c3_rss_set(&c3, a, b);
 	else if (!strcmp(name, "cnt_read"))
-		mvPp2ClsC3HitCntrsRead(a, NULL);
+		mvPp2ClsC3HitCntrsRead(sysfs_cur_hw, a, NULL);
 	else if (!strcmp(name, "cnt_ms_read"))
-		mvPp2ClsC3HitCntrsMissRead(a, NULL);
+		mvPp2ClsC3HitCntrsMissRead(sysfs_cur_hw, a, NULL);
 	else if (!strcmp(name, "cnt_clr_all"))
-		mvPp2ClsC3HitCntrsClearAll();
+		mvPp2ClsC3HitCntrsClearAll(sysfs_cur_hw);
 	else if (!strcmp(name, "cnt_clr_lkp"))
-		mvPp2ClsC3HitCntrsClear(a);
+		mvPp2ClsC3HitCntrsClear(sysfs_cur_hw, a);
 	else if (!strcmp(name, "sc_start"))
-		mvPp2ClsC3ScanStart();
+		mvPp2ClsC3ScanStart(sysfs_cur_hw);
 	else if (!strcmp(name, "sc_thresh"))
-		mvPp2ClsC3ScanThreshSet(a, b);
+		mvPp2ClsC3ScanThreshSet(sysfs_cur_hw, a, b);
 	else if (!strcmp(name, "sc_clear_before"))
-		mvPp2ClsC3ScanClearBeforeEnSet(a);
+		mvPp2ClsC3ScanClearBeforeEnSet(sysfs_cur_hw, a);
 	else if (!strcmp(name, "sc_start_idx"))
-		mvPp2ClsC3ScanStartIndexSet(a);
+		mvPp2ClsC3ScanStartIndexSet(sysfs_cur_hw, a);
 	else if (!strcmp(name, "sc_delay"))
-		mvPp2ClsC3ScanDelaySet(a);
+		mvPp2ClsC3ScanDelaySet(sysfs_cur_hw, a);
 	else if (!strcmp(name, "sc_res_read"))
-		mvPp2ClsC3ScanResRead(a, NULL, NULL);
+		mvPp2ClsC3ScanResRead(sysfs_cur_hw, a, NULL, NULL);
 	else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
@@ -248,7 +250,7 @@ static ssize_t mv_cls3_signed_store(struct device *dev,
 	local_irq_save(flags);
 
 	if (!strcmp(name, "sc_lkp"))
-		mvPp2ClsC3ScanLkpTypeSet(a);
+		mvPp2ClsC3ScanLkpTypeSet(sysfs_cur_hw, a);
 	else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
@@ -263,7 +265,7 @@ static ssize_t mv_cls3_signed_store(struct device *dev,
 
 
 static DEVICE_ATTR(hw_dump,		S_IRUSR, mv_cls3_show, NULL);
-static DEVICE_ATTR(hw_ms_dump,		S_IRUSR, mv_cls3_show, NULL);/*PPv2.1 new feature MAS 3.7*/
+static DEVICE_ATTR(hw_ms_dump,		S_IRUSR, mv_cls3_show, NULL);
 static DEVICE_ATTR(hw_ext_dump,		S_IRUSR, mv_cls3_show, NULL);
 static DEVICE_ATTR(sw_dump,		S_IRUSR, mv_cls3_show, NULL);
 static DEVICE_ATTR(sc_res_dump,		S_IRUSR, mv_cls3_show, NULL);
@@ -275,7 +277,7 @@ static DEVICE_ATTR(help,		S_IRUSR, mv_cls3_show, NULL);
 static DEVICE_ATTR(hw_query_add,	S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(hw_read,		S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(hw_add,		S_IWUSR, NULL, mv_cls3_store);
-static DEVICE_ATTR(hw_ms_add,		S_IWUSR, NULL, mv_cls3_store);/*PPv2.1 new feature MAS 3.12*/
+static DEVICE_ATTR(hw_ms_add,		S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(hw_del,		S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(hw_del_all,		S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(sw_clear,		S_IWUSR, NULL, mv_cls3_store);
@@ -294,11 +296,12 @@ static DEVICE_ATTR(act_sw_fwd,		S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(act_sw_pol,		S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(act_sw_mdf,		S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(act_sw_flowid,	S_IWUSR, NULL, mv_cls3_store);
-static DEVICE_ATTR(act_sw_mtu,		S_IWUSR, NULL, mv_cls3_store);/*PPv2.1 new feature MAS 3.7*/
+static DEVICE_ATTR(act_sw_mtu,		S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(act_sw_dup,		S_IWUSR, NULL, mv_cls3_store);
-static DEVICE_ATTR(act_sw_sq,		S_IWUSR, NULL, mv_cls3_store);/*PPv2.1 new feature MAS 3.14*/
+static DEVICE_ATTR(act_sw_sq,		S_IWUSR, NULL, mv_cls3_store);
+static DEVICE_ATTR(act_sw_rss,		S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(cnt_read,		S_IWUSR, NULL, mv_cls3_store);
-static DEVICE_ATTR(cnt_ms_read,		S_IWUSR, NULL, mv_cls3_store);/*PPv2.1 new feature MAS 3.12*/
+static DEVICE_ATTR(cnt_ms_read,		S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(cnt_clr_all,		S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(cnt_clr_lkp,		S_IWUSR, NULL, mv_cls3_store);
 static DEVICE_ATTR(sc_start,		S_IWUSR, NULL, mv_cls3_store);
@@ -345,6 +348,7 @@ static struct attribute *cls3_attrs[] = {
 	&dev_attr_act_sw_mtu.attr,
 	&dev_attr_act_sw_dup.attr,
 	&dev_attr_act_sw_sq.attr,
+	&dev_attr_act_sw_rss.attr,
 	&dev_attr_cnt_read.attr,
 	&dev_attr_cnt_ms_read.attr,
 	&dev_attr_cnt_clr_all.attr,
@@ -368,6 +372,9 @@ static struct attribute_group cls3_group = {
 int mv_pp2_cls3_sysfs_init(struct kobject *pp2_kobj)
 {
 	int err = 0;
+
+	/* C3 init */
+	mvPp2ClsC3Init(sysfs_cur_hw);
 
 	err = sysfs_create_group(pp2_kobj, &cls3_group);
 	if (err)
