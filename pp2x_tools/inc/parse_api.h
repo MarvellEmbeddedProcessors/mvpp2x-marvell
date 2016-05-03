@@ -38,6 +38,7 @@ int parse_xml_mod_data2(char *xmlFile);
 int parse_xml_mod_cfg(char *xmlFile);
 int parse_xml_config_info(char *xmlFile);
 int parse_xml_mc(char *xmlFile);
+int parse_xml_rss(char *xmlFile);
 int parse_xml_console(char *xmlFile, bool);
 
 #ifdef __cplusplus

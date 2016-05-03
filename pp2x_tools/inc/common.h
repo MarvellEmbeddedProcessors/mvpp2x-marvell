@@ -48,6 +48,7 @@ extern unsigned int DEB_LEVEL;
 #define PME_SYSFS_PATH		"/sys/devices/platform/pp2/pme"
 #define PRS_SYSFS_PATH		"/sys/devices/platform/pp2/prs/debug"
 #define MC_SYSFS_PATH		"/sys/devices/platform/pp2/mc"
+#define RSS_SYSFS_PATH		"/sys/devices/platform/pp2/rss"
 
 typedef enum {
 	SHEET_PRS_INIT,
@@ -64,6 +65,7 @@ typedef enum {
 	SHEET_MOD_DATA1,
 	SHEET_MOD_DATA2,
 	SHEET_MC,
+	SHEET_RSS,
 	MAX_SHEET
 } EXCEL_SHEETS;
 

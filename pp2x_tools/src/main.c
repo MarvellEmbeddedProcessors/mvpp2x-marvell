@@ -63,7 +63,8 @@ parse_sheet_s parse_section[MAX_SHEET] = {
 	{ "MOD_cmd",	parse_xml_mod_cmd,	1},
 	{ "MOD_d1",	parse_xml_mod_data1,	1},
 	{ "MOD_d2",	parse_xml_mod_data2,	1},
-	{ "MC",		parse_xml_mc,		1}
+	{ "MC",		parse_xml_mc,		1},
+	{ "RSS",	parse_xml_rss,		1}
 };
 
 inline unsigned int get_execution_delay(void)

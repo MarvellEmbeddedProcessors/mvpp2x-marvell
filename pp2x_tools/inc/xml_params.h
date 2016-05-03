@@ -44,6 +44,7 @@ to you under the terms of the applicable Commercial License.
 #define WORKSHEET_MOD_DATA2		"mod_d2"
 #define WORKSHEET_MOD_CFG		"mod_cfg"
 #define WORKSHEET_MC_TABLE		"MC"
+#define WORKSHEET_RSS_TABLE		"RSS"
 #define WORKSHEET_CONSOLE		"cnsl"
 #define WORKSHEET_DICTIONARY		"dictionary"
 
@@ -277,7 +278,14 @@ to you under the terms of the applicable Commercial License.
 #define FRWD_TYPE                  "FRWD_Type"
 #define QUEUE_NUMBER               "queue_number"
 #define NEXT_MC_TABLE_INDEX        "NextMCTableIndex"
-
+/* RSS_table */
+#define RSS_ACCESS_MODE            "access_mode"
+#define RSS_TABLE_INDEX            "rss_tbl_idx"
+#define RXQ_OWNER                  "rxq_owner"
+#define RSS_LINE_IDX               "line_index"
+#define RXQ_NEW                    "rxq_new"
+#define RSS_WIDTH                  "width"
+#define HASH_SELECT                "hash_sel"
 /* dictionary */
 #define CNSL_DESC			"description"
 #define CNSL_CMD			"command"
