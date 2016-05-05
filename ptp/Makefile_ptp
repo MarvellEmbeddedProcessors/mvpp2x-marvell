@@ -1,0 +1,67 @@
+#--------------------------------------------------------------------------
+# "ptp" Makefile
+# Builds the "mvpp2" platform network device with full PTP functionality
+# Source-save is under "ptp"
+#   but for make it should be either:
+#    copied into base-"mvpp2" directory or
+#    linked in base-"mvpp2" by command:   ln -s ptp/Makefile Makefile
+#--------------------------------------------------------------------------
+
+MNAME := mvpp2x
+#MNAME := mvpp2x-ptp
+
+ifndef KDIR
+$(error KDIR is not set. must declare kernel directory. example: export KDIR=~/linux-4.0.4/kernel/)
+endif
+
+ifndef PTP_INFO_PRINTED_ONCE
+# Makefile is re-entered several times, but Config-message is printed once only
+ $(info -------------------------------------------------------------)
+ $(info --- making $(MNAME).ko module with full PTP functionality)
+ $(info ---)
+ export PTP_INFO_PRINTED_ONCE = 1
+endif
+
+
+##================== MVPP2x common part ======================================
+##
+M:=$(CURDIR)
+obj-m := $(MNAME).o
+$(MNAME)-objs := mv_pp2x_ethtool.o mv_pp2x_hw.o mv_pp2x_main.o mv_pp2x_debug.o
+$(MNAME)-objs += mv_gop110_hw.o
+ccflags-y := -I$(M)
+ccflags-y += -I${KDIR}/include
+ccflags-y += -DMVPP2_DEBUG
+
+#config := MVPP2_VERBOSE
+
+ifdef config
+ccflags-y += -D$(config)
+$(info NOTE!! : config=$(config))
+endif
+
+
+##================== PTP private part ========================================
+##
+PTPD   := ptp
+PTPDIR := $(M)/$(PTPD)
+PTP_CCFLAGS := -I$(PTPDIR)
+PTP_CCFLAGS += -DCONFIG_MV_PTP_SERVICE
+#PTP_OBJS += $(PTPD)/mv_ptp_if.o
+#PTP_OBJS += $(PTPD)/mv_ptp_if_serv.o
+#PTP_OBJS += $(PTPD)/mv_ptp_sysfs.o
+#PTP_OBJS += $(PTPD)/mv_ptp_uio.o
+#PTP_OBJS += $(PTPD)/mv_tai_clock.o
+# mv_pp2x_ptp_hook.c is used as include mv_pp2x_main.c
+
+ccflags-y += $(PTP_CCFLAGS)
+$(MNAME)-objs += $(PTP_OBJS)
+
+
+##================== Make-target-actions ======================================
+##
+all:
+	make -C ${KDIR} M=$(M) modules
+
+clean:
+	make -C ${KDIR} SUBDIRS=$(M) clean
