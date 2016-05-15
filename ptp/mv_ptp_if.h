@@ -21,6 +21,8 @@
 
 #define PTP_TAI_PRT_STR	"TAI/PTP"
 
+#include <mv_tai_regs.h>
+
 struct mv_tai_ptp_map {
 	phys_addr_t tai_base_pa;
 	phys_addr_t tai_base_va;
@@ -71,4 +73,6 @@ void mv_tai_ptp_map_print(struct mv_tai_ptp_map *map, char *str);
 int __init mv_ptp_event_init_module(void);
 int __exit mv_ptp_event_deinit_module(void);
 #endif
+int mv_ptp_sysfs_init(char *dev_name, char *subdir);
+
 #endif /* _mv_ptp_if_h_ */
