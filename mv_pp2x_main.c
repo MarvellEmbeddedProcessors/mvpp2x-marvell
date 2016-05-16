@@ -61,6 +61,8 @@
 #include <mv_pp2x_ptp_hook.c>
 /* non-inline init/config */
 #include <mv_ptp_if.h>
+#include <mv_ptp_service.h>
+#include <mv_ptp_if.h>
 #endif
 
 #define MVPP2_SKB_TEST_SIZE 64
@@ -4568,7 +4570,7 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 		mv_pp2x_ptp_hook_init(priv, port_count);
 
 		mv_ptp_sysfs_init("pp2", NULL);
-		/* mv_pp3_ptp_tai_tod_uio_init(device->pdev); */
+		mv_ptp_tai_tod_uio_init(pdev);
 	}
 #endif
 

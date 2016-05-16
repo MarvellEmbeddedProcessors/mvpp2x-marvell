@@ -51,8 +51,13 @@ PTP_OBJS += $(PTPD)/mv_ptp_if.o
 PTP_OBJS += $(PTPD)/mv_ptp_if_serv.o
 PTP_OBJS += $(PTPD)/mv_tai_clock.o
 PTP_OBJS += $(PTPD)/mv_ptp_sysfs.o
-#PTP_OBJS += $(PTPD)/mv_ptp_uio.o
+PTP_OBJS += $(PTPD)/mv_ptp_uio.o
 # mv_pp2x_ptp_hook.c is used as include mv_pp2x_main.c
+
+PTP_CCFLAGS += -DMV_PTP_SERVICE_UIO
+ifeq ($(CONFIG_UIO),)
+PTP_CCFLAGS += -DMV_PTP_SERVICE_UIO_DEV_BUILT_IN
+endif
 
 ccflags-y += $(PTP_CCFLAGS)
 $(MNAME)-objs += $(PTP_OBJS)

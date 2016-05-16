@@ -23,7 +23,7 @@ void mv_ptp_hook_extra_op(u32 val1, u32 val2, u32 val3);
 
 #ifdef __KERNEL__
 /* Probre/Init should be called with/after mv_ptp_enable() */
-int mv_pp3_ptp_tai_tod_uio_init(struct platform_device *shared_pdev);
+int mv_ptp_tai_tod_uio_init(struct platform_device *shared_pdev);
 #endif
 
 #endif /* __mv_ptp_h__ */
