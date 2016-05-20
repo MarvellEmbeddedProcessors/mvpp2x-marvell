@@ -158,6 +158,8 @@ to you under the terms of the applicable Commercial License.
 #define POLICER_SELECT             "PolicerSelect"
 #define POLICER_ID                 "PolicerId"
 #define FLOWID_ENABLE              "FlowIDEnable"
+#define RSS_ENABLE_ACT             "RSSEnable"
+#define RSS_ENABLE_ATTR            "RSS_en"
 #define HWFM_DPTR                  "HWFM_DPtr"
 #define HWFM_IPTR                  "HWFM_IPtr"
 #define HWF_L4_CHK_EN              "HWF_L4_Checksum_en"

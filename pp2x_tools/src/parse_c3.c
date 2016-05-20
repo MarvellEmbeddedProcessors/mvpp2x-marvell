@@ -54,6 +54,8 @@ enum xml_entry_data_C3{
 	C3_POLICER_ID_E,
 	C3_FLOW_ID_ENABLE_E,
 	C3_FLOW_ID_E,
+	C3_RSS_ACTION_E,
+	C3_RSS_VALUE_E,
 	C3_HWFM_DPTR_E,
 	C3_HWFM_IPTR_E,
 	C3_HWF_L4CHK_ENB_E,
@@ -415,6 +417,25 @@ static int build_c3_action_sysfs(xml_entry_data *c3_data,
 			atoi(policer_action->value),
 			policer_id & C3_POLICER_ID_MAX,
 			policer_id >> C3_POLICER_ID_BITS,
+			C3_SYSFS_PATH);
+		handle_sysfs_command(sysfs_buf, false);
+	}
+
+	{
+		DdEntry *rss_action = findMatchingEntry((char *)ezxml_txt(c3_data[C3_RSS_ACTION_E].xmlEntry));
+		DdEntry *rss_en = findMatchingEntry((char *)ezxml_txt(c3_data[C3_RSS_VALUE_E].xmlEntry));
+
+		if (c3_data[C3_RSS_ACTION_E].xmlEntry == NULL)	{
+			ERR_PR("%s is missing for tcam index %d\n", RSS_ENABLE_ACT, tcam_idx);
+			return 1;
+		}
+		if (c3_data[C3_RSS_VALUE_E].xmlEntry == NULL) {
+			ERR_PR("%s is missing for tcam index %d\n", RSS_ENABLE_ATTR, tcam_idx);
+			return 1;
+		}
+		sprintf(sysfs_buf, "echo %s %s  > %s/act_sw_rss\n",
+       			rss_action->value,
+			rss_en->value,
 			C3_SYSFS_PATH);
 		handle_sysfs_command(sysfs_buf, false);
 	}
@@ -810,6 +831,8 @@ int parse_xml_c3(char *xmlFile)
 		{POLICER_ID,	            NULL},
 		{FLOW_ID_ENABLE,	    NULL},
 		{FLOW_ID,	            NULL},
+		{RSS_ENABLE_ACT,	    NULL},
+		{RSS_ENABLE_ATTR,           NULL},
 		{HWFM_DPTR,		    NULL},
 		{HWFM_IPTR,		    NULL},
 		{HWF_L4CHK_ENB, 	    NULL},

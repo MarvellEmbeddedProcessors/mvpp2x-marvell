@@ -58,6 +58,8 @@ enum xml_entry_data_C2{
 	FORWARDING_E,
 	POLICER_SELECT_E,
 	POLICER_ID_E,
+	RSS_ACTION_E,
+	RSS_VALUE_E,
 	HWFM_DPTR_E,
 	HWFM_IPTR_E,
 	HWF_L4_CHK_EN_E,
@@ -890,6 +892,25 @@ static int build_c2_action_sysfs(xml_entry_data *c2_data, char *xmlFile)
 	}
 
 	{
+		DdEntry *rss_action = findMatchingEntry((char *)ezxml_txt(c2_data[RSS_ACTION_E].xmlEntry));
+		DdEntry *rss_en = findMatchingEntry((char *)ezxml_txt(c2_data[RSS_VALUE_E].xmlEntry));
+
+		if (c2_data[RSS_ACTION_E].xmlEntry == NULL)	{
+			ERR_PR("%s is missing for tcam index %d\n", RSS_ENABLE_ACT, tcam_idx);
+			return 1;
+		}
+		if (c2_data[RSS_VALUE_E].xmlEntry == NULL) {
+			ERR_PR("%s is missing for tcam index %d\n", RSS_ENABLE_ATTR, tcam_idx);
+			return 1;
+		}
+		sprintf(sysfs_buf, "echo %s %s  > %s/act_sw_rss\n",
+       			rss_action->value,
+			rss_en->value,
+			C2_SYSFS_PATH);
+		handle_sysfs_command(sysfs_buf, false);
+	}
+
+	{
 		unsigned int mtu_index = atoi(ezxml_txt(c2_data[MTU_INDEX_E].xmlEntry));
 
 		if (c2_data[MTU_INDEX_E].xmlEntry == NULL) {
@@ -1057,6 +1078,7 @@ int parse_xml_c2(char *xmlFile)
 		{GEMPORTID_ACTION, NULL},	{GEMPORTID, NULL},		{QUEUE_LOW_ACTION,  NULL},
 		{QUEUE_LOW_VALUE, NULL},	{QUEUE_HIGH_ACTION, NULL},	{QUEUE_HIGH_VALUE, NULL},
 		{FORWARDING,  NULL},		{POLICER_SELECT, NULL},		{POLICER_ID, NULL},
+		{RSS_ENABLE_ACT, NULL},		{RSS_ENABLE_ATTR, NULL},
 		{HWFM_DPTR, NULL},		{HWFM_IPTR, NULL},      	{HWF_L4_CHK_EN, NULL},
 		{MTU_INDEX, NULL},		{HW_DUPLICATION_FLOWID, NULL},	{HW_DUPLICATION_COUNT, NULL},
 		{ENTRY_ID, NULL},		{MISS, NULL} };
