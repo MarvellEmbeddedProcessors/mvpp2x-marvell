@@ -62,7 +62,7 @@
 /* non-inline init/config */
 #include <mv_ptp_if.h>
 #include <mv_ptp_service.h>
-#include <mv_ptp_if.h>
+#include <mv_pp2x_ptp_init.h>
 #endif
 
 #define MVPP2_SKB_TEST_SIZE 64
@@ -4552,26 +4552,8 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 	mv_pp2x_init_rxfhindir(priv);
 
 #ifdef CONFIG_MV_PTP_SERVICE
-	{
-		/* TAI/PTP must be in the given ordering but could be
-		 * called not only in this _probe place. So are Not collected
-		 * into one "init" procedure but are present one by-one.
-		 */
-		u32 tclk_hz = 250000000;
-
-		of_property_read_u32(dn, "clock-frequency", &tclk_hz);
-		pr_info("tai clock-frequency = %u Hz\n", tclk_hz);
-		mv_ptp_tclk_hz_set(tclk_hz);
-
-		/* TAI clock init (must be after gop) */
-		mv_tai_clock_init(pdev);
-		mv_ptp_enable(port_count, true);
-
-		mv_pp2x_ptp_hook_init(priv, port_count);
-
-		mv_ptp_sysfs_init("pp2", NULL);
-		mv_ptp_tai_tod_uio_init(pdev);
-	}
+	mv_pp2x_ptp_init(pdev, priv, port_count);
+	mv_pp2x_ptp_hook_init(priv, port_count);
 #endif
 
 	/* Initialize ports */

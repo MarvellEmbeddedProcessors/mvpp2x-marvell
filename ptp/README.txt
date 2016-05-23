@@ -7,6 +7,7 @@ mv_ptp_if_serv.o - service interfacing to sysfs
 mv_ptp_sysfs.o   - sysfs commands run-time used by User-Space PTP application
 mv_ptp_uio.o     - uio device driver mapping all tai/ptp registers for
                             User-Space PTP application
+mv_pp2x_ptp_init.c - platform-depend PTP package init
 mv_pp2x_ptp_hook.c - include/hook into mvppXX network RX/TX packet device
 
 The PTP package is a built-in extension of generic Network-device mvppXX.
