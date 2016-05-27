@@ -1482,7 +1482,7 @@ int mvPp2ClsC4SwDump(struct mv_pp2x_cls_c4_entry *C4)
 			index,
 			MVPP2_CLS4_FATTR_ID_VAL(index, C4->rules.regs.attr[GET_FIELD_ATRR(index)]),
 			MVPP2_CLS4_FATTR_OPCODE_VAL(index, C4->rules.regs.attr[GET_FIELD_ATRR(index)]));
-	pr_info(FLD4_FMT, FLD4_VAL(C4->rules.regs.fdataArr));
+	printk(FLD4_FMT, FLD4_VAL(C4->rules.regs.fdataArr));
 	pr_info("\n");
 
 	/*------------------------------*/
@@ -1494,7 +1494,7 @@ int mvPp2ClsC4SwDump(struct mv_pp2x_cls_c4_entry *C4)
 			index,
 			MVPP2_CLS4_FATTR_ID_VAL(index, C4->rules.regs.attr[GET_FIELD_ATRR(index)]),
 			MVPP2_CLS4_FATTR_OPCODE_VAL(index, C4->rules.regs.attr[GET_FIELD_ATRR(index)]));
-	pr_info(FLD5_FMT, FLD5_VAL(C4->rules.regs.fdataArr));
+	printk(FLD5_FMT, FLD5_VAL(C4->rules.regs.fdataArr));
 	pr_info("\n");
 	pr_info("\n");
 	pr_info("VLAN: %d  PPPOE: %d  MACME: %d  L4INFO: %d  L3INFO: %d\n",

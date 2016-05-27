@@ -20,9 +20,9 @@
 
 /* C3 test Macros */
 #define HEK_EXT_FMT				"%8.8x %8.8x %8.8x | %8.8x %8.8x %8.8x %8.8x %8.8x %8.8x"
-#define HEK_EXT_VAL(p)				(p[8], p[7], p[6], p[5], p[4], p[3], p[2], p[1], p[0])
+#define HEK_EXT_VAL(p)				p[8], p[7], p[6], p[5], p[4], p[3], p[2], p[1], p[0]
 #define HEK_FMT					"%8.8x %8.8x %8.8x"
-#define HEK_VAL(p)				(p[8], p[7], p[6])
+#define HEK_VAL(p)				p[8], p[7], p[6]
 
 /* C4 test Macros */
 /* Field 0- 3 */
@@ -30,10 +30,10 @@
 #define FLD_VAL(field, p)			((p[field/2] >> (16 * (field % 2))) & 0xFFFF)
 /* field 4 */
 #define FLD4_FMT				"%8.8x %8.8x %8.8x %8.8x"
-#define FLD4_VAL(p)				(p[2], p[3], p[4], p[5])
+#define FLD4_VAL(p)				p[2], p[3], p[4], p[5]
 /* field 5 */
 #define FLD5_FMT				"%4.4x %8.8x"
-#define FLD5_VAL(p)				(p[6] & 0xFFFF, p[7])
+#define FLD5_VAL(p)				p[6] & 0xFFFF, p[7]
 #define GET_FIELD_ATRR(field)			((field) / 3)
 
 /* PME test Macros */
