@@ -2049,8 +2049,6 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 	int rx_received, rx_filled, i;
 	u32 rcvd_pkts = 0;
 	u32 rcvd_bytes = 0;
-	u32 refill_array[MVPP2_BM_POOLS_NUM] = {0};
-	u8 num_pool = mv_pp2x_num_pools_get(port->priv);
 
 #ifdef DEV_NETMAP
 		if (port->flags & MVPP2_F_IFCAP_NETMAP) {
@@ -2074,7 +2072,7 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 		struct mv_pp2x_bm_pool *bm_pool;
 		struct sk_buff *skb;
 		u32 rx_status, pool;
-		int rx_bytes;
+		int rx_bytes, err;
 		dma_addr_t buf_phys_addr;
 
 #if defined(__BIG_ENDIAN)
@@ -2089,7 +2087,7 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 		rx_bytes = rx_desc->data_size - MVPP2_MH_SIZE;
 
 		pool = MVPP2_RX_DESC_POOL(rx_desc);
-		bm_pool = &port->priv->bm_pools[pool - port->priv->pp2_cfg.first_bm_pool];
+		bm_pool = &port->priv->bm_pools[pool];
 		/* Check if buffer header is used */
 		if (rx_status & MVPP2_RXD_BUF_HDR) {
 			mv_pp2x_buff_hdr_rx(port, rx_desc);
@@ -2134,7 +2132,6 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 		rcvd_pkts++;
 		rcvd_bytes += rx_bytes;
 		atomic_inc(&bm_pool->in_use);
-		refill_array[bm_pool->log_id]++;
 
 		skb_reserve(skb, MVPP2_MH_SIZE);
 		skb_put(skb, rx_bytes);
@@ -2142,25 +2139,11 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 		mv_pp2x_rx_csum(port, rx_status, skb);
 
 		napi_gro_receive(napi, skb);
-	}
 
-	/* Refill pool */
-	for (i = 0; i < num_pool; i++) {
-		int err;
-		struct mv_pp2x_bm_pool *refill_bm_pool;
-
-		if (!refill_array[i])
-			continue;
-		refill_bm_pool = &port->priv->bm_pools[i];
-		while (refill_array[i]--) {
-			err = mv_pp2x_rx_refill(port, refill_bm_pool,
-						refill_bm_pool->log_id + port->priv->pp2_cfg.first_bm_pool, 0);
-			if (err) {
-				netdev_err(port->dev, "failed to refill BM pools\n");
-				refill_array[i]++;
-				rx_filled -= refill_array[i];
-				break;
-			}
+		err = mv_pp2x_rx_refill(port, bm_pool, pool, 0);
+		if (err) {
+			netdev_err(port->dev, "failed to refill BM pools\n");
+			rx_filled--;
 		}
 	}
 
