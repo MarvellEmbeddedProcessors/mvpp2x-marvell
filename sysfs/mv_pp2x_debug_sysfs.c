@@ -34,6 +34,20 @@ disclaimer.
 #include "mv_pp2x_sysfs.h"
 
 
+
+void mv_pp2x_syfs_cpn_set(int index)
+{
+	struct device *pp2_dev;
+	struct mv_pp2x *priv;
+
+	pp2_dev = bus_find_device_by_name(&platform_bus_type, NULL, pp2_dev_name[index]);
+	priv = dev_get_drvdata(pp2_dev);
+
+	sysfs_cur_priv = priv;
+	sysfs_cur_hw = &priv->hw;
+}
+
+
 static ssize_t mv_debug_help(char *buf)
 {
 	int off = 0;
@@ -44,6 +58,7 @@ static ssize_t mv_debug_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset     >mv_pp2x_reg_read     - Read mvpp2 register.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo val        >debug_param          - Set global debug_param.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "cat             debug_param           - Get global debug_param.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo val       > cpn_index            - Set cpn_index to use for sysfs commands.\n");
 
 
 	return off;
@@ -131,6 +146,8 @@ static ssize_t mv_debug_store_unsigned(struct device *dev,
 		printk("mv_pp2x_write_read(0x%x)=0x%x\n", a, val);
 	} else if (!strcmp(name, "debug_param")) {
 		mv_pp2x_debug_param_set(a);
+	} else if (!strcmp(name, "cpn_index")) {
+		mv_pp2x_syfs_cpn_set(a);
 	}
 	else {
 		err = 1;
@@ -150,6 +167,7 @@ static DEVICE_ATTR(debug_param,	(S_IRUSR|S_IWUSR), mv_debug_show,
 static DEVICE_ATTR(bind_cpu,		S_IWUSR, NULL, mv_debug_store);
 static DEVICE_ATTR(mv_pp2x_reg_read,	S_IWUSR, NULL, mv_debug_store_unsigned);
 static DEVICE_ATTR(mv_pp2x_reg_write,	S_IWUSR, NULL, mv_debug_store_unsigned);
+static DEVICE_ATTR(cpn_index           ,S_IWUSR, NULL, mv_debug_store_unsigned);
 
 static struct attribute *debug_attrs[] = {
 	&dev_attr_help.attr,
@@ -157,6 +175,7 @@ static struct attribute *debug_attrs[] = {
 	&dev_attr_bind_cpu.attr,
 	&dev_attr_mv_pp2x_reg_read.attr,
 	&dev_attr_mv_pp2x_reg_write.attr,
+	&dev_attr_cpn_index.attr,
 	NULL
 };
 

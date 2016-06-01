@@ -61,9 +61,12 @@ disclaimer.
 //#include "dpi/mvPp2DpiHw.h"
 //#include "wol/mvPp2Wol.h"
 
+#define MAX_NUM_CP_110 2
 
 struct mv_pp2x *sysfs_cur_priv;
 struct mv_pp2x_hw *sysfs_cur_hw;
+char *pp2_dev_name[MAX_NUM_CP_110] = {"f2000000.ppv22", "f4000000.ppv22"};
+
 static struct platform_device * pp2_sysfs;
 
 
@@ -76,7 +79,7 @@ static int mv_pp2_sysfs_init(void)
 	struct device *pp2_dev;
 	struct platform_device *pp2_plat_dev;
 	struct mv_pp2x *priv;
-	char *pp2_dev_name = "f2000000.ppv22";
+	int cpn_index;
 
 
 	pd = bus_find_device_by_name(&platform_bus_type, NULL, "pp2");
@@ -89,18 +92,6 @@ static int mv_pp2_sysfs_init(void)
 		printk(KERN_ERR"%s: cannot find sysfs pp2 device\n", __func__);
 		return -1;
 	}
-	pp2_dev = bus_find_device_by_name(&platform_bus_type, NULL, pp2_dev_name);
-	if (!pp2_dev) {
-		printk(KERN_ERR"%s: cannot find device %s\n", __func__, pp2_dev_name);
-		return -1;
-	}
-
-	priv = dev_get_drvdata(pp2_dev);
-	pp2_plat_dev = to_platform_device(pp2_dev);
-	mv_pp2x_pp2_basic_print(pp2_plat_dev, priv);
-	mv_pp2x_pp2_ports_print(priv);
-	sysfs_cur_priv = priv;
-	sysfs_cur_hw = &priv->hw;
 
 	mv_pp2_prs_high_sysfs_init(&pd->kobj);
 	mv_pp2_cls_sysfs_init(&pd->kobj);
@@ -136,6 +127,22 @@ static int mv_pp2_sysfs_init(void)
 
 	mv_gop_sysfs_init(&pd->kobj);
 //	mv_pp2_dbg_sysfs_init(&pd->kobj);
+
+	for (cpn_index=(MAX_NUM_CP_110-1);cpn_index>=0;cpn_index--)
+	{
+		pp2_dev = bus_find_device_by_name(&platform_bus_type, NULL, pp2_dev_name[cpn_index]);
+		if (!pp2_dev) {
+			printk(KERN_ERR"%s: cannot find device %s\n", __func__, pp2_dev_name[cpn_index]);
+			continue;
+		}
+		priv = dev_get_drvdata(pp2_dev);
+		pp2_plat_dev = to_platform_device(pp2_dev);
+		mv_pp2x_pp2_basic_print(pp2_plat_dev, priv);
+		mv_pp2x_pp2_ports_print(priv);
+		sysfs_cur_priv = priv;
+		sysfs_cur_hw = &priv->hw;
+	}
+
 
 	return 0;
 }

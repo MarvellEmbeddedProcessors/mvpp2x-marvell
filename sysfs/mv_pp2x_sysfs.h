@@ -80,6 +80,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 extern struct mv_pp2x_hw *sysfs_cur_hw;
 extern struct mv_pp2x *sysfs_cur_priv;
+extern char *pp2_dev_name[];
+
 
 
 
