@@ -40,6 +40,7 @@ static ssize_t mv_gop_help(char *b)
 
 	o += sprintf(b+o, "cat               gopBases        - show GOP Unit Virtual Bases\n");
 	o += sprintf(b+o, "cat               xpcsGlRegs      - show XPCS Global registers\n");
+	o += sprintf(b+o, "echo [p]        > status_show     - show GOP Port status\n");
 	o += sprintf(b+o, "echo [p]        > gmacRegs        - show GMAC registers for port <p>\n");
 	o += sprintf(b+o, "echo [p]        > xlgmacRegs      - show XLG MAC registers for port <p>\n");
 	o += sprintf(b+o, "echo [p]        > mibCntrs        - show MIB counters for port <p>\n");
@@ -123,6 +124,8 @@ static ssize_t mv_gop_port_store(struct device *dev,
 		mv_gop110_serdes_lane_regs_dump(&sysfs_cur_hw->gop, p);
 	} else if (!strcmp(name, "xpcsLaneRegs")) {
 		mv_gop110_xpcs_lane_regs_dump(&sysfs_cur_hw->gop, p);
+	} else if (!strcmp(name, "status_show")) {
+		mv_gop110_status_show(&sysfs_cur_hw->gop, sysfs_cur_priv, p);
 	} else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
@@ -158,7 +161,7 @@ static DEVICE_ATTR(xlgmacRegs,    S_IWUSR, NULL, mv_gop_port_store);
 static DEVICE_ATTR(mibCntrs,      S_IWUSR, NULL, mv_gop_port_store);
 static DEVICE_ATTR(serdesRegs,    S_IWUSR, NULL, mv_gop_port_store);
 static DEVICE_ATTR(xpcsLaneRegs,  S_IWUSR, NULL, mv_gop_port_store);
-
+static DEVICE_ATTR(status_show,    S_IWUSR, NULL, mv_gop_port_store);
 
 
 
@@ -184,6 +187,7 @@ static struct attribute *mv_gop_attrs[] = {
 	&dev_attr_mibCntrs.attr,
 	&dev_attr_serdesRegs.attr,
 	&dev_attr_xpcsLaneRegs.attr,
+	&dev_attr_status_show.attr,
 	NULL
 };
 
