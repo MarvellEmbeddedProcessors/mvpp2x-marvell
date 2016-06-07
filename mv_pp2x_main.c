@@ -4933,12 +4933,6 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 		goto err_clk;
 	}
 
-	/*Init GOP */
-
-#ifdef MV_PP22_GOP_DEBUG
-	for (i = 0; i < MVCPN110_GOP_MAC_NUM; i++)
-		hw->gop.gop_110.gop_port_debug[i].flags = (1 << NOT_CREATED);
-#endif
 #if !defined(CONFIG_MV_PP2_FPGA) && !defined(CONFIG_MV_PP2_PALLADIUM)
 	/* smi init */
 	if (priv->pp2_version == PPV21)
