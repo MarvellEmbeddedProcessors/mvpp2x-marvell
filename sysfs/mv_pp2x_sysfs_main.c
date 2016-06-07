@@ -132,7 +132,6 @@ static int mv_pp2_sysfs_init(void)
 	{
 		pp2_dev = bus_find_device_by_name(&platform_bus_type, NULL, pp2_dev_name[cpn_index]);
 		if (!pp2_dev) {
-			printk(KERN_ERR"%s: cannot find device %s\n", __func__, pp2_dev_name[cpn_index]);
 			continue;
 		}
 		priv = dev_get_drvdata(pp2_dev);
