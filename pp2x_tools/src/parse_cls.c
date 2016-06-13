@@ -295,10 +295,11 @@ int parse_xml_cls_config(ezxml_t xmlHead)
 
 	xmlEntry = ezxml_child(xmlCLS, TABLE_ENTRY);
 	if (xmlEntry == NULL){
-		ERR_PR("Failed to get %s\n", TABLE_ENTRY);
+		DEBUG_PR(DEB_XML, "Skipping %s worksheet, no entries found\n", WORKSHEET_CLS_CONFIG);
 		ezxml_free(xmlHead);
-		return 1;
+		return PPV2_RC_OK;
 	}
+
 	/* only one entry */
 	for (i=0; i < CLS_CONFIG_COL_INDEX_MAX;i++) {
 		cls_config_data[i].xmlEntry = ezxml_child(xmlEntry, cls_config_data[i].name);
@@ -422,9 +423,9 @@ int parse_xml_cls(ezxml_t xmlHead)
 
 	xmlEntry = ezxml_child(xmlCLS, TABLE_ENTRY);
 	if (xmlEntry == NULL){
-		ERR_PR("Failed to get %s\n", TABLE_ENTRY);
+		DEBUG_PR(DEB_XML, "Skipping %s worksheet, no entries found\n", WORKSHEET_CLS);
 		ezxml_free(xmlHead);
-		return 1;
+		return PPV2_RC_OK;
 	}
 
 	for (; xmlEntry; xmlEntry = ezxml_next(xmlEntry)) {
@@ -545,9 +546,9 @@ int parse_xml_cls_flows(ezxml_t xmlHead)
 
 	xmlEntry = ezxml_child(xmlCLS, TABLE_ENTRY);
 	if (xmlEntry == NULL){
-		ERR_PR("Failed to get %s\n", TABLE_ENTRY);
+		DEBUG_PR(DEB_XML, "Skipping %s worksheet, no entries found\n", WORKSHEET_CLS_FLOWS);
 		ezxml_free(xmlHead);
-		return 1;
+		return PPV2_RC_OK;
 	}
 
 	for (; xmlEntry; xmlEntry = ezxml_next(xmlEntry)) {
