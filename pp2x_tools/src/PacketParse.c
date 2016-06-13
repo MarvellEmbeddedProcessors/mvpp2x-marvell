@@ -301,8 +301,8 @@ SubFieldDb_S l4dstSubFieldDb =
 // TCP START
 SubField_S tcpSubFieldAra[] =
 {
-    {"tcpsrc",     0xFFFF, PKTFLD_TCP_SUBFLD_SPORT,    159, 144,	NO_FIELD_ID,		   parseIntegerSubFldValue   },
-    {"tcpdst",     0xFFFF, PKTFLD_TCP_SUBFLD_DPORT,    143, 128,	NO_FIELD_ID,		   parseIntegerSubFldValue   },
+    {"tcpsrc",     0xFFFF, PKTFLD_TCP_SUBFLD_SPORT,    159, 144,	L4_SRC_FIELD_ID,		   parseIntegerSubFldValue   },
+    {"tcpdst",     0xFFFF, PKTFLD_TCP_SUBFLD_DPORT,    143, 128,	L4_DST_FIELD_ID,		   parseIntegerSubFldValue   },
     {"flags",      0x3F,   PKTFLD_TCP_SUBFLD_FLAGS,    53,  48, 	TCP_FLAGS_FIELD_ID,	   parseIntegerSubFldValue   },
     {"u",          1,      PKTFLD_TCP_SUBFLD_U,        53,  53,	NO_FIELD_ID,		    parseIntegerSubFldValue   },
     {"a",          1,      PKTFLD_TCP_SUBFLD_A,        52,  52,	NO_FIELD_ID,		    parseIntegerSubFldValue   },
