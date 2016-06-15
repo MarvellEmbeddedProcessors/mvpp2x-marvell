@@ -1053,6 +1053,8 @@ void mv_gop110_port_enable(struct gop_hw *gop, struct mv_mac_data *mac)
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
 		mv_gop110_gmac_port_enable(gop, port_num);
+		mv_gop110_force_link_mode_set(gop, mac, false, false);
+		mv_gop110_gmac_reset(gop, port_num, UNRESET);
 	break;
 	case PHY_INTERFACE_MODE_XAUI:
 	case PHY_INTERFACE_MODE_RXAUI:

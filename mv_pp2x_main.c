@@ -2655,8 +2655,6 @@ static int mvcpn110_mac_hw_init(struct mv_pp2x_port *port)
 	int gop_port = mac->gop_index;
 
 	if (mac->flags & MV_EMAC_F_INIT) {
-		mv_gop110_gmac_reset(gop, gop_port, UNRESET);
-		mv_gop110_force_link_mode_set(gop, mac, false, false);
 		return 0;
 		}
 
