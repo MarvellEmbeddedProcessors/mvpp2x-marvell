@@ -1165,7 +1165,7 @@ bool mv_gop110_port_autoneg_status(struct gop_hw *gop, struct mv_mac_data *mac)
 		reg_val = mv_gop110_gmac_read(gop, mac->gop_index, MV_GMAC_PORT_AUTO_NEG_CFG_REG);
 
 		if (reg_val & MV_GMAC_PORT_AUTO_NEG_CFG_EN_FDX_AN_OFFS &&
-			reg_val & MV_GMAC_PORT_AUTO_NEG_CFG_EN_FC_AN_OFFS)
+			reg_val & MV_GMAC_PORT_AUTO_NEG_CFG_EN_AN_SPEED_MASK)
 			return true;
 		else
 			return false;
