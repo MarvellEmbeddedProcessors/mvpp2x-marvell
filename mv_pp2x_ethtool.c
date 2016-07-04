@@ -89,7 +89,7 @@ int mv_pp2x_check_speed_duplex_valid(struct ethtool_cmd *cmd,
 		pstatus->speed = MV_PORT_SPEED_1000;
 		if (cmd->duplex)
 			return 0;
-		pr_err("1G port dosen't support half duplex\n");
+		pr_err("1G port doesn't support half duplex\n");
 		return -1;
 	default:
 		pr_err("Wrong speed configuration\n");
@@ -123,7 +123,7 @@ int mv_pp2x_autoneg_check_valid(struct mv_mac_data *mac, struct gop_hw *gop,
 	case PHY_INTERFACE_MODE_XAUI:
 	case PHY_INTERFACE_MODE_RXAUI:
 	case PHY_INTERFACE_MODE_KR:
-		pr_err("XLG GOP %d dosen't support autonegotiation\n", port_num);
+		pr_err("XLG GOP %d doesn't support autonegotiation\n", port_num);
 		return -ENODEV;
 
 	break;
@@ -217,7 +217,7 @@ int mv_pp2x_eth_tool_nway_reset(struct net_device *dev)
 	case PHY_INTERFACE_MODE_XAUI:
 	case PHY_INTERFACE_MODE_RXAUI:
 	case PHY_INTERFACE_MODE_KR:
-		pr_err("XLG GOP %d dosen't support autonegotiation\n", mac->gop_index);
+		pr_err("XLG GOP %d doesn't support autonegotiation\n", mac->gop_index);
 		return -ENODEV;
 	break;
 	default:
