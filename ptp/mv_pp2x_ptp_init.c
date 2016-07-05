@@ -52,13 +52,14 @@ static int mv_pp2x_ptp_map_init(struct platform_device *pdev,
 	/* TAI from .dtb */
 	res = platform_get_resource_byname(pdev,
 		IORESOURCE_MEM, "tai");
-	res->start &= ~(PAGE_SIZE - 1);
-	res->end = res->start + PAGE_SIZE;
 	base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(base))
 		return PTR_ERR(base);
-	map.tai_base_pa = res->start;
-	map.tai_base_va = (phys_addr_t)base;
+	/* UIO remap must be page aligned => extend/align mapping
+	 * This is safety inside the page.
+	 */
+	map.tai_base_pa = res->start & ~(PAGE_SIZE - 1);
+	map.tai_base_va = (phys_addr_t)((u64)base  & ~(PAGE_SIZE - 1));
 	map.tai_size = PAGE_SIZE;
 
 	/* PTP is already in "mspg", but PhAddr needed */
@@ -82,30 +83,40 @@ static int mv_pp2x_ptp_map_init(struct platform_device *pdev,
  *  Called from mv_pp2x_probe() -> mv_pp2x_platform_data_get()
  */
 int mv_pp2x_ptp_init(struct platform_device *pdev,
-	struct mv_pp2x *priv, int port_count)
+	struct mv_pp2x_port *p_port, int port)
 {
 	/* TAI clock init (must be after gop) */
-	u32 tclk_hz = 250000000;
+	u32 tclk_hz = MV_PP2_TAI_CLK_FREQ_HZ;
 	struct device_node *dn = pdev->dev.of_node;
 	int ret;
 	bool common_required;
+	struct mv_pp2x *priv = p_port->priv;
 
-	if (priv->pp2_version == PPV22)
+	if (priv->pp2_version != PPV22)
 		return -EINVAL;
+	/* WORKAROUND: Skip the "f4000000.ppv22",
+	 * only CPU_0 "f2000000.ppv22" shared-dev supported
+	 */
+	if (strcmp("f2000000.ppv22", pdev->name))
+		return 0;
 
 	ret = mv_pp2x_ptp_map_init(pdev, priv);
 	if (ret < 0)
 		return ret;
+
 	common_required = !ret;
 	if (common_required) {
 		of_property_read_u32(dn, "clock-frequency", &tclk_hz);
-		pr_info("tai clock-frequency = %u Hz\n", tclk_hz);
+		pr_info("tai clock-frequency = %u MHz\n", tclk_hz/1000000);
 		mv_ptp_tclk_hz_set(tclk_hz);
 		mv_tai_clock_init(pdev);
 		mv_ptp_sysfs_init("pp2", NULL);
 		mv_ptp_tai_tod_uio_init(pdev);
 	}
-	mv_ptp_enable(port_count, true);
-	/*mv_pp2x_ptp_hook_init(priv, port_count);*/
+
+	mv_pp2x_ptp_hook_init(priv, port);
+	if (!mv_ptp_enable(port, true))
+		pr_info("ptp port_%d enabled on netdev <%s>\n",
+			port, p_port->dev->name);
 	return 0;
 }

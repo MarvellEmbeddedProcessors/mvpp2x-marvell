@@ -511,8 +511,8 @@ ssize_t mv_pp3_tai_clock_status_get_sysfs(char *buf)
 		idx = 4;
 	}
 	mv_pp3_tai_clock_in_cntr_get(&clock_in_cntr);
-	sz  = scnprintf(buf, PAGE_SIZE, "%s, 1pps-in-cntr=%u\n",
-		status_str[idx], clock_in_cntr);
+	sz  = scnprintf(buf, PAGE_SIZE, "%s, 1pps-in-cntr=%u, freq=%uMHz\n",
+		status_str[idx], clock_in_cntr, mv_ptp_tclk_hz_get()/1000000);
 	return sz;
 }
 

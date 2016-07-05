@@ -60,6 +60,8 @@ ifeq ($(CONFIG_UIO),)
 PTP_CCFLAGS += -DMV_PTP_SERVICE_UIO_DEV_BUILT_IN
 endif
 
+PTP_CCFLAGS += -DMV_PTP_DEBUG
+
 ccflags-y += $(PTP_CCFLAGS)
 $(MNAME)-objs += $(PTP_OBJS)
 

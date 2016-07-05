@@ -20,9 +20,11 @@
 
 void mv_ptp_hook_enable(int port, bool enable);
 void mv_ptp_hook_extra_op(u32 val1, u32 val2, u32 val3);
+int mv_ptp_netdev_name_get(int port, char *name_buf);
+void mv_ptp_ts32bit_print(u32 ts32bit, char *txt);
 
 #ifdef __KERNEL__
-/* Probre/Init should be called with/after mv_ptp_enable() */
+/* Probe/Init should be called with/after mv_ptp_enable() */
 int mv_ptp_tai_tod_uio_init(struct platform_device *shared_pdev);
 #endif
 

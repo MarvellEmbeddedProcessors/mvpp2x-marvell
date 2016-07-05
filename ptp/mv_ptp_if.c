@@ -91,6 +91,11 @@ int mv_ptp_tclk_hz_set(u32 tclk_hz)
 	return 0;
 }
 
+u32 mv_ptp_tclk_hz_get(void)
+{
+	return ptp_tclk_hz;
+}
+
 void mv_pp3_tai_clock_stable_status_set(bool on)
 {
 	/* Save to "free" REG, PTP-Application could poll it
@@ -236,7 +241,7 @@ void mv_pp3_ptp_reset(int port)
 {
 	u32 reg_data;
 
-	if (port >= MV_EMAC_NUM) /* Could be from sysfs command */
+	if (!MV_PTP_PORT_IS_VALID(port))
 		return;
 	if (!(ptp_ports_enabled & (1 << port)))
 		return;
@@ -264,9 +269,8 @@ int mv_ptp_enable(int port, bool enable)
 {
 	u32 reg_data;
 
-	if (port >= MV_EMAC_NUM) {
-		/* Could be from sysfs command */
-		pr_info("%s: wrong port number %d\n", PTP_TAI_PRT_STR, port);
+	if (!MV_PTP_PORT_IS_VALID(port)) {
+		pr_info("%s: no ptp on emac/port %d\n", PTP_TAI_PRT_STR, port);
 		return -1;
 	}
 	if (enable) {
@@ -304,9 +308,9 @@ void mv_tai_ptp_map_print(struct mv_tai_ptp_map *m, char *str)
 		m = &mv_tai_ptp_map;
 	if (!str)
 		str = " ";
-	pr_info("tai_ptp_map: %s tai pa=%p va=%p sz=%x, ptp pa=%p va=%p sz=%x\n",
-		str,
-		(void *)m->tai_base_pa, (void *)m->tai_base_va, m->tai_size,
+	pr_info("tai map:%s pa=%p va=%p sz=0x%x\n", str,
+		(void *)m->tai_base_pa, (void *)m->tai_base_va, m->tai_size);
+	pr_info("ptp map:%s pa=%p va=%p sz=0x%x\n", str,
 		(void *)m->ptp_base_pa, (void *)m->ptp_base_va, m->ptp_size);
 }
 
@@ -344,6 +348,7 @@ int mv_tai_ptp_map_init(struct mv_tai_ptp_map *m)
 		memcpy(&mv_tai_ptp_map, m, sizeof(struct mv_tai_ptp_map));
 		mv_tai_base = m->tai_base_va;
 		mv_ptp_base = m->ptp_base_va;
+		mv_tai_ptp_map_print(&mv_tai_ptp_map, NULL);
 		return 0;
 	}
 	mv_tai_ptp_map_print(m, "ERROR:");

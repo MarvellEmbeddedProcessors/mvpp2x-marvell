@@ -27,9 +27,12 @@
 #include <linux/if_vlan.h>
 
 #include <mv_pp2x.h>
+#include <mv_ptp_regs.h>
+#include <mv_ptp_service.h>
 
 
-/* MVPP2 PTP info in TX-descriptor has 2 parts:
+/* ============  CFH-interface macros  ========================
+* MVPP2 PTP info in TX-descriptor has 2 parts:
 *    OFFS_0x08[11:0] contains tag1[11:0]
 *    OFFS_0x14[31:8] contains tag2[35:12]
 * PTP_descriptor [35:0] bits are:
@@ -63,15 +66,20 @@
 	} while (0)
 
 
-/* MVPP2 PTP info in RX-descriptor */
+/* GENERAL packet-info in RX-descriptor (parsing) */
 #define MV_RXD_VLAN_INFO_GET(d) ((d->rsrvd_parser & MVPP2_RXD_VLAN_INFO_MASK) >> MVPP2_RXD_VLAN_INFO_OFFS)
-#define MV_RXD_IPHDR_LEN_GET(d) ((d->status & MVPP2_RXD_IP_HLEN_MASK) >> MVPP2_RXD_IP_HLEN_OFFS)
+#define MV_RXD_IPHDR_LEN_GET(d) (((d->status & MVPP2_RXD_IP_HLEN_MASK) >> MVPP2_RXD_IP_HLEN_OFFS)*sizeof(u32))
 #define MV_RXD_L3_OFFS_GET(d) ((d->status & MVPP2_RXD_L3_OFFSET_MASK) >> MVPP2_RXD_L3_OFFSET_OFFS)
 #define MV_RXD_L3_IS_IP4(d)	(d->status & MVPP2_RXD_L3_IP4)
 #define MV_RXD_L3_IS_IP6(d)	(d->status & MVPP2_RXD_L3_IP6)
 #define MV_RXD_L4_IS_UDP(d)	(d->status & MVPP2_RXD_L4_UDP)
 
+/* Extra-offset for GENERAL packet parsing */
+#define PTP_MH_ADDOFFS_RX	0 /* (MVPP2_MH_SIZE + 2) */
+#define PTP_MH_ADDOFFS_TX	2 /* (MVPP2_MH_SIZE + 2) */
+#define PTP_MH_ADDOFFS   	0 /* (MVPP2_MH_SIZE) */
 
+/* ========  PTP  macros  ============================ */
 #define PTP_PORT_EVENT	319 /* for PTP RX and TX */
 #define PTP_PORT_SIGNAL	320 /* for PTP TX only */
 /* PTP message-IDs having special TX handling */
@@ -101,6 +109,21 @@
 /* FEATURES */
 #define PTP_IGNORE_TIMESTAMPING_FLAG_FOR_DEBUG
 /*#define PTP_TS_TRAFFIC_CORRECTION*/
+
+/***  Extra debug: MV_PTP_DEBUG_HOOK ************************/
+#define MV_PTP_DEBUG_HOOK
+#ifdef MV_PTP_DEBUG_HOOK
+#include <mv_ptp_hook_dbg.h>
+#define PTP_RX_TS_PRINT(TXT, rx32bit) \
+	mv_ptp_ts32bit_print(rx32bit, TXT)
+#define PTP_TX_PRINT(TXT, LEN, TS_OFFS, CS_OFFS, PACT) \
+	pr_info("%s: data_len=%d, ts_offs=%d cs_offs=%d, pkt_action=%d\n", \
+		TXT, LEN, TS_OFFS, CS_OFFS, PACT);
+#else
+#define PTP_RX_TS_PRINT(TXT, rx32bit)	/**/
+#define PTP_TX_PRINT(TXT, PKT_LEN, TS_OFFS, CS_OFFS, PACT)	/**/
+#endif
+/***  Extra debug END:MV_PTP_DEBUG_HOOK *********************/
 
 struct ptp_stats {
 	u32 tx;
@@ -174,9 +197,7 @@ void mv_ptp_hook_enable(int port_num, bool enable)
 {
 	struct mv_pp2x_port *port_desc;
 
-	if (port_num >= MVPP2_MAX_PORTS)
-		return;
-	if (!mv_ptp_priv)
+	if (!MV_PTP_PORT_IS_VALID(port_num) || !mv_ptp_priv)
 		return;
 	port_desc = mv_pp2x_port_struct_get(mv_ptp_priv, port_num);
 	if (!port_desc)
@@ -198,14 +219,31 @@ void mv_ptp_hook_enable(int port_num, bool enable)
 	}
 }
 
-static void mv_pp2x_ptp_hook_init(struct mv_pp2x *priv, int port_count)
+void mv_pp2x_ptp_hook_init(void *priv, int port)
 {
-	(void)port_count;
-	if (priv->pp2_version == PPV21) {
+	struct mv_pp2x *pp2x_priv = priv;
+
+	(void)port;
+	if (pp2x_priv->pp2_version == PPV21) {
 		pr_err("ERROR: pp21 (armada-375) does not support PTP\n");
 		return;
 	}
-	mv_ptp_priv = priv;
+	if (!mv_ptp_priv)
+		mv_ptp_priv = pp2x_priv;
+}
+
+int mv_ptp_netdev_name_get(int port, char *name_buf)
+{
+	struct mv_pp2x_port *port_desc;
+
+	if (!MV_PTP_PORT_IS_VALID(port) || !mv_ptp_priv || !name_buf)
+		return -EINVAL;
+	port_desc = mv_pp2x_port_struct_get(mv_ptp_priv, port);
+	if (!port_desc)
+		return -EINVAL;
+	/* Name found, copy into given name-buffer */
+	strcpy(name_buf, port_desc->dev->name);
+	return 0;
 }
 
 /***************************************************************************
@@ -295,9 +333,8 @@ static inline void mv_pp2_is_pkt_ptp_rx_proc(struct mv_pp2x_port *port_desc,
 	eth_tag_len = MV_RXD_VLAN_INFO_GET(rx_desc) ? 2 : 0;
 
 	/* Check in most-valuable ordering: port -> udpProto -> etherType */
-	dst_port_offs = eth_tag_len + MVPP2_MH_SIZE +
-		+ MV_RXD_L3_OFFS_GET(rx_desc) + MV_RXD_IPHDR_LEN_GET(rx_desc)
-		+ 2; /* +2 for RX only */
+	dst_port_offs = PTP_MH_ADDOFFS_RX + eth_tag_len +
+		MV_RXD_L3_OFFS_GET(rx_desc) + MV_RXD_IPHDR_LEN_GET(rx_desc);
 	l4_port = ntohs(*(u16 *)(pkt_data + dst_port_offs));
 	if ((l4_port != PTP_PORT_EVENT) && (l4_port != PTP_PORT_SIGNAL))
 		goto exit;
@@ -319,6 +356,7 @@ static inline void mv_pp2_is_pkt_ptp_rx_proc(struct mv_pp2x_port *port_desc,
 
 	ptp_offs = ptp_hdr_offs + PTP_HEADER_RESERVE_4BYTES_OFFS;
 	memcpy(pkt_data + ptp_offs, &ts, sizeof(ts));
+	PTP_RX_TS_PRINT("PTP-RX", ts);
 
 	/*DBG_PTP_TS("ptp-rx: ts=%08x=%d.%09d\n", ts, ts >> 30, ts & 0x3fffffff);*/
 	port_desc->ptp_desc->stats->rx++;
@@ -371,7 +409,7 @@ static inline int mv_is_pkt_ptp_tx(struct mv_pp2x_port *port_desc, struct sk_buf
 	switch (protocol) {
 	case htons(ETH_P_IP):
 		ip_hdr_len = ip_hdr(skb)->ihl * sizeof(u32);
-		skb_dst_port_offs = MVPP2_MH_SIZE + eth_tag_len + l2_hdr_len + ip_hdr_len + 2;
+		skb_dst_port_offs = PTP_MH_ADDOFFS_TX + eth_tag_len + l2_hdr_len + ip_hdr_len;
 		udp_port = *(u16 *)(skb->data + skb_dst_port_offs);
 		if ((udp_port != htons(PTP_PORT_EVENT)) && (udp_port != htons(PTP_PORT_SIGNAL)))
 			return 0;
@@ -381,7 +419,7 @@ static inline int mv_is_pkt_ptp_tx(struct mv_pp2x_port *port_desc, struct sk_buf
 
 	case htons(ETH_P_IPV6):
 		ip_hdr_len = 20 + 20;
-		skb_dst_port_offs = MVPP2_MH_SIZE + eth_tag_len + l2_hdr_len + ip_hdr_len + 2;
+		skb_dst_port_offs = PTP_MH_ADDOFFS_TX + eth_tag_len + l2_hdr_len + ip_hdr_len;
 		udp_port = *(u16 *)(skb->data + skb_dst_port_offs);
 		if ((udp_port != htons(PTP_PORT_EVENT)) && (udp_port != htons(PTP_PORT_SIGNAL)))
 			return 0;
@@ -418,7 +456,7 @@ static inline int mv_is_pkt_ptp_tx(struct mv_pp2x_port *port_desc, struct sk_buf
 	 * should be extended with these 2=PTP_TS_CS_CORRECTION_SIZE.
 	 */
 	skb_udp_len_lsb_offs = skb_dst_port_offs + 2 + 1;
-	skb_ip_len_lsb_offs = MVPP2_MH_SIZE + eth_tag_len + l2_hdr_len +
+	skb_ip_len_lsb_offs = PTP_MH_ADDOFFS + eth_tag_len + l2_hdr_len +
 		(2 + 1)/*IPv4 TotalLen LSB*/;
 	if (protocol == htons(ETH_P_IPV6))
 		skb_ip_len_lsb_offs += 2;  /*IPv6 PayloadLen vs IPv4 TotalLen*/
@@ -441,8 +479,8 @@ static inline void mv_ptp_pkt_proc_tx(struct mv_pp2x_port *port_desc,
 	 * Set PACT: 6={AddTime(to packet) + Capture(to egress queue)}
 	 *   or only 4=AddTime according to the cfh-offset
 	 */
-	cfh_ts_offs = skb_ts_offs - MVPP2_MH_SIZE;
-	cfh_cs_offs = skb_len - sizeof(short) - MVPP2_MH_SIZE;
+	cfh_ts_offs = skb_ts_offs - PTP_MH_ADDOFFS;
+	cfh_cs_offs = skb_len - PTP_MH_ADDOFFS_RX;
 	pact = (tx_ts_queue) ? 6 : 4;
 
 	/*DBG_PTP_TS("ptp-tx: ts in_queue=%d, offs=%d\n", tx_ts_queue, cfh_ts_offs);*/
@@ -459,11 +497,12 @@ static inline void mv_ptp_pkt_proc_tx(struct mv_pp2x_port *port_desc,
 	/*  1,   0,   76,     86,    1,   4,    0,  0,  0,  0,   0 */
 	MVPP2_TXD_PTP_TSE_SET(ptxd);
 	/* MV_CFH_PTP_QS_SET(0) QueueSelect=0 */
-	MVPP2_TXD_PTP_TS_OFF_SET(ptxd, cfh_ts_offs); /*TS_off (not including MVPP2_MH_SIZE!)*/
+	MVPP2_TXD_PTP_TS_OFF_SET(ptxd, cfh_ts_offs); /*TS_off never including MVPP2_MH_SIZE*/
 	MVPP2_TXD_PTP_CS_OFF_SET(ptxd, cfh_cs_offs); /*CS_off*/;
 	MVPP2_TXD_PTP_CUE_SET(ptxd);
 	MVPP2_TXD_PTP_PACT_SET(ptxd, pact); /*PACT*/
 	MVPP2_TXD_PTP_SET(tx_desc, ptxd);
+	PTP_TX_PRINT("PTP-TX", skb_len, cfh_ts_offs, cfh_cs_offs, pact);
 }
 
 

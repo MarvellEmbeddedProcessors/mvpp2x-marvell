@@ -47,15 +47,23 @@
 #ifdef ARMADA_390
 /* unit offset (there are TAI & PTP which are the one same HW) */
 #define MV_PP3_PTP_TAI_UNIT_OFFSET		0x03180000
-#define MV_PP3_TAI_UNIT_OFFSET		MV_PP3_PTP_TAI_UNIT_OFFSET
+#define MV_TAI_UNIT_OFFSET	MV_PP3_PTP_TAI_UNIT_OFFSET
 #define MV_TAI_REG_OFFS		0x0a00
+#define MV_PP3_TAI_CLK_FREQ_HZ	250000000 /* => 4 nano-per-clock */
 #else
 /* 0x12a400..0x12a504 mapped over __iomem  mv_tai_base */
+#define MV_TAI_UNIT_OFFSET	0x120000
 #define MV_TAI_REG_OFFS		0x0400
+#define MV_PP2_TAI_CLK_FREQ_HZ	333000000 /* => 3 nano-per-clock */
 #endif
 
 
 /***** {{ Common Platform independent Register access definitions *************/
+/* Tai Interrupt Cause */
+#define MV_TAI_INTR_CAUSE_REG	(MV_TAI_REG_OFFS + 0x0000)
+/* Tai Interrupt Mask */
+#define MV_TAI_INTR_MASK_REG	(MV_TAI_REG_OFFS + 0x0004)
+
 /* Tai Control Reg0 */
 #define MV_TAI_CTRL_REG0_REG	(MV_TAI_REG_OFFS + 0x0008)
 #define MV_TAI_CTRL_REG0_SW_RESET_OFFS		0
@@ -543,12 +551,13 @@
 #define MV_TAI_TIME_UPDATE_CNTR_MSB_TIME_UPDATE_CNTR_MSB_MASK    \
 		(0x0000ffff << MV_TAI_TIME_UPDATE_CNTR_MSB_TIME_UPDATE_CNTR_MSB_OFFS)
 
-
+#ifdef ARMADA_390
 /* Incoming Clockin Counting Configuration High */
 #define MV_TAI_INCOMING_CLOCKIN_CNTING_CFG_HIGH_REG	(MV_TAI_REG_OFFS + 0x0100)
 #define MV_TAI_INCOMING_CLOCKIN_CNTING_CFG_HIGH_CLOCK_CNTR_BITS_16_31_OFFS		0
 #define MV_TAI_INCOMING_CLOCKIN_CNTING_CFG_HIGH_CLOCK_CNTR_BITS_16_31_MASK    \
 		(0x0000ffff << MV_TAI_INCOMING_CLOCKIN_CNTING_CFG_HIGH_CLOCK_CNTR_BITS_16_31_OFFS)
+#endif
 
 #define MV_TAI_CNTR_TIME_FUNC_BITSET(op, reg_val) \
 	((reg_val & ~MV_TAI_TIME_CNTR_FUNC_CFG_0_TIME_CNTR_FUNC_MASK) \
@@ -613,12 +622,12 @@ struct mv_pp3_tai_tod {
 /* Indirect mapping over mv_gop_reg_read/write */
 static inline u32 mv_tai_reg_read(u32 reg_addr)
 {
-	return mv_gop_reg_read(reg_addr + MV_PP3_TAI_UNIT_OFFSET);
+	return mv_gop_reg_read(reg_addr + MV_TAI_UNIT_OFFSET);
 }
 
 static inline void mv_tai_reg_write(u32 reg_addr, u32 reg_data)
 {
-	return mv_gop_reg_write(reg_addr + MV_PP3_TAI_UNIT_OFFSET, reg_data);
+	return mv_gop_reg_write(reg_addr + MV_TAI_UNIT_OFFSET, reg_data);
 }
 #else
 /* Direct mapping over VALUE (not ptr) phys_addr_t ~ u32 or u64  */
@@ -638,6 +647,12 @@ static inline void mv_tai_reg_write(u32 reg_addr, u32 reg_data)
 	writel(reg_data, reg_ptr);
 }
 #endif/*ARMADA_390*/
-#endif/*__KERNEL__*/
 
+static inline void mv_tai_reg_print(char *reg_name, u32 reg)
+{
+	pr_info(" %-42s: 0x%x = %08x\n", reg_name,
+		MV_TAI_UNIT_OFFSET + reg, mv_tai_reg_read(reg));
+}
+
+#endif/*__KERNEL__*/
 #endif /* _mv_tai_regs_h_ */

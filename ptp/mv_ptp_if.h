@@ -34,6 +34,7 @@ struct mv_tai_ptp_map {
 };
 
 int mv_ptp_tclk_hz_set(u32 tclk_hz); /* from dtb "clock-frequency" */
+u32 mv_ptp_tclk_hz_get(void);
 void mv_tai_clock_init(struct platform_device *pdev);
 bool mv_pp3_tai_clock_external_init(struct platform_device *pdev);
 void mv_pp3_tai_clock_external_init2(bool from_external);
@@ -74,5 +75,6 @@ int __init mv_ptp_event_init_module(void);
 int __exit mv_ptp_event_deinit_module(void);
 #endif
 int mv_ptp_sysfs_init(char *dev_name, char *subdir);
+void mv_pp2x_ptp_hook_init(void *priv, int port);
 
 #endif /* _mv_ptp_if_h_ */
