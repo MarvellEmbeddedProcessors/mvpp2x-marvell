@@ -116,12 +116,11 @@
 			};
 			gop {
 				emac0: mac0 {
-					phy-mode = "sgmii"; /* lane-2 */
+					phy-mode = "kr"; /* lane-2 */
 					status = "okay";
 				};
 				emac2: mac2 {
-					phy-mode = "sgmii"; /* lane-0 */
-					phy-speed = <2500>;
+					phy-mode = "rgmii"; /* lane-0 */
 					status = "okay";
 				};
 				emac3: mac3 {
