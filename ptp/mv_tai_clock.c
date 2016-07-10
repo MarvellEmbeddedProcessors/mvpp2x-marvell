@@ -68,6 +68,7 @@ enum mv_ptp_event_clock_state {
 	PTP_CLK_HW_SYNC,
 	PTP_CLK_GPS_UP,
 	PTP_CLK_GPS_DOWN,
+	PTP_CLK_EXTERN_FORCE,
 };
 
 struct mv_ptp_event {
@@ -493,15 +494,21 @@ ssize_t mv_pp3_tai_clock_status_get_sysfs(char *buf)
 		"2:sync_ok",
 		"3:sync_ok_checkpoll",
 		"4:sync_fail",
+		"5:sync_unkn",
 	};
 	enum mv_ptp_event_clock_state ext_state = mv_ptp_event.state;
 	int sz, idx;
 	u32 clock_in_cntr;
 
 	if (!mv_pp3_tai_clock_enable_get()) {
-		idx = 0;
+		if (mv_tai_clock_external_force_modparm != 1)
+			idx = 0;
+		else
+			idx = 5;
 	} else if (ext_state == PTP_CLK_FREE_RUN) {
 		idx = 1;
+		if (mv_tai_clock_external_force_modparm == 1)
+			idx = 5;
 	} else if (ext_state == PTP_CLK_GPS_UP) {
 		if (!mv_ptp_event.sync_check_polling_limit)
 			idx = 2;

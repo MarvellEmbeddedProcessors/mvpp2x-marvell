@@ -33,9 +33,11 @@ struct mv_tai_ptp_map {
 	int num;
 };
 
+extern int mv_tai_clock_external_force_modparm;
+
 int mv_ptp_tclk_hz_set(u32 tclk_hz); /* from dtb "clock-frequency" */
 u32 mv_ptp_tclk_hz_get(void);
-void mv_tai_clock_init(struct platform_device *pdev);
+void mv_tai_clock_init(struct platform_device *pdev, int tai_clock_external);
 bool mv_pp3_tai_clock_external_init(struct platform_device *pdev);
 void mv_pp3_tai_clock_external_init2(bool from_external);
 void mv_pp3_tai_set_nop(void);
@@ -69,6 +71,8 @@ int mv_pp3_tai_tod_load_set(u32 sec_h, u32 sec_l, u32 nano, u32 frac);
 int mv_tai_ptp_map_init(struct mv_tai_ptp_map *map);
 struct mv_tai_ptp_map *mv_tai_ptp_map_get(void);
 void mv_tai_ptp_map_print(struct mv_tai_ptp_map *map, char *str);
+int mv_tai_1pps_out_phase_update(int nsec);
+u32 mv_ptp_egress_tx_ts_32bit_get(int port, int queue_num);
 
 #if !defined ARMADA_390
 int __init mv_ptp_event_init_module(void);

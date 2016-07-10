@@ -57,10 +57,14 @@
 #define MVPP2_TXD_PTP_TS_OFF_SET(p32, ts)	{ p32[5] |= (ts << 16); }
 #define MVPP2_TXD_PTP_CS_OFF_SET(p32, cs)	{ p32[5] |= (cs << 24); }
 
+#define MVPP2_TXD_PTP_LEN_GET(p32, len)	{ len = p32[1] >> 16; }
+#define MVPP2_TXD_PTP_LEN_SET(p32, len)	{ p32[1] |= ((len) << 16); }
+
 #define MVPP2_TXD_PTP_CLEAR_EXT(p32)	{ p32[2] = 0; p32[5] = 0; }
 #define MVPP2_TXD_PTP_SET(txd, p32)	\
 	do { \
 		u32 *txd32 = (u32 *)txd; \
+		txd32[1] = (txd32[1] & 0x0000ffff) | p32[1]; \
 		txd32[2] = (txd32[2] & 0xfffff000) | p32[2]; \
 		txd32[5] = (txd32[5] & 0x000000ff) | p32[5]; \
 	} while (0)
@@ -89,7 +93,7 @@
 #define PTP_DELAY_RESP	0x09
 #define PTP_ANNOUNCE	0x0b
 
-#define PTP_HEADER_OFFS	(44)
+/* PTP_HEADER_OFFS = dst_port_offs + 6 */
 #define PTP_HEADER_MSG_ID_OFFS	(0)
 #define PTP_HEADER_RESERVE_1BYTES_OFFS	(5)
 #define PTP_HEADER_CORRECTION_FIELD_OFFS	(8) /*size 6+2bytes */
@@ -111,7 +115,7 @@
 /*#define PTP_TS_TRAFFIC_CORRECTION*/
 
 /***  Extra debug: MV_PTP_DEBUG_HOOK ************************/
-#define MV_PTP_DEBUG_HOOK
+/*#define MV_PTP_DEBUG_HOOK*/
 #ifdef MV_PTP_DEBUG_HOOK
 #include <mv_ptp_hook_dbg.h>
 #define PTP_RX_TS_PRINT(TXT, rx32bit) \
@@ -199,7 +203,7 @@ void mv_ptp_hook_enable(int port_num, bool enable)
 
 	if (!MV_PTP_PORT_IS_VALID(port_num) || !mv_ptp_priv)
 		return;
-	port_desc = mv_pp2x_port_struct_get(mv_ptp_priv, port_num);
+	port_desc = mv_pp2x_port_struct_get_by_gop_index(mv_ptp_priv, port_num);
 	if (!port_desc)
 		return;
 	/* New Request handling depends upon current state */
@@ -238,7 +242,7 @@ int mv_ptp_netdev_name_get(int port, char *name_buf)
 
 	if (!MV_PTP_PORT_IS_VALID(port) || !mv_ptp_priv || !name_buf)
 		return -EINVAL;
-	port_desc = mv_pp2x_port_struct_get(mv_ptp_priv, port);
+	port_desc = mv_pp2x_port_struct_get_by_gop_index(mv_ptp_priv, port);
 	if (!port_desc)
 		return -EINVAL;
 	/* Name found, copy into given name-buffer */
@@ -350,7 +354,7 @@ static inline void mv_pp2_is_pkt_ptp_rx_proc(struct mv_pp2x_port *port_desc,
 	/* Handling PTP packet: fetch TS32bits from cfh and place into PTP header */
 	ts = rx_desc->u.pp22.rsrvd_timestamp;
 
-	ptp_hdr_offs = PTP_HEADER_OFFS + eth_tag_len;
+	ptp_hdr_offs = dst_port_offs + 6;
 	if (!l3_is_ipv4)
 		ptp_hdr_offs += 20; /* IPV6 header +20 bytes */
 
@@ -381,7 +385,6 @@ static inline int mv_is_pkt_ptp_tx(struct mv_pp2x_port *port_desc, struct sk_buf
 	int skb_ts_offs; /* OUT result: TimeStamp offset */
 	const int ptp_ts_offs = 34; /* Offset from PTP-data beginning */
 	u8 msg_type;
-
 #ifndef PTP_IGNORE_TIMESTAMPING_FLAG_FOR_DEBUG
 	if (!skb->sk)
 		return 0;
@@ -470,17 +473,21 @@ static inline int mv_is_pkt_ptp_tx(struct mv_pp2x_port *port_desc, struct sk_buf
 static inline void mv_ptp_pkt_proc_tx(struct mv_pp2x_port *port_desc,
 			struct mv_pp2x_tx_desc *tx_desc, int skb_ts_offs, int tx_ts_queue)
 {
-	int pact, cfh_ts_offs, cfh_cs_offs;
+	int pact, cfh_ts_offs, cfh_cs_offs, len;
 	int skb_len = tx_desc->data_size;/* = skb_headlen(skb) */
-	struct mv_pp2x_tx_desc l_txd;
+	struct mv_pp2x_tx_desc l_txd = {0};
 	u32 *ptxd = (u32 *)&l_txd;
+	u32 *tx_desc_u32 = (u32 *)tx_desc;
 
 	/* Convert skb offset to cfh offset (aka "TS off" field)
 	 * Set PACT: 6={AddTime(to packet) + Capture(to egress queue)}
 	 *   or only 4=AddTime according to the cfh-offset
 	 */
-	cfh_ts_offs = skb_ts_offs - PTP_MH_ADDOFFS;
-	cfh_cs_offs = skb_len - PTP_MH_ADDOFFS_RX;
+	cfh_ts_offs = skb_ts_offs - PTP_MH_ADDOFFS; /* 10byte timestamp beginning */
+	cfh_cs_offs = skb_len - PTP_MH_ADDOFFS_RX; /* EOPacket, hw adds CS here */
+	if ((cfh_ts_offs + 10/*ts-size*/) > cfh_cs_offs)
+		return; /* UDP with PTP-port but NOT ptp-packet */
+
 	pact = (tx_ts_queue) ? 6 : 4;
 
 	/*DBG_PTP_TS("ptp-tx: ts in_queue=%d, offs=%d\n", tx_ts_queue, cfh_ts_offs);*/
@@ -500,7 +507,10 @@ static inline void mv_ptp_pkt_proc_tx(struct mv_pp2x_port *port_desc,
 	MVPP2_TXD_PTP_TS_OFF_SET(ptxd, cfh_ts_offs); /*TS_off never including MVPP2_MH_SIZE*/
 	MVPP2_TXD_PTP_CS_OFF_SET(ptxd, cfh_cs_offs); /*CS_off*/;
 	MVPP2_TXD_PTP_CUE_SET(ptxd);
+	MVPP2_TXD_PTP_LEN_GET(tx_desc_u32, len);
+	MVPP2_TXD_PTP_LEN_SET(ptxd, len + 2); /* add 2 bytes for CS-correction */
 	MVPP2_TXD_PTP_PACT_SET(ptxd, pact); /*PACT*/
+	/* Final copy updates from local l_txd into real tx_desc */
 	MVPP2_TXD_PTP_SET(tx_desc, ptxd);
 	PTP_TX_PRINT("PTP-TX", skb_len, cfh_ts_offs, cfh_cs_offs, pact);
 }

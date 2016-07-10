@@ -27,5 +27,5 @@
 
 /* Called from mv_pp2x_probe() */
 int mv_pp2x_ptp_init(struct platform_device *pdev,
-	struct mv_pp2x_port *p_port, int port_count);
+	struct mv_pp2x_port *p_port, int id);
 #endif /* _mv_pp2x_ptp_init_h_ */

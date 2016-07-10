@@ -49,6 +49,8 @@ static ssize_t mv_gop_ptp_help(char *b)
 	PR_HLP("cat              tai_tod   - show TAI time capture values\n");
 	PR_HLP("cat              tai_clock - show TAI clock status\n");
 	PR_HLP("cat              ptp_netif - get netdev-port mapping\n");
+	PR_HLP("echo nsec      > 1pps_out_phase -  +/-nsec update_set (DEC)\n");
+	PR_HLP("echo units     > freq_offs      -  +/-HEX units\n");
 	PR_HLP("echo [p]       > ptp_regs  - show PTP unit registers\n");
 	PR_HLP("echo [p] [0/1] > ptp_en    - enable(1) / disable(0) PTP unit\n");
 	PR_HLP("echo [p]       > ptp_reset - reset given port PTP unit\n");
@@ -75,6 +77,7 @@ static ssize_t mv_gop_ptp_help(char *b)
 	PR_HLP("     CED - Clock External Decrement [h] seconds\n");
 	PR_HLP("     CEA - Clock External Absolute set [h] seconds\n");
 	PR_HLP("     CEC - Clock External Check stability & counter\n");
+	PR_HLP("     CE  - Clock External (restart ToD=000..0)\n");
 	PR_HLP("     C1  - Clock Internal (free-running)\n");
 	PR_HLP("     C0  - Clock Off\n");
 	PR_HLP("   DEBUG:\n");
@@ -85,6 +88,7 @@ static ssize_t mv_gop_ptp_help(char *b)
 	PR_HLP("echo [r]         > read_tai\n");
 	PR_HLP("echo [r] [v] {p} > write_ptp - [v]value to [r]PTP-reg\n");
 	PR_HLP("echo [r]     {p} > read_ptp    [r] is offs or addr=r*p\n");
+	PR_HLP("echo [p] [q]     > tx_ts_get [pORT][qUEUE 0/1]\n");
 	PR_HLP("\n");
 #endif
 	return o;
@@ -172,6 +176,66 @@ static ssize_t mv_ptp_sysfs_tai_op(struct device *dev,
 	return len;
 }
 
+static ssize_t mv_ptp_sysfs_1pps_out_phase(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t len)
+{
+	/* echo > tai_op */
+	unsigned long flags;
+	int rc,  nsec;
+
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
+
+	rc = kstrtoint(buf, 0, &nsec);
+	if (rc)
+		return -EINVAL;
+	/* Valid nano-second range is -0.5s .. 1sec */
+	if ((nsec < -499999999) || (nsec > 999999999))
+		return -EINVAL;
+
+	local_irq_save(flags);
+	mv_tai_1pps_out_phase_update(nsec);
+	local_irq_restore(flags);
+	return len;
+}
+
+static ssize_t mv_ptp_sysfs_freq_offs(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t len)
+{
+	/* echo > tai_op */
+	int num, step_input, rc;
+	u32 h, l, step;
+
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
+
+	num = sscanf(buf, "-%x", &step_input);
+	if (num == 1) {
+		step_input = -step_input;
+	} else {
+		rc = kstrtoint(buf, 16, &step_input);
+		if (rc)
+			return -EINVAL;
+	}
+	h = mv_tai_reg_read(MV_TAI_TOD_STEP_FRAC_CFG_HIGH_REG);
+	l = mv_tai_reg_read(MV_TAI_TOD_STEP_FRAC_CFG_LOW_REG);
+	step = ((h & 0xFFFF) << 16) | (l & 0xFFFF);
+
+	if (!step_input)
+		step = 0;
+	else
+		step += step_input;
+
+	h = step >> 16;
+	l = step & 0xFFFF;
+	mv_tai_reg_write(MV_TAI_TOD_STEP_FRAC_CFG_LOW_REG, l);
+	mv_tai_reg_write(MV_TAI_TOD_STEP_FRAC_CFG_HIGH_REG, h);
+	pr_info("Frequency STEP_FRAC_CFG = %d = 0x%04x.%04x\n",
+		(int)step, h, l);
+	return len;
+}
+
+
 static ssize_t mv_ptp_sysfs_store_2hex(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t len)
 {
@@ -179,6 +243,7 @@ static ssize_t mv_ptp_sysfs_store_2hex(struct device *dev,
 	unsigned long   flags;
 	int             err, num;
 	unsigned int    p, v, reg, addr, p1;
+	u32 ts32bit;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -208,6 +273,15 @@ static ssize_t mv_ptp_sysfs_store_2hex(struct device *dev,
 	(void)addr;
 	(void)reg;
 #else
+
+	if (!strcmp(name, "tx_ts_get")) {
+		if (!MV_PTP_PORT_IS_VALID(p))
+			goto err;
+		ts32bit = mv_ptp_egress_tx_ts_32bit_get(p, v);
+		mv_ptp_ts32bit_print(ts32bit, "TX");
+		goto done;
+	}
+
 	/* Reg read/write with smart 6-digit-addressing
 	 * (like 0x130408 used in regs-dump) or with Offset only
 	 */
@@ -271,6 +345,9 @@ static DEVICE_ATTR(ptp_netif,		S_IRUSR, mv_ptp_sysfs_show, NULL);
 static DEVICE_ATTR(tai_tod,		S_IRUSR, mv_ptp_sysfs_show, NULL);
 static DEVICE_ATTR(tai_tod_load_value,	S_IWUSR, NULL, mv_ptp_sysfs_tai_tod_load);
 static DEVICE_ATTR(tai_op,		S_IWUSR, NULL, mv_ptp_sysfs_tai_op);
+static DEVICE_ATTR(1pps_out_phase,	S_IWUSR, NULL, mv_ptp_sysfs_1pps_out_phase);
+static DEVICE_ATTR(freq_offs,	S_IWUSR, NULL, mv_ptp_sysfs_freq_offs);
+
 static DEVICE_ATTR(ptp_regs,		S_IWUSR, NULL, mv_ptp_sysfs_store_2hex);
 static DEVICE_ATTR(ptp_en,		S_IWUSR, NULL, mv_ptp_sysfs_store_2hex);
 static DEVICE_ATTR(ptp_reset,		S_IWUSR, NULL, mv_ptp_sysfs_store_2hex);
@@ -279,6 +356,7 @@ static DEVICE_ATTR(write_tai,	S_IWUSR, NULL, mv_ptp_sysfs_store_2hex);
 static DEVICE_ATTR(read_tai,	S_IWUSR, NULL, mv_ptp_sysfs_store_2hex);
 static DEVICE_ATTR(write_ptp,	S_IWUSR, NULL, mv_ptp_sysfs_store_2hex);
 static DEVICE_ATTR(read_ptp,	S_IWUSR, NULL, mv_ptp_sysfs_store_2hex);
+static DEVICE_ATTR(tx_ts_get,	S_IWUSR, NULL, mv_ptp_sysfs_store_2hex);
 #endif
 
 static struct attribute *mv_gop_ptp_attrs[] = {
@@ -288,6 +366,8 @@ static struct attribute *mv_gop_ptp_attrs[] = {
 	&dev_attr_tai_tod.attr,
 	&dev_attr_tai_tod_load_value.attr,
 	&dev_attr_tai_op.attr,
+	&dev_attr_1pps_out_phase.attr,
+	&dev_attr_freq_offs.attr,
 	&dev_attr_ptp_netif.attr,
 	&dev_attr_ptp_regs.attr,
 	&dev_attr_ptp_en.attr,
@@ -297,6 +377,7 @@ static struct attribute *mv_gop_ptp_attrs[] = {
 	&dev_attr_read_tai.attr,
 	&dev_attr_write_ptp.attr,
 	&dev_attr_read_ptp.attr,
+	&dev_attr_tx_ts_get.attr,
 #endif
 	NULL
 };

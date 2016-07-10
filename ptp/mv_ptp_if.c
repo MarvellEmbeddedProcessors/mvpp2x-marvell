@@ -61,6 +61,12 @@
 #define MV_EMAC_NUM		MVPP2_MAX_PORTS
 #endif
 
+/* MODULE_PARM_DESC  "tai_clock_external"
+ *       =1 force TAI clock External, =0 Internal,
+ * -1 = unspecified (not given to insmod, or even not a module)
+ */
+int mv_tai_clock_external_force_modparm = -1;
+
 static u32 ptp_tclk_hz;
 static u32 ptp_ports_enabled; /* used to reset ports on tai_clock */
 static u32 ptp_tai_clock_in_cntr;
@@ -187,8 +193,8 @@ void mv_pp3_tai_clock_cfg_external(bool from_external)
 	/* Configure TAI clock: */
 	regv = 0;
 	regv = MV_TAI_CNTR_TIME_FUNC_BITSET(MV_TAI_NOP, regv);
-	/* MV_TAI_TIME_CNTR_FUNC_CFG_0_INT_CLOCK_GENERATOR_EN keep disable */
-	clock_mode = (from_external) ? 2 : 1; /* 2=Reception : 1=Generate */
+	/* MV_TAI_TIME_CNTR_FUNC_CFG_0_1PPS_PHASE_UPDATE keep in disable */
+	clock_mode = (from_external) ? 2 : 1; /* 2=Reception : 1=Generate (3=ReceptionAdv) */
 	MV_U32_SET_FIELD(regv, MV_TAI_TIME_CNTR_FUNC_CFG_0_CLOCK_MODE_MASK,
 		clock_mode << MV_TAI_TIME_CNTR_FUNC_CFG_0_CLOCK_MODE_OFFS);
 	regv = MV_SET_BIT(regv, MV_TAI_TIME_CNTR_FUNC_CFG_0_PCLK_COUNTER_START_OFFS, 1);
@@ -219,8 +225,9 @@ void mv_pp3_tai_clock_disable(void)
 	ptp_tai_clock_in_cntr = 0; /* reset the SW accumulated */
 }
 
-void mv_tai_clock_init(struct platform_device *pdev)
+void mv_tai_clock_init(struct platform_device *pdev, int tai_clock_external)
 {
+	char *extra_str;
 	if (ptp_tai_clock_init_done)
 		return;
 	ptp_tai_clock_init_done = true;
@@ -229,6 +236,19 @@ void mv_tai_clock_init(struct platform_device *pdev)
 	mv_tai_reg_write(MV_TAI_INCOMING_CLOCKIN_CNTING_EN_REG, 1);
 
 	ptp_tai_clock_external_cfg = mv_pp3_tai_clock_external_init(pdev);
+	if (!tai_clock_external || tai_clock_external == 1) {
+		/* "tai_clock_external" INSMOD-parameter FORCEs the behavior to
+		 *  tai_clock_external<0  ~ no MODULE_PARM, no any force
+		 *  tai_clock_external=0  ~ force internal clock
+		 *  tai_clock_external=1  ~ force external clock
+		 */
+		ptp_tai_clock_external_cfg = tai_clock_external;
+		extra_str = "(forced)";
+	} else {
+		extra_str = "(detected)";
+	}
+	pr_info("TAI clock is %s %s\n",
+		(ptp_tai_clock_external_cfg) ? "external" : "internal", extra_str);
 	mv_pp3_tai_clock_cfg_external(ptp_tai_clock_external_cfg); /*hw here*/
 	mv_pp3_tai_clock_external_init2(ptp_tai_clock_external_cfg);
 }
@@ -412,6 +432,7 @@ int mv_pp3_tai_tod_op_read_captured(struct mv_pp3_tai_tod *ts, u32 *p_status)
 int mv_pp3_tai_tod_op(enum mv_pp3_tai_ptp_op op, struct mv_pp3_tai_tod *ts,
 			int synced_op)
 {
+	/* "synced_op" - execute synchronized/triggered by HW-signal */
 	u32 ctrl, ctrl_new, status;
 	int rc = 0, mutex_req;
 	bool keep_last_op = (bool)synced_op;
@@ -471,4 +492,49 @@ exit:
 	if (mutex_req)
 		mutex_unlock(&ptp_op_mutex);
 	return rc;
+}
+
+int mv_tai_1pps_out_phase_update(int nsec)
+{
+	u32 ctrl, ctrl_phase;
+	struct mv_pp3_tai_tod ts;
+
+	ts.sec_msb_16b = 0;
+	ts.sec_lsb_32b = 0;
+	ts.nsec = nsec;
+	ts.nfrac = 0;
+
+	ctrl = mv_tai_reg_read(MV_TAI_TIME_CNTR_FUNC_CFG_0_REG);
+	ctrl_phase = MV_SET_BIT(ctrl, MV_TAI_TIME_CNTR_FUNC_CFG_0_1PPS_PHASE_UPDATE_OFFS, 1);
+	mv_tai_reg_write(MV_TAI_TIME_CNTR_FUNC_CFG_0_REG, ctrl_phase);
+	mv_pp3_tai_tod_op(MV_TAI_SET_UPDATE, &ts, 0);
+	/* restore back the original Control */
+	mv_tai_reg_write(MV_TAI_TIME_CNTR_FUNC_CFG_0_REG, ctrl);
+	return 0;
+}
+
+u32 mv_ptp_egress_tx_ts_32bit_get(int port, int queue_num)
+{
+	u32 queue_base, reg_data, ts;
+
+	queue_base = queue_num ? MV_PTP_TX_TIMESTAMP_QUEUE1_REG0_REG(port)
+				: MV_PTP_TX_TIMESTAMP_QUEUE0_REG0_REG(port);
+
+	/* STATUS bit0[TIMESTAMP_QUEUE0_VALID_MASK]=0 means queue is empty */
+	reg_data = mv_ptp_reg_read(queue_base);
+	if (!(reg_data & 1))
+		return 0;
+
+	ts = (reg_data >> 13) & 7; /* 3bits:[2,1,0] */
+	reg_data = mv_ptp_reg_read(queue_base + 4);
+	ts |= (reg_data & 0xffff) << 3; /* 16bits[18..3] */
+	reg_data = mv_ptp_reg_read(queue_base + 8);
+	ts |= (reg_data & 0x1fff) << 19; /* 13bits:[31..19] */
+
+	/* If packet sent with bad FCS(?!) the TS is "valid" but ZERO
+	 * Re-Read would never help. Return ERROR=-1
+	 */
+	if (!ts)
+		ts = (u32)-1;
+	return ts;
 }

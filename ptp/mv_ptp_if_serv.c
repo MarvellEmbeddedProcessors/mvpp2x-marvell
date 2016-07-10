@@ -129,7 +129,13 @@ int mv_pp3_tai_tod_load_set(u32 sec_h, u32 sec_l, u32 nano, u32 op)
 		pr_info("TAI/ToD clock: stability=%d, counter=%u\n",
 			mv_pp3_tai_clock_stable_status_get(), value);
 		break;
+	case 0xce: /* External, reset and ToD=0 */
+		mv_pp3_tai_clock_disable();
+		mv_tai_clock_external_force_modparm = 1;
+		mv_pp3_tai_clock_cfg_external(true);
+		break;
 	case 0xc1: /* Internal */
+		mv_tai_clock_external_force_modparm = -1; /* disable force */
 		mv_pp3_tai_clock_from_external_sync(0, 0, 0);
 		mv_pp3_tai_clock_cfg_external(false);
 		break;
@@ -362,29 +368,7 @@ void mv_pp3_ptp_reg_dump(int port)
 
 	mv_ptp_reg_print("PTP_GENERAL_CTRL", MV_PTP_GENERAL_CTRL_REG(port));
 	mv_ptp_reg_print("TOTAL_PTP_PCKTS_CNTR", MV_PTP_TOTAL_PTP_PCKTS_CNTR_REG(port));
-	mv_ptp_reg_print("PTPV1_PCKT_CNTR", MV_PTP_PTPV1_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("PTPV2_PCKT_CNTR", MV_PTP_PTPV2_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("Y1731_PCKT_CNTR", MV_PTP_Y1731_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("NTPTS_PCKT_CNTR", MV_PTP_NTPTS_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("NTPRECEIVE_PCKT_CNTR", MV_PTP_NTPRECEIVE_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("NTPTRANSMIT_PCKT_CNTR", MV_PTP_NTPTRANSMIT_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("WAMP_PCKT_CNTR", MV_PTP_WAMP_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("NONE_ACTION_PCKT_CNTR", MV_PTP_NONE_ACTION_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("FORWARD_ACTION_PCKT_CNTR", MV_PTP_FORWARD_ACTION_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("DROP_ACTION_PCKT_CNTR", MV_PTP_DROP_ACTION_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("CAPTURE_ACTION_PCKT_CNTR", MV_PTP_CAPTURE_ACTION_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("ADD_TIME_ACTION_PCKT_CNTR", MV_PTP_ADDTIME_ACTION_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("ADD_CORRECT_TIME_ACTION_PCKT_CNTR", MV_PTP_ADDCORRECTEDTIME_ACTION_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("CAPTURE_TIME_ACTION_PCKT_CNTR", MV_PTP_CAPTUREADDTIME_ACTION_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("CAPTURE_CORRECT_TIME_ACTION_PCKT_CNTR",
-		MV_PTP_CAPTUREADDCORRECTEDTIME_ACTION_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("ADD_INGRESS_TIME_ACTION_PCKT_CNTR", MV_PTP_ADDINGRESSTIME_ACTION_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("CAPTURE_ADD_INGRESS_TIME_ACTION_PCKT_CNTR",
-		MV_PTP_CAPTUREADDINGRESSTIME_ACTION_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("CAPTURE_INGRESS_TIME_ACTION_PCKT_CNTR",
-		MV_PTP_CAPTUREINGRESSTIME_ACTION_PCKT_CNTR_REG(port));
-	mv_ptp_reg_print("NTP_PTP_OFFSET_HIGH", MV_PTP_NTP_PTP_OFFSET_HIGH_REG(port));
-	mv_ptp_reg_print("NTP_PTP_OFFSET_LOW", MV_PTP_NTP_PTP_OFFSET_LOW_REG(port));
+	/* Do NOT read queue-status. The read clears the capture so could harm application */
 }
 
 void mv_pp3_tai_reg_dump(void)

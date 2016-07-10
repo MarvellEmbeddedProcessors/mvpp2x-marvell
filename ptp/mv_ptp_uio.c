@@ -94,10 +94,10 @@ static int read_show_cmd(char *buf, const struct kernel_param *kp)
 	} else {
 		offs = 0;
 		for (i = 0; i < ts_ptp_uio->num_maps; i++)
-			offs += sprintf(buf + offs, "%s addr=%p size=%lx\n",
-				p->uio_info.mem[0].name,
+			offs += sprintf(buf + offs, "%s addr=0x%p size=0x%lx\n",
+				p->uio_info.mem[i].name,
 				(void *)p->uio_info.mem[i].addr,
-				(unsigned long)p->uio_info.mem[0].size);
+				(unsigned long)p->uio_info.mem[i].size);
 	}
 	/*pr_debug("%s device is used with parameters: %s\n", kp->name, buf);*/
 end:
@@ -177,7 +177,7 @@ static int ts_ptp_uio_probe(struct platform_device *pdev)
 	ts_ptp_uio->num_maps = m->num;
 #endif
 	ts_ptp_uio->uio_info.name = TS_NAME;
-	ts_ptp_uio->uio_info.version = "v1";
+	ts_ptp_uio->uio_info.version = "v2";
 	ts_ptp_uio->uio_info.priv = ts_ptp_uio;
 
 	for (i = 0; i < ts_ptp_uio->num_maps; i++) {

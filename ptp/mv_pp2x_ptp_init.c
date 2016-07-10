@@ -30,12 +30,17 @@
 #include <linux/of_net.h>
 #include <linux/of_address.h>
 #include <linux/of_device.h>
+#include <linux/init.h>
 
 #include "mv_pp2x.h"
 
 #include <mv_tai_regs.h>
 #include <mv_ptp_if.h>
 #include <mv_ptp_service.h>
+
+module_param_named(tai_clock_external, mv_tai_clock_external_force_modparm, int, S_IRUGO);
+MODULE_PARM_DESC(tai_clock_external, " =1 force TAI clock External, =0 Internal");
+
 
 static int mv_pp2x_ptp_map_init(struct platform_device *pdev,
 	struct mv_pp2x *priv)
@@ -83,7 +88,7 @@ static int mv_pp2x_ptp_map_init(struct platform_device *pdev,
  *  Called from mv_pp2x_probe() -> mv_pp2x_platform_data_get()
  */
 int mv_pp2x_ptp_init(struct platform_device *pdev,
-	struct mv_pp2x_port *p_port, int port)
+	struct mv_pp2x_port *p_port, int id)
 {
 	/* TAI clock init (must be after gop) */
 	u32 tclk_hz = MV_PP2_TAI_CLK_FREQ_HZ;
@@ -91,6 +96,7 @@ int mv_pp2x_ptp_init(struct platform_device *pdev,
 	int ret;
 	bool common_required;
 	struct mv_pp2x *priv = p_port->priv;
+	int port = p_port->mac_data.gop_index;
 
 	if (priv->pp2_version != PPV22)
 		return -EINVAL;
@@ -109,14 +115,14 @@ int mv_pp2x_ptp_init(struct platform_device *pdev,
 		of_property_read_u32(dn, "clock-frequency", &tclk_hz);
 		pr_info("tai clock-frequency = %u MHz\n", tclk_hz/1000000);
 		mv_ptp_tclk_hz_set(tclk_hz);
-		mv_tai_clock_init(pdev);
+		mv_tai_clock_init(pdev, mv_tai_clock_external_force_modparm);
 		mv_ptp_sysfs_init("pp2", NULL);
 		mv_ptp_tai_tod_uio_init(pdev);
 	}
 
 	mv_pp2x_ptp_hook_init(priv, port);
 	if (!mv_ptp_enable(port, true))
-		pr_info("ptp port_%d enabled on netdev <%s>\n",
-			port, p_port->dev->name);
+		pr_info("ptp port_%d enabled on netdev <%s>, pp2-id=%d\n",
+			port, p_port->dev->name, id);
 	return 0;
 }
