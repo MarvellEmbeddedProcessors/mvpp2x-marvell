@@ -85,6 +85,7 @@ static u32 port_cpu_bind_map;
 static u8 first_bm_pool;
 static u8 first_addr_space;
 static u8 first_log_rxq_queue;
+static u8 uc_filter_max = 4;
 
 u32 debug_param;
 
@@ -119,6 +120,10 @@ MODULE_PARM_DESC(tx_queue_size, "Tx queue size");
 
 module_param(buffer_scaling, ushort, S_IRUGO);
 MODULE_PARM_DESC(buffer_scaling, "Buffer scaling (TBD)");
+
+module_param(uc_filter_max, byte, S_IRUGO);
+MODULE_PARM_DESC(uc_filter_max,
+		 "Set unicast filter max size, it is multiple of 4. def=4");
 
 module_param(debug_param, uint, S_IRUGO);
 MODULE_PARM_DESC(debug_param,
@@ -223,24 +228,17 @@ void mv_pp2x_txq_inc_put(enum mvppv2_version pp2_ver,
 #endif /* __BIG_ENDIAN */
 }
 
-static inline u8 mv_pp2x_first_pool_get(struct mv_pp2x *priv)
+static u8 mv_pp2x_first_pool_get(struct mv_pp2x *priv)
 {
 	return priv->pp2_cfg.first_bm_pool;
 }
 
-static inline u8 mv_pp2x_last_pool_get(struct mv_pp2x *priv)
-{
-	return(mv_pp2x_first_pool_get(priv) + priv->num_pools);
-}
-
-static inline int mv_pp2x_pool_pkt_size_get(
-		enum mv_pp2x_bm_pool_log_num  log_id)
+static int mv_pp2x_pool_pkt_size_get(enum mv_pp2x_bm_pool_log_num  log_id)
 {
 	return mv_pp2x_pools[log_id].pkt_size;
 }
 
-static inline int mv_pp2x_pool_buf_num_get(
-		enum mv_pp2x_bm_pool_log_num  log_id)
+static int mv_pp2x_pool_buf_num_get(enum mv_pp2x_bm_pool_log_num  log_id)
 {
 	return mv_pp2x_pools[log_id].buf_num;
 }
@@ -1603,7 +1601,7 @@ static enum hrtimer_restart mv_pp2x_hr_timer_cb(struct hrtimer *timer)
 }
 
 /* The function get the number of cpu online */
-static inline int mv_pp2x_num_online_cpu_get(struct mv_pp2x *pp2)
+static int mv_pp2x_num_online_cpu_get(struct mv_pp2x *pp2)
 {
 	u8 num_online_cpus = 0;
 	u16 x = pp2->cpu_map;
@@ -1617,8 +1615,8 @@ static inline int mv_pp2x_num_online_cpu_get(struct mv_pp2x *pp2)
 }
 
 /* The function calculate the width, such as cpu width, cos queue width */
-static inline void mv_pp2x_width_calc(struct mv_pp2x *pp2, u32 *cpu_width,
-				u32 *cos_width, u32 *port_rxq_width)
+static void mv_pp2x_width_calc(struct mv_pp2x *pp2, u32 *cpu_width,
+			       u32 *cos_width, u32 *port_rxq_width)
 {
 	if (pp2) {
 		/* Calculate CPU width */
@@ -1794,8 +1792,8 @@ EXPORT_SYMBOL(mv_pp2x_cos_default_value_set);
 /* RSS API */
 
 /* Translate CPU sequence number to real CPU ID */
-static inline int mv_pp22_cpu_id_from_indir_tbl_get(struct mv_pp2x *pp2,
-					int cpu_seq, u32 *cpu_id)
+static int mv_pp22_cpu_id_from_indir_tbl_get(struct mv_pp2x *pp2,
+					     int cpu_seq, u32 *cpu_id)
 {
 	int i;
 	int seq = 0;
@@ -2270,8 +2268,9 @@ err_drop_frame:
 	return rx_todo;
 }
 
-static inline void tx_desc_unmap_put(struct device *dev,
-	struct mv_pp2x_tx_queue *txq, struct mv_pp2x_tx_desc *desc)
+static void tx_desc_unmap_put(struct device *dev,
+			      struct mv_pp2x_tx_queue *txq,
+			      struct mv_pp2x_tx_desc *desc)
 {
 	dma_addr_t buf_phys_addr;
 
@@ -2645,7 +2644,7 @@ void mv_pp2x_port_napi_disable(struct mv_pp2x_port *port)
 		napi_disable(&port->q_vector[i].napi);
 }
 
-static inline void mv_pp2x_port_irqs_dispose_mapping(struct mv_pp2x_port *port)
+static void mv_pp2x_port_irqs_dispose_mapping(struct mv_pp2x_port *port)
 {
 	int i;
 
@@ -2774,7 +2773,7 @@ void mv_pp2x_stop_dev(struct mv_pp2x_port *port)
 }
 
 /* Return positive if MTU is valid */
-static inline int mv_pp2x_check_mtu_valid(struct net_device *dev, int mtu)
+static int mv_pp2x_check_mtu_valid(struct net_device *dev, int mtu)
 {
 	if (mtu < 68) {
 		netdev_err(dev, "cannot change mtu to less than 68\n");
@@ -2870,14 +2869,13 @@ int mv_pp2x_open_cls(struct net_device *dev)
 		return err;
 	}
 
-	err = mv_pp2x_prs_mac_da_accept(hw, port->id, mac_bcast, true);
+	err = mv_pp2x_prs_mac_da_accept(port, mac_bcast, true);
 	if (err) {
 		netdev_err(dev, "mv_pp2x_prs_mac_da_accept BC failed\n");
 		return err;
 	}
 
-	err = mv_pp2x_prs_mac_da_accept(hw, port->id,
-				      dev->dev_addr, true);
+	err = mv_pp2x_prs_mac_da_accept(port, dev->dev_addr, true);
 	if (err) {
 		netdev_err(dev, "mv_pp2x_prs_mac_da_accept M2M failed\n");
 		return err;
@@ -3053,6 +3051,36 @@ int mv_pp2x_stop(struct net_device *dev)
 	return 0;
 }
 
+static void mv_pp2x_set_rx_promisc(struct mv_pp2x_port *port)
+{
+	struct mv_pp2x_hw *hw = &port->priv->hw;
+	int id = port->id;
+
+	/* Accept all: Multicast + Unicast */
+	mv_pp2x_prs_mac_multi_set(hw, id, MVPP2_PE_MAC_MC_ALL, true);
+	mv_pp2x_prs_mac_multi_set(hw, id, MVPP2_PE_MAC_MC_IP6, true);
+	/* Enter promisc mode */
+	mv_pp2x_prs_mac_promisc_set(hw, id, true);
+	/* Remove all port->id's mcast enries */
+	mv_pp2x_prs_mac_entry_del(port, MVPP2_PRS_MAC_MC, MVPP2_DEL_MAC_ALL);
+	/* Remove all port->id's ucast enries except M2M entry */
+	mv_pp2x_prs_mac_entry_del(port, MVPP2_PRS_MAC_UC, MVPP2_DEL_MAC_ALL);
+}
+
+static void mv_pp2x_set_rx_allmulti(struct mv_pp2x_port *port)
+{
+	struct mv_pp2x_hw *hw = &port->priv->hw;
+	int id = port->id;
+
+	/* Accept all multicast */
+	mv_pp2x_prs_mac_multi_set(hw, id,
+				  MVPP2_PE_MAC_MC_ALL, true);
+	mv_pp2x_prs_mac_multi_set(hw, id,
+				  MVPP2_PE_MAC_MC_IP6, true);
+	/* Remove all multicast filter entries from parser */
+	mv_pp2x_prs_mac_entry_del(port, MVPP2_PRS_MAC_MC, MVPP2_DEL_MAC_ALL);
+}
+
 /* register unicast and multicast addresses */
 static void mv_pp2x_set_rx_mode(struct net_device *dev)
 {
@@ -3063,28 +3091,51 @@ static void mv_pp2x_set_rx_mode(struct net_device *dev)
 	int err;
 
 	if (dev->flags & IFF_PROMISC) {
-		/* Accept all: Multicast + Unicast */
-		mv_pp2x_prs_mac_multi_set(hw, id, MVPP2_PE_MAC_MC_ALL, true);
-		mv_pp2x_prs_mac_multi_set(hw, id, MVPP2_PE_MAC_MC_IP6, true);
-		/* Remove all port->id's mcast enries */
-		mv_pp2x_prs_mcast_del_all(hw, id);
-		/* Enter promisc mode */
-		mv_pp2x_prs_mac_promisc_set(hw, id, true);
+		mv_pp2x_set_rx_promisc(port);
 	} else {
+		/* Put dev into promisc if MAC num greater than uc filter max */
+		if (netdev_uc_count(dev) > port->priv->pp2_cfg.uc_filter_max) {
+			mv_pp2x_set_rx_promisc(port);
+			return;
+		}
+		/* Remove old enries not in uc list except M2M entry */
+		mv_pp2x_prs_mac_entry_del(port,
+					  MVPP2_PRS_MAC_UC,
+					  MVPP2_DEL_MAC_NOT_IN_LIST);
+		/* Add all entries into to uc mac addr filter list */
+		netdev_for_each_uc_addr(ha, dev) {
+			err = mv_pp2x_prs_mac_da_accept(port,
+							ha->addr, true);
+			if (err)
+				netdev_err(dev,
+					   "[%2x:%2x:%2x:%2x:%2x:%x]add fail\n",
+					   ha->addr[0], ha->addr[1],
+					   ha->addr[2], ha->addr[3],
+					   ha->addr[4], ha->addr[5]);
+		}
+		/* Leave promisc mode */
+		mv_pp2x_prs_mac_promisc_set(hw, id, false);
+
 		if (dev->flags & IFF_ALLMULTI) {
-			/* Accept all multicast */
-			mv_pp2x_prs_mac_multi_set(hw, id,
-						  MVPP2_PE_MAC_MC_ALL, true);
-			mv_pp2x_prs_mac_multi_set(hw, id,
-						  MVPP2_PE_MAC_MC_IP6, true);
-			/* Remove all port->id's mcast enries */
-			mv_pp2x_prs_mcast_del_all(hw, id);
+			mv_pp2x_set_rx_allmulti(port);
 		} else {
-			/* Accept only initialized multicast */
+			/* Put dev allmulti if MAC num exceeds mc filter max */
+			if (netdev_mc_count(dev) >
+					port->priv->pp2_cfg.mc_filter_max) {
+				mv_pp2x_set_rx_allmulti(port);
+				return;
+			}
+			/* Remove old mcast entries not in mc list */
+			mv_pp2x_prs_mac_entry_del(port,
+						  MVPP2_PRS_MAC_MC,
+						  MVPP2_DEL_MAC_NOT_IN_LIST);
+			/* Add all entries into to mc mac filter list */
 			if (!netdev_mc_empty(dev)) {
 				netdev_for_each_mc_addr(ha, dev) {
-					err = mv_pp2x_prs_mac_da_accept(hw,
-							id, ha->addr, true);
+					err =
+					mv_pp2x_prs_mac_da_accept(port,
+								  ha->addr,
+								  true);
 					if (err)
 						netdev_err(dev,
 						"MAC[%2x:%2x:%2x:%2x:%2x:%2x] add failed\n",
@@ -3093,13 +3144,12 @@ static void mv_pp2x_set_rx_mode(struct net_device *dev)
 						ha->addr[4], ha->addr[5]);
 				}
 			}
+			/* Reject other MC mac entries */
 			mv_pp2x_prs_mac_multi_set(hw, id,
 						  MVPP2_PE_MAC_MC_ALL, false);
 			mv_pp2x_prs_mac_multi_set(hw, id,
 						  MVPP2_PE_MAC_MC_IP6, false);
 		}
-		/* Leave promisc mode */
-		mv_pp2x_prs_mac_promisc_set(hw, id, false);
 	}
 }
 
@@ -3843,6 +3893,9 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 	if (mv_pp2x_queue_mode)
 		dev->hw_features |= NETIF_F_RXHASH;
 	dev->vlan_features |= features;
+
+	dev->priv_flags |= IFF_UNICAST_FLT;
+
 	err = register_netdev(dev);
 	if (err < 0) {
 		dev_err(&pdev->dev, "failed to register netdev\n");
@@ -4138,6 +4191,9 @@ static void mv_pp2x_init_config(struct mv_pp2x_param_config *pp2_cfg,
 	pp2_cfg->rss_cfg.rss_mode = rss_mode;
 
 	pp2_cfg->rx_cpu_map = port_cpu_bind_map;
+
+	pp2_cfg->uc_filter_max = uc_filter_max;
+	pp2_cfg->mc_filter_max = MVPP2_PRS_MAC_UC_MC_FILT_MAX - uc_filter_max;
 }
 
 static void mv_pp2x_init_rxfhindir(struct mv_pp2x *pp2)
