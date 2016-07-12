@@ -1151,8 +1151,8 @@ static int mv_pp2x_txq_init(struct mv_pp2x_port *port,
 
 		txq_pcpu->data_size= kmalloc(txq_pcpu->size *
 						sizeof(int), GFP_KERNEL);
-				if (!txq_pcpu->tx_buffs)
-					goto error;
+		if (!txq_pcpu->data_size)
+			goto error;
 
 		txq_pcpu->count = 0;
 		txq_pcpu->reserved_num = 0;
