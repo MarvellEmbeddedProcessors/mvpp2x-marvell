@@ -174,17 +174,22 @@ struct mv_pp2x_pool_attributes mv_pp2x_pools[] = {
 static inline int mv_pp2x_txq_count(struct mv_pp2x_txq_pcpu *txq_pcpu)
 {
 
-	int index_diff = txq_pcpu->txq_put_index - txq_pcpu->txq_get_index;
+	int index_modulo = (txq_pcpu->txq_put_index - txq_pcpu->txq_get_index +
+				txq_pcpu->size) % txq_pcpu->size;
 
-	return(index_diff % txq_pcpu->size);
+	return index_modulo;
 }
 
 static inline int mv_pp2x_txq_free_count(struct mv_pp2x_txq_pcpu *txq_pcpu)
 {
 
-	int index_diff = txq_pcpu->txq_get_index - txq_pcpu->txq_put_index;
+	int index_modulo = (txq_pcpu->txq_get_index - txq_pcpu->txq_put_index +
+				txq_pcpu->size) % txq_pcpu->size;
 
-	return(index_diff % txq_pcpu->size);
+	if (index_modulo == 0)
+		return txq_pcpu->size;
+
+	return index_modulo;
 }
 
 static void mv_pp2x_txq_inc_get(struct mv_pp2x_txq_pcpu *txq_pcpu)
@@ -193,6 +198,19 @@ static void mv_pp2x_txq_inc_get(struct mv_pp2x_txq_pcpu *txq_pcpu)
 	if (txq_pcpu->txq_get_index == txq_pcpu->size)
 		txq_pcpu->txq_get_index = 0;
 }
+
+void mv_pp2x_txq_inc_error(struct mv_pp2x_txq_pcpu *txq_pcpu, int num)
+{
+	for (; num > 0; num--) {
+		txq_pcpu->txq_put_index--;
+		if (txq_pcpu->txq_put_index < 0)
+			txq_pcpu->txq_put_index = txq_pcpu->size - 1;
+		txq_pcpu->tx_skb[txq_pcpu->txq_put_index] = 0;
+		txq_pcpu->data_size[txq_pcpu->txq_put_index] = 0;
+		txq_pcpu->tx_buffs[txq_pcpu->txq_put_index] = 0;
+	}
+}
+
 
 void mv_pp2x_txq_inc_put(enum mvppv2_version pp2_ver,
 			 struct mv_pp2x_txq_pcpu *txq_pcpu,
@@ -887,7 +905,7 @@ static void mv_pp2x_txq_done(struct mv_pp2x_port *port,
 
 	mv_pp2x_txq_bufs_free(port, txq_pcpu, tx_done);
 
-		if (netif_tx_queue_stopped(nq))
+	if (netif_tx_queue_stopped(nq))
 		if (mv_pp2x_txq_free_count(txq_pcpu) >= (MAX_SKB_FRAGS + 2))
 			netif_tx_wake_queue(nq);
 }
@@ -1148,7 +1166,7 @@ static int mv_pp2x_txq_init(struct mv_pp2x_port *port,
 		if (!txq_pcpu->tx_buffs)
 			goto error;
 
-		txq_pcpu->data_size= kmalloc(txq_pcpu->size *
+		txq_pcpu->data_size = kmalloc(txq_pcpu->size *
 						sizeof(int), GFP_KERNEL);
 		if (!txq_pcpu->data_size)
 			goto error;
@@ -2324,6 +2342,8 @@ error:
 	/* Release all descriptors that were used to map fragments of
 	 * this packet, as well as the corresponding DMA mappings
 	 */
+	 mv_pp2x_txq_inc_error(txq_pcpu, i);
+
 	for (i = i - 1; i >= 0; i--) {
 		tx_desc = txq->first_desc + i;
 		tx_desc_unmap_put(port->dev->dev.parent, txq, tx_desc);
@@ -2366,7 +2386,7 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 	u16 txq_id;
 	u32 tx_cmd;
 
-	txq_id = 0/*skb_get_queue_mapping(skb)*/;
+	txq_id = skb_get_queue_mapping(skb);
 	nq = netdev_get_tx_queue(dev, txq_id);
 	txq = port->txqs[txq_id];
 	txq_pcpu = this_cpu_ptr(txq->pcpu);
@@ -2379,6 +2399,7 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 	if (mv_pp2x_aggr_desc_num_check(port->priv, aggr_txq, frags) ||
 	    mv_pp2x_txq_reserved_desc_num_proc(port->priv, txq,
 					     txq_pcpu, frags)) {
+		netif_tx_stop_queue(nq);
 		frags = 0;
 		MVPP2_PRINT_LINE();
 		goto out;
@@ -2438,6 +2459,7 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 		/* Continue with other skb fragments */
 		if (mv_pp2x_tx_frag_process(port, skb, aggr_txq, txq)) {
 			MVPP2_PRINT_LINE();
+			mv_pp2x_txq_inc_error(txq_pcpu, 1);
 			tx_desc_unmap_put(port->dev->dev.parent, txq, tx_desc);
 			frags = 0;
 			goto out;
@@ -2478,9 +2500,9 @@ out:
 		dev->stats.tx_dropped++;
 		dev_kfree_skb_any(skb);
 	}
-	/* PPV21 TX Post-Processing */
+	/* PPV22 TX Post-Processing */
 
-	if (port->priv->pp2xdata->interrupt_tx_done == false && frags > 0)
+	if (port->priv->pp2xdata->interrupt_tx_done == false)
 		mv_pp2x_tx_done_post_proc(txq, txq_pcpu, port, frags);
 
 	return NETDEV_TX_OK;
@@ -3807,7 +3829,7 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 
 	port->num_tx_queues = mv_pp2x_txq_number;
 	port->num_rx_queues = mv_pp2x_rxq_number;
-	dev->tx_queue_len = MVPP2_MAX_TXD;
+	dev->tx_queue_len = tx_queue_size;
 	dev->watchdog_timeo = 5 * HZ;
 	dev->netdev_ops = &mv_pp2x_netdev_ops;
 	mv_pp2x_set_ethtool_ops(dev);
