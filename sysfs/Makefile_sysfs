@@ -31,11 +31,11 @@ ccflags-y += -I${KDIR}/include
 ccflags-y += -DARMADA_390
 ccflags-y += -DMVPP2_DEBUG
 
-mvpp2x_sysfs-y := mv_pp2x_sysfs_main.o mv_pp2x_prs_high_sysfs.o mv_pp2x_prs_low_sysfs.o mv_pp2x_cls_sysfs.o mv_pp2x_cls2_sysfs.o
-mvpp2x_sysfs-y += mv_pp2x_eth_bm_sysfs.o mv_pp2x_eth_rx_sysfs.o mv_pp2x_eth_tx_sysfs.o mv_pp2x_rss_sysfs.o mv_pp2x_cos_sysfs.o mv_pp2x_debug_sysfs.o
-mvpp2x_sysfs-y += mv_pp2x_eth_tx_sched_sysfs.o mv_pp2x_eth_sysfs.o mv_pp2x_eth_gop_sysfs.o
+mvpp2x_sysfs-y := mv_pp2x_sysfs_main.o mv_pp2x_sysfs_prs_high.o mv_pp2x_sysfs_prs_low.o mv_pp2x_sysfs_cls.o mv_pp2x_sysfs_cls2.o
+mvpp2x_sysfs-y += mv_pp2x_sysfs_eth_bm.o mv_pp2x_sysfs_eth_rx.o mv_pp2x_sysfs_eth_tx.o mv_pp2x_sysfs_rss.o mv_pp2x_sysfs_cos.o mv_pp2x_sysfs_debug.o mv_pp2x_sysfs_debug_dump.o mv_pp2x_sysfs_debug_func.o
+mvpp2x_sysfs-y += mv_pp2x_sysfs_eth_tx_sched.o mv_pp2x_sysfs_eth.o mv_pp2x_sysfs_eth_gop.o
 ifeq (SOC_TEST,$(TARGET))
-mvpp2x_sysfs-y += mv_pp2x_cls3_sysfs.o mv_pp2x_cls4_sysfs.o mv_pp2x_pme_sysfs.o mv_pp2x_cls_mc_sysfs.o
+mvpp2x_sysfs-y += mv_pp2x_sysfs_cls3.o mv_pp2x_sysfs_cls4.o mv_sysfs_pp2x_pme.o mv_pp2x_sysfs_cls_mc.o
 ccflags-y += -DMVPP2_SOC_TEST
 endif
 

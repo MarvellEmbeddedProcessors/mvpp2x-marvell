@@ -32,7 +32,7 @@ disclaimer.
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include "mv_pp2x_sysfs.h"
-#include "mv_pp2x_prs_sysfs.h"
+#include "mv_pp2x_sysfs_prs.h"
 
 
 static struct kobject *prs_kobj;

@@ -52,7 +52,7 @@ disclaimer.
 //#include "cls/mvPp2Classifier.h"
 
 #include "mv_pp2x_sysfs.h"
-#include "mv_pp2x_eth_sysfs.h"
+#include "mv_pp2x_sysfs_eth.h"
 
 #include "mv_pp2x.h"
 

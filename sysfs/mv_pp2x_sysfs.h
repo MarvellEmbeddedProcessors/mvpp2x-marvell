@@ -71,18 +71,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "mv_pp2x.h"
 #include "mv_pp2x_hw.h"
-#include "mv_pp2x_debug.h"
+#include "mv_pp2x_sysfs_debug.h"
 #include "mv_gop110_hw.h"
 #ifdef MVPP2_SOC_TEST
 #include "mv_pp2x_soc_test.h"
 #endif
 
-
 extern struct mv_pp2x_hw *sysfs_cur_hw;
 extern struct mv_pp2x *sysfs_cur_priv;
 extern char *pp2_dev_name[];
-
-
-
 
 #endif /* __MV_PP2X_SYSFS_H__ */

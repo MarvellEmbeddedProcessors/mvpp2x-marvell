@@ -31,7 +31,6 @@
 
 #include "mv_pp2x.h"
 #include "mv_pp2x_hw.h"
-#include "mv_pp2x_debug.h"
 
 /* Utility/helper methods */
 
@@ -3686,6 +3685,7 @@ int mv_pp2x_aggr_desc_num_read(struct mv_pp2x *priv, int cpu)
 
 	return(val & MVPP2_AGGR_TXQ_PENDING_MASK);
 }
+EXPORT_SYMBOL(mv_pp2x_aggr_desc_num_read);
 
 /* Check if there are enough free descriptors in aggregated txq.
  * If not, update the number of occupied descriptors and repeat the check.
@@ -4136,6 +4136,7 @@ int mv_pp2x_prs_sw_sram_shift_get(struct mv_pp2x_prs_entry *pe, int *shift)
 		*shift *= -1;
 	return MV_OK;
 }
+EXPORT_SYMBOL(mv_pp2x_prs_sw_sram_shift_get);
 
 int mv_pp2x_prs_sw_sram_offset_set(struct mv_pp2x_prs_entry *pe,
 				   unsigned int type, int offset,
@@ -4287,6 +4288,7 @@ int mv_pp2x_prs_sw_sram_next_lu_get(struct mv_pp2x_prs_entry *pe,
 	*lu &= MVPP2_PRS_SRAM_NEXT_LU_MASK;
 	return MV_OK;
 }
+EXPORT_SYMBOL(mv_pp2x_prs_sw_sram_next_lu_get);
 
 int mv_pp2x_prs_sram_bit_get(struct mv_pp2x_prs_entry *pe, int bitNum,
 			     unsigned int *bit)
@@ -4317,6 +4319,7 @@ int mv_pp2x_prs_sw_sram_lu_done_get(struct mv_pp2x_prs_entry *pe,
 {
 	return mv_pp2x_prs_sram_bit_get(pe, MVPP2_PRS_SRAM_LU_DONE_BIT, bit);
 }
+EXPORT_SYMBOL(mv_pp2x_prs_sw_sram_lu_done_get);
 
 void mv_pp2x_prs_sw_sram_flowid_set(struct mv_pp2x_prs_entry *pe)
 {
@@ -4335,6 +4338,7 @@ int mv_pp2x_prs_sw_sram_flowid_gen_get(struct mv_pp2x_prs_entry *pe,
 {
 	return mv_pp2x_prs_sram_bit_get(pe, MVPP2_PRS_SRAM_LU_GEN_BIT, bit);
 }
+EXPORT_SYMBOL(mv_pp2x_prs_sw_sram_flowid_gen_get);
 
 /* return RI and RI_UPDATE */
 int mv_pp2x_prs_sw_sram_ri_get(struct mv_pp2x_prs_entry *pe,
@@ -4353,6 +4357,7 @@ int mv_pp2x_prs_sw_sram_ri_get(struct mv_pp2x_prs_entry *pe,
 	*enable = pe->sram.word[MVPP2_PRS_SRAM_RI_CTRL_OFFS/32];
 	return MV_OK;
 }
+EXPORT_SYMBOL(mv_pp2x_prs_sw_sram_ri_get);
 
 int mv_pp2x_prs_sw_sram_ai_get(struct mv_pp2x_prs_entry *pe,
 			       unsigned int *bits, unsigned int *enable)
@@ -4386,6 +4391,7 @@ int mv_pp2x_prs_sw_sram_ai_get(struct mv_pp2x_prs_entry *pe,
 
 	return MV_OK;
 }
+EXPORT_SYMBOL(mv_pp2x_prs_sw_sram_ai_get);
 
 /*#include "mvPp2ClsHw.h" */
 
@@ -4464,6 +4470,7 @@ int mv_pp2x_cls_sw_lkp_rxq_get(struct mv_pp2x_cls_lookup_entry *lkp, int *rxq)
 	*rxq =  (lkp->data & MVPP2_FLOWID_RXQ_MASK) >> MVPP2_FLOWID_RXQ;
 	return MV_OK;
 }
+EXPORT_SYMBOL(mv_pp2x_cls_sw_lkp_rxq_get);
 
 int mv_pp2x_cls_sw_lkp_rxq_set(struct mv_pp2x_cls_lookup_entry *lkp, int rxq)
 {
@@ -4494,6 +4501,7 @@ int mv_pp2x_cls_sw_lkp_en_get(struct mv_pp2x_cls_lookup_entry *lkp, int *en)
 	*en = (lkp->data & MVPP2_FLOWID_EN_MASK) >> MVPP2_FLOWID_EN;
 	return MV_OK;
 }
+EXPORT_SYMBOL(mv_pp2x_cls_sw_lkp_en_get);
 
 int mv_pp2x_cls_sw_lkp_en_set(struct mv_pp2x_cls_lookup_entry *lkp, int en)
 {
@@ -4524,6 +4532,7 @@ int mv_pp2x_cls_sw_lkp_flow_get(struct mv_pp2x_cls_lookup_entry *lkp,
 	*flow_idx = (lkp->data & MVPP2_FLOWID_FLOW_MASK) >> MVPP2_FLOWID_FLOW;
 	return MV_OK;
 }
+EXPORT_SYMBOL(mv_pp2x_cls_sw_lkp_flow_get);
 
 int mv_pp2x_cls_sw_lkp_flow_set(struct mv_pp2x_cls_lookup_entry *lkp,
 		int flow_idx)
@@ -4556,6 +4565,7 @@ int mv_pp2x_cls_sw_lkp_mod_get(struct mv_pp2x_cls_lookup_entry *lkp,
 	*mod_base = (lkp->data & MVPP2_FLOWID_MODE_MASK) >> MVPP2_FLOWID_MODE;
 	return MV_OK;
 }
+EXPORT_SYMBOL(mv_pp2x_cls_sw_lkp_mod_get);
 
 int mv_pp2x_cls_sw_lkp_mod_set(struct mv_pp2x_cls_lookup_entry *lkp,
 			       int mod_base)
@@ -4905,6 +4915,7 @@ int mv_pp2x_cls_hw_lkp_hit_get(struct mv_pp2x_hw *hw, int lkpid, int way,
 
 	return MV_OK;
 }
+EXPORT_SYMBOL(mv_pp2x_cls_hw_lkp_hit_get);
 
 /*----------------------------------------------------------------------*/
 /*	Classifier C2 engine QoS table Public APIs			*/
@@ -5946,6 +5957,7 @@ int mv_pp2x_cls_c2_rule_set(struct mv_pp2x_port *port, u8 start_queue)
 
 	return 0;
 }
+EXPORT_SYMBOL(mv_pp2x_cls_c2_rule_set);
 
 /* The function get the queue in the C2 rule with input index */
 u8 mv_pp2x_cls_c2_rule_queue_get(struct mv_pp2x_hw *hw, u32 rule_idx)
@@ -6104,7 +6116,7 @@ int mv_pp22_rss_tbl_entry_get(struct mv_pp2x_hw *hw,
 	}
 	return 0;
 }
-
+EXPORT_SYMBOL(mv_pp22_rss_tbl_entry_get);
 
 /* The function allocate a rss table for each phisical rxq,
  * they have same cos priority

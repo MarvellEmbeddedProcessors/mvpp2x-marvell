@@ -32,8 +32,7 @@ disclaimer.
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include "mv_pp2x_sysfs.h"
-
-
+#include "mv_pp2x_debug.h"
 
 void mv_pp2x_syfs_cpn_set(int index)
 {
@@ -46,7 +45,6 @@ void mv_pp2x_syfs_cpn_set(int index)
 	sysfs_cur_priv = priv;
 	sysfs_cur_hw = &priv->hw;
 }
-
 
 static ssize_t mv_debug_help(char *buf)
 {

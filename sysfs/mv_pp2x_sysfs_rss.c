@@ -33,7 +33,9 @@ disclaimer.
 #include <linux/platform_device.h>
 #include "mv_pp2x_sysfs.h"
 
+#ifdef MVPP2_SOC_TEST
 static struct mv_pp22_rss_entry  rss_entry;
+#endif
 
 static ssize_t mv_rss_help(char *buf)
 {
@@ -103,9 +105,9 @@ static ssize_t mv_rss_store(struct device *dev,
 	port = netdev_priv(netdev);
 
 	if (!strcmp(name, "rss_mode")) {
-		mv_pp22_wrap_rss_mode_set(port, b);
+		mv_pp22_rss_mode_set(port, b);
 	} else if (!strcmp(name, "rss_dflt_cpu")) {
-		mv_pp22_wrap_rss_dflt_cpu_set(port, b);
+		mv_pp22_rss_default_cpu_set(port, b);
 	} else {
 		err = 1;
 		printk("%s: illegal operation <%s>\n", __func__, attr->attr.name);
