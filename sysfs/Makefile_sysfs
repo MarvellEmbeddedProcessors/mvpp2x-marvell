@@ -29,7 +29,6 @@ ccflags-y += -I${PP2_MOD_DIR}
 
 ccflags-y += -I${KDIR}/include
 ccflags-y += -DARMADA_390
-ccflags-y += -DMVPP2_DEBUG
 
 mvpp2x_sysfs-y := mv_pp2x_sysfs_main.o mv_pp2x_sysfs_prs_high.o mv_pp2x_sysfs_prs_low.o mv_pp2x_sysfs_cls.o mv_pp2x_sysfs_cls2.o
 mvpp2x_sysfs-y += mv_pp2x_sysfs_eth_bm.o mv_pp2x_sysfs_eth_rx.o mv_pp2x_sysfs_eth_tx.o mv_pp2x_sysfs_rss.o mv_pp2x_sysfs_cos.o mv_pp2x_sysfs_debug.o mv_pp2x_sysfs_debug_dump.o mv_pp2x_sysfs_debug_func.o
