@@ -4355,6 +4355,18 @@ static int mv_pp2x_platform_data_get(struct platform_device *pdev,
 
 		MVPP2_PRINT_2LINE();
 
+		/* FCA - flow control*/
+		res = platform_get_resource_byname(pdev,
+			IORESOURCE_MEM, "fca");
+		if ((res->start <= mspg_base) || (res->end >= mspg_end))
+			return -ENXIO;
+		hw->gop.gop_110.fca.base =
+			(void *)(hw->gop.gop_110.mspg_base +
+			(res->start-mspg_base));
+		hw->gop.gop_110.fca.obj_size = 0x1000;
+
+		MVPP2_PRINT_2LINE();
+
 		/* MSPG - xlg */
 		res = platform_get_resource_byname(pdev,
 			IORESOURCE_MEM, "xlg");

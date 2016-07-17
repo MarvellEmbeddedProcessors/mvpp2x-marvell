@@ -126,6 +126,7 @@ static int mv_pp2_sysfs_init(void)
 	mv_pp2_gbe_sysfs_init(&pd->kobj);
 
 	mv_gop_sysfs_init(&pd->kobj);
+	mv_fca_sysfs_init(&pd->kobj);
 //	mv_pp2_dbg_sysfs_init(&pd->kobj);
 
 	for (cpn_index=0;cpn_index<MAX_NUM_CP_110;cpn_index++)
@@ -185,6 +186,7 @@ static void mv_pp2_sysfs_exit(void)
 //	mv_pp2_plcr_sysfs_exit(&pd->kobj);
 	mv_pp2_gbe_sysfs_exit(&pd->kobj);
 	mv_gop_sysfs_exit(&pd->kobj);
+	mv_fca_sysfs_exit(&pd->kobj);
 	/* can't delete, we call to init/clean function from this sysfs */
 	/* TODO: open this line when we delete clean/init sysfs commands*/
 	/*mv_pp2_dbg_sysfs_exit(&pd->kobj);*/

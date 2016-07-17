@@ -117,4 +117,7 @@ int mv_pp2_debug_sysfs_exit(struct kobject *pp2_kobj);
 int mv_gop_sysfs_init(struct kobject *pp2_kobj);
 int mv_gop_sysfs_exit(struct kobject *pp2_kobj);
 
+int mv_fca_sysfs_init(struct kobject *pp2_kobj);
+int mv_fca_sysfs_exit(struct kobject *pp2_kobj);
+
 #endif /* __mv_eth_sysfs_h__ */
