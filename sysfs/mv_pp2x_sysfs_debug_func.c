@@ -257,7 +257,7 @@ int mvPp2TxqWrrPrioSet(struct mv_pp2x *priv, int port, int txq, int weight)
 	 */
 	mtu /= MV_AMPLIFY_FACTOR_MTU;
 	mtu /= MV_BIT_NUM_OF_BYTE; /* move to bytes */
-	mtu_aligned = MV_PP2_ALIGN_UP(mtu, MV_WRR_WEIGHT_UNIT);
+	mtu_aligned = round_up(mtu, MV_WRR_WEIGHT_UNIT);
 	weight_min = mtu_aligned / MV_WRR_WEIGHT_UNIT;
 
 	if ((weight < weight_min) || (weight > MVPP2_TXQ_WRR_WEIGHT_MAX)) {

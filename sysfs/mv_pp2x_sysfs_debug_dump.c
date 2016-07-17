@@ -764,7 +764,7 @@ int mvPp2RateCalc(int rate, unsigned int accuracy, unsigned int *pPeriod,
 		tokens = 1;
 		while (1)	{
 			calc = (tokens * 1000) / period;
-			if (((MV_PP2_ABS(calc - rate) * 100) / rate) <= accuracy) {
+			if (((abs(calc - rate) * 100) / rate) <= accuracy) {
 				if (pPeriod != NULL)
 					*pPeriod = period;
 

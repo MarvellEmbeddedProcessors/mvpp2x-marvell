@@ -57,9 +57,10 @@ void mv_pp2x_skb_dump(struct sk_buff *skb, int size, int access)
 				access);
 		return;
 	}
-	memAddr = MV_ALIGN_DOWN((uintptr_t)addr, 4);
-	size = MV_ALIGN_UP(size, 4);
-	addr = (void *)MV_ALIGN_DOWN((uintptr_t)addr, access);
+	memAddr = round_down((uintptr_t)addr, 4);
+	size = round_up(size, 4);
+	addr = (void *)round_down((uintptr_t)addr, access);
+
 	while (size > 0) {
 		printk("%08lx: ", memAddr);
 		i = 0;
@@ -69,17 +70,17 @@ void mv_pp2x_skb_dump(struct sk_buff *skb, int size, int access)
 				switch (access) {
 				case 1:
 					printk("%02x ",
-						MV_MEMIO8_READ(memAddr));
+						ioread8((void *)memAddr));
 					break;
 
 				case 2:
 					printk("%04x ",
-						MV_MEMIO16_READ(memAddr));
+						ioread16((void *)memAddr));
 					break;
 
 				case 4:
 					printk("%08x ",
-						MV_MEMIO32_READ(memAddr));
+						ioread32((void *)memAddr));
 					break;
 				}
 			} else {
@@ -95,6 +96,4 @@ void mv_pp2x_skb_dump(struct sk_buff *skb, int size, int access)
 		printk("\n");
 	}
 }
-
-
 
