@@ -64,11 +64,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __MV_PP2X_SYSFS_H__
 #define __MV_PP2X_SYSFS_H__
 
-#ifdef ARMADA_390
-#include <linux/phy.h>
-#endif
-
-
 #include "mv_pp2x.h"
 #include "mv_pp2x_hw.h"
 #include "mv_pp2x_sysfs_debug.h"

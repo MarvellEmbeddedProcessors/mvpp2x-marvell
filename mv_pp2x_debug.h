@@ -21,7 +21,6 @@
 
 #include <linux/kernel.h>
 #include <linux/skbuff.h>
-//#include <linux/platform_device.h>
 
 /* Macro for alignment up. For example, MV_ALIGN_UP(0x0330, 0x20) = 0x0340   */
 #define MV_ALIGN_UP(number, align) (((number) & ((align) - 1)) ? \
