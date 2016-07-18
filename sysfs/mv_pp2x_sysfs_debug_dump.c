@@ -263,7 +263,7 @@ void mvPp2RxqShow(struct mv_pp2x *priv, int port, int rxq, int mode)
 
 	DBG_MSG("size=%d, pkts_coal=%d, time_coal=%d\n",
 		pp_rxq->size, pp_rxq->pkts_coal, pp_rxq->time_coal);
-
+	preempt_disable();
 	DBG_MSG(
 		"first_virt_addr=%p, first_dma_addr=%lx, next_rx_desc=%d, rxq_cccupied=%d, rxq_nonoccupied=%d\n",
 		pp_rxq->first_desc,
@@ -271,6 +271,7 @@ void mvPp2RxqShow(struct mv_pp2x *priv, int port, int rxq, int mode)
 		pp_rxq->next_desc_to_proc,
 		mv_pp2x_rxq_received(pp_port, pp_rxq->id),
 		mv_pp2x_rxq_free(pp_port, pp_rxq->id));
+	preempt_enable();
 	DBG_MSG("virt_mem_area_addr=%p, dma_mem_area_addr=%lx\n",
 		pp_rxq->desc_mem, (unsigned long)pp_rxq->descs_phys);
 
