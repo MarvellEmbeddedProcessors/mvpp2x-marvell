@@ -1982,6 +1982,8 @@ void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv)
 		DBG_MSG("gop_addr: rfu1(%p)\n",
 			priv->hw.gop.gop_110.rfu1_base);
 	}
+	DBG_MSG("uc_filter_max(%d), mc_filter_max(%d)\n",
+		priv->pp2_cfg.uc_filter_max, priv->pp2_cfg.mc_filter_max);
 }
 EXPORT_SYMBOL(mv_pp2x_pp2_basic_print);
 
