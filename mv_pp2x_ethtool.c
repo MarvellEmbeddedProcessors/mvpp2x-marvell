@@ -297,7 +297,7 @@ static int mv_pp2x_set_pauseparam(struct net_device *dev,
 		if (mac->speed == SPEED_2500) {
 			err = mv_gop110_check_port_type(gop, gop_port);
 			if (err) {
-				pr_err("Peridot module dosen't support FC\n");
+				pr_err("Peridot module doesn't support FC\n");
 				return -EINVAL;
 			}
 		}
@@ -334,7 +334,7 @@ static int mv_pp2x_set_pauseparam(struct net_device *dev,
 	case PHY_INTERFACE_MODE_RXAUI:
 	case PHY_INTERFACE_MODE_KR:
 		if (pause->autoneg) {
-			pr_err("10G port dosen't fc autoneg\n");
+			pr_err("10G port doesn't suport fc autoneg\n");
 			return -EINVAL;
 			}
 		if (pause->rx_pause)

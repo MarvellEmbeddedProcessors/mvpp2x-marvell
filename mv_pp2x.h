@@ -399,12 +399,6 @@ struct mv_pp2x_hw {
 	void __iomem *cpu_base[MVPP2_MAX_CPUS];
 
 	struct gop_hw gop;
-	/* ppv22_base_address for each CPU.
-	 * PPv2.2 - cpu_base[x] = base +
-	 * cpu_index[smp_processor_id]*MV_PP2_SPACE_64K,
-	 * for non-participating CPU it is NULL.
-	 * PPv2.1 cpu_base[x] = base
-	 */
 	/* Common clocks */
 	struct clk *pp_clk;
 	struct clk *gop_clk;

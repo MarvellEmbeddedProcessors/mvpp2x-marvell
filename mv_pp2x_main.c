@@ -2460,9 +2460,8 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 
 	/* Prevent shadow_q override, stop tx_queue until tx_done is called*/
 
-	if (mv_pp2x_txq_free_count(txq_pcpu) < (MAX_SKB_FRAGS + 2)) {
+	if (mv_pp2x_txq_free_count(txq_pcpu) < (MAX_SKB_FRAGS + 2))
 		netif_tx_stop_queue(nq);
-	}
 
 	/* Enable transmit */
 	if (!skb->xmit_more || netif_xmit_stopped(nq)) {
