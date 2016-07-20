@@ -144,6 +144,14 @@ MODULE_PARM_DESC(first_addr_space, "First used PPV22 address space (0-8)");
 module_param(first_log_rxq_queue, byte, S_IRUGO);
 MODULE_PARM_DESC(first_log_rxq_queue, "First logical rx_queue (0-31)");
 
+void set_device_base_address(struct net_device *dev)
+{
+	struct mv_pp2x_port *port = netdev_priv(dev);
+
+	dev->mem_start = (unsigned long)port->priv->hw.phys_addr_start;
+	dev->mem_end = (unsigned long)port->priv->hw.phys_addr_end;
+}
+
 /* Number of RXQs used by single port */
 static int mv_pp2x_rxq_number;
 /* Number of TXQs used by single port */
@@ -2972,6 +2980,8 @@ int mv_pp2x_open(struct net_device *dev)
 	struct mv_pp2x_port *port = netdev_priv(dev);
 	int err;
 
+	set_device_base_address(dev);
+
 	/* Allocate the Rx/Tx queues */
 	err = mv_pp2x_setup_rxqs(port);
 	if (err) {
@@ -4253,6 +4263,8 @@ static int mv_pp2x_platform_data_get(struct platform_device *pdev,
 
 	/* PPV2 Address Space */
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "pp");
+	hw->phys_addr_start = res->start;
+	hw->phys_addr_end = res->end;
 	hw->base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(hw->base))
 		return PTR_ERR(hw->base);
