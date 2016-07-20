@@ -3186,7 +3186,7 @@ EXPORT_SYMBOL(mv_pp2x_cls_hw_udf_set);
 void mv_pp2x_cls_lookup_tbl_config(struct mv_pp2x_hw *hw)
 {
 	int index, flow_idx;
-	int data[MVPP2_LKP_PTR_FLOW_NUM];
+	int data[MVPP2_LKP_PTR_NUM];
 	struct mv_pp2x_cls_lookup_entry le;
 	struct mv_pp2x_cls_flow_info *flow_info;
 
@@ -3200,7 +3200,7 @@ void mv_pp2x_cls_lookup_tbl_config(struct mv_pp2x_hw *hw)
 
 		flow_info = &(hw->cls_shadow->flow_info[index]);
 		/* Init data[] as invalid value */
-		for (i = 0; i < MVPP2_LKP_PTR_FLOW_NUM; i++)
+		for (i = 0; i < MVPP2_LKP_PTR_NUM; i++)
 			data[i] = MVPP2_FLOW_TBL_SIZE;
 		le.lkpid = hw->cls_shadow->flow_info[index].lkpid;
 		/* Find the min non-zero one in flow_entry_dflt,
