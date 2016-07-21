@@ -1998,7 +1998,7 @@ void mv_pp2x_pp2_port_print(struct mv_pp2x_port *port)
 	for (i = 0; i < port->num_irqs; i++)
 		DBG_MSG("\t\t irq%d(%d)\n", i, port->of_irqs[i]);
 	DBG_MSG("\t pkt_size(%d)\n", port->pkt_size);
-	DBG_MSG("\t flags(%lx)\n", port->flags);
+	DBG_MSG("\t flags(%llx)\n", port->flags);
 	DBG_MSG("\t tx_ring_size(%d)\n", port->tx_ring_size);
 	DBG_MSG("\t rx_ring_size(%d)\n", port->rx_ring_size);
 	DBG_MSG("\t time_coal(%d)\n", port->tx_time_coal);
