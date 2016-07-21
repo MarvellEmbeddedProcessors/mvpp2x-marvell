@@ -46,6 +46,17 @@ void mv_pp2x_syfs_cpn_set(int index)
 	sysfs_cur_hw = &priv->hw;
 }
 
+static int mv_pp2x_parse_mac_address(char *buf, u32 *macaddr_parts)
+{
+	if (sscanf(buf, "%x:%x:%x:%x:%x:%x",
+		   &macaddr_parts[0], &macaddr_parts[1],
+		   &macaddr_parts[2], &macaddr_parts[3],
+		   &macaddr_parts[4], &macaddr_parts[5]) == ETH_ALEN)
+		return MV_OK;
+	else
+		return MV_ERROR;
+}
+
 static ssize_t mv_debug_help(char *buf)
 {
 	int off = 0;
@@ -57,6 +68,10 @@ static ssize_t mv_debug_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo val        >debug_param          - Set global debug_param.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "cat             debug_param           - Get global debug_param.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo val       > cpn_index            - Set cpn_index to use for sysfs commands.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name] [mac_addr]     >  uc_filter_add - Add UC MAC to filter list on the device\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name] [mac_addr]     >  uc_filter_del - Del UC MAC from filter list on the device\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name]     >  uc_filter_dump - Dump UC MAC in filter list on the device\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "     mac_addr format: ff:ff:ff:ff:ff:ff\n");
 
 
 	return off;
@@ -159,13 +174,79 @@ static ssize_t mv_debug_store_unsigned(struct device *dev,
 	return err ? -EINVAL : len;
 }
 
+static ssize_t mv_debug_store_mac(struct device *dev,
+				  struct device_attribute *attr, const char *buf, size_t len)
+{
+	const char      *name = attr->attr.name;
+	int             err = 0;
+	u32		b[ETH_ALEN];
+	u8		mac_uc[ETH_ALEN];
+	char		if_name[10];
+	char		mac[30];
+	struct net_device *netdev;
+	int i;
+
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
+
+	sscanf(buf, "%s %s", if_name, mac);
+
+	netdev = dev_get_by_name(&init_net, if_name);
+	if (!netdev) {
+		printk("%s: illegal interface <%s>\n", __func__, if_name);
+		return -EINVAL;
+	}
+
+	if (!strcmp(name, "uc_filter_add")) {
+		if (mv_pp2x_parse_mac_address(mac, b)) {
+			pr_err("%s: illegal mac address input\n", mac);
+			err = 1;
+		}
+		for (i = 0; i < ETH_ALEN; i++)
+			mac_uc[i] = (u8)b[i];
+		dev_uc_add(netdev, mac_uc);
+	} else if (!strcmp(name, "uc_filter_del")) {
+		if (mv_pp2x_parse_mac_address(mac, b)) {
+			pr_err("%s: illegal mac address input\n", mac);
+			err = 1;
+		}
+		for (i = 0; i < ETH_ALEN; i++)
+			mac_uc[i] = (u8)b[i];
+		dev_uc_del(netdev, mac_uc);
+	} else if (!strcmp(name, "uc_filter_dump")) {
+		struct netdev_hw_addr *ha;
+
+		if (netdev_uc_count(netdev) == 0) {
+				pr_info("%s: UC list is empty\n", if_name);
+		} else {
+			pr_info("%s: UC list dump:\n", if_name);
+			netdev_for_each_uc_addr(ha, netdev)
+				pr_info("%02x:%02x:%02x:%02x:%02x:%02x\n",
+					ha->addr[0], ha->addr[1],
+					ha->addr[2], ha->addr[3],
+					ha->addr[4], ha->addr[5]);
+		}
+
+	} else {
+		printk("%s: illegal operation <%s>\n", __func__, attr->attr.name);
+	}
+
+	if (err)
+		printk("%s: error %d\n", __func__, err);
+
+	return err ? -EINVAL : len;
+}
+
 static DEVICE_ATTR(help,		S_IRUSR, mv_debug_show, NULL);
 static DEVICE_ATTR(debug_param,	(S_IRUSR|S_IWUSR), mv_debug_show,
 		   mv_debug_store_unsigned);
 static DEVICE_ATTR(bind_cpu,		S_IWUSR, NULL, mv_debug_store);
 static DEVICE_ATTR(mv_pp2x_reg_read,	S_IWUSR, NULL, mv_debug_store_unsigned);
 static DEVICE_ATTR(mv_pp2x_reg_write,	S_IWUSR, NULL, mv_debug_store_unsigned);
-static DEVICE_ATTR(cpn_index           ,S_IWUSR, NULL, mv_debug_store_unsigned);
+static DEVICE_ATTR(cpn_index,		S_IWUSR, NULL, mv_debug_store_unsigned);
+static DEVICE_ATTR(uc_filter_add,	S_IWUSR, NULL, mv_debug_store_mac);
+static DEVICE_ATTR(uc_filter_del,	S_IWUSR, NULL, mv_debug_store_mac);
+static DEVICE_ATTR(uc_filter_dump,	S_IWUSR, NULL, mv_debug_store_mac);
 
 static struct attribute *debug_attrs[] = {
 	&dev_attr_help.attr,
@@ -174,6 +255,9 @@ static struct attribute *debug_attrs[] = {
 	&dev_attr_mv_pp2x_reg_read.attr,
 	&dev_attr_mv_pp2x_reg_write.attr,
 	&dev_attr_cpn_index.attr,
+	&dev_attr_uc_filter_add.attr,
+	&dev_attr_uc_filter_del.attr,
+	&dev_attr_uc_filter_dump.attr,
 	NULL
 };
 
