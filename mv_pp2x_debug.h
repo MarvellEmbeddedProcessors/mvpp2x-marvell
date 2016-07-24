@@ -22,6 +22,8 @@
 #include <linux/kernel.h>
 #include <linux/skbuff.h>
 
+#define DBG_MSG(fmt, args...)	printk(fmt, ## args)
+
 void mv_pp2x_skb_dump(struct sk_buff *skb, int size, int access);
 
 int mv_pp2x_debug_param_set(u32 param);

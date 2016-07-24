@@ -44,56 +44,56 @@ void mv_pp2x_skb_dump(struct sk_buff *skb, int size, int access)
 {
 	int i, j;
 	void *addr = skb->head + NET_SKB_PAD;
-	uintptr_t memAddr = (uintptr_t)addr;
+	uintptr_t mem_addr = (uintptr_t)addr;
 
-	printk("skb=%p, buf=%p, ksize=%d\n", skb, skb->head,
-			(int)ksize(skb->head));
+	DBG_MSG("skb=%p, buf=%p, ksize=%d\n", skb, skb->head,
+		(int)ksize(skb->head));
 
 	if (access == 0)
 		access = 1;
 
 	if ((access != 4) && (access != 2) && (access != 1)) {
-		printk("%d wrong access size. Access must be 1 or 2 or 4\n",
+		pr_err("%d wrong access size. Access must be 1 or 2 or 4\n",
 				access);
 		return;
 	}
-	memAddr = round_down((uintptr_t)addr, 4);
+	mem_addr = round_down((uintptr_t)addr, 4);
 	size = round_up(size, 4);
 	addr = (void *)round_down((uintptr_t)addr, access);
 
 	while (size > 0) {
-		printk("%08lx: ", memAddr);
+		DBG_MSG("%08lx: ", mem_addr);
 		i = 0;
 		/* 32 bytes in the line */
 		while (i < 32) {
-			if (memAddr >= (uintptr_t)addr) {
+			if (mem_addr >= (uintptr_t)addr) {
 				switch (access) {
 				case 1:
-					printk("%02x ",
-						ioread8((void *)memAddr));
+					DBG_MSG("%02x ",
+						ioread8((void *)mem_addr));
 					break;
 
 				case 2:
-					printk("%04x ",
-						ioread16((void *)memAddr));
+					DBG_MSG("%04x ",
+						ioread16((void *)mem_addr));
 					break;
 
 				case 4:
-					printk("%08x ",
-						ioread32((void *)memAddr));
+					DBG_MSG("%08x ",
+						ioread32((void *)mem_addr));
 					break;
 				}
 			} else {
 				for (j = 0; j < (access * 2 + 1); j++)
-					printk(" ");
+					DBG_MSG(" ");
 			}
 			i += access;
-			memAddr += access;
+			mem_addr += access;
 			size -= access;
 			if (size <= 0)
 				break;
 		}
-		printk("\n");
+		DBG_MSG("\n");
 	}
 }
 

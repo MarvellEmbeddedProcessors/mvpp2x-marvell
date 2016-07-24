@@ -109,8 +109,7 @@ module_param(pri_map, uint, S_IRUGO);
 MODULE_PARM_DESC(pri_map, "Set priority_map, nibble for each cos.");
 
 module_param(default_cos, byte, S_IRUGO);
-MODULE_PARM_DESC(default_cos,
-		 "Set default cos value(0-7) for unclassified traffic");
+MODULE_PARM_DESC(default_cos, "Set default cos (0-(num_cose_queues-1)).");
 
 module_param(rx_queue_size, ushort, S_IRUGO);
 MODULE_PARM_DESC(rx_queue_size, "Rx queue size");
@@ -2481,8 +2480,9 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 
 	/* Prevent shadow_q override, stop tx_queue until tx_done is called*/
 
-	if (mv_pp2x_txq_free_count(txq_pcpu) < (MAX_SKB_FRAGS + 2))
+	if (mv_pp2x_txq_free_count(txq_pcpu) < (MAX_SKB_FRAGS + 2)) {
 		netif_tx_stop_queue(nq);
+	}
 
 	/* Enable transmit */
 	if (!skb->xmit_more || netif_xmit_stopped(nq)) {
@@ -4354,6 +4354,7 @@ static int mv_pp2x_platform_data_get(struct platform_device *pdev,
 			(res->start-mspg_base));
 		hw->gop.gop_110.gmac.obj_size = 0x1000;
 
+
 		/* FCA - flow control*/
 		res = platform_get_resource_byname(pdev,
 			IORESOURCE_MEM, "fca");
@@ -4363,6 +4364,7 @@ static int mv_pp2x_platform_data_get(struct platform_device *pdev,
 			(void *)(hw->gop.gop_110.mspg_base +
 			(res->start-mspg_base));
 		hw->gop.gop_110.fca.obj_size = 0x1000;
+
 
 		/* MSPG - xlg */
 		res = platform_get_resource_byname(pdev,

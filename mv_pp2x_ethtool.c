@@ -334,7 +334,7 @@ static int mv_pp2x_set_pauseparam(struct net_device *dev,
 	case PHY_INTERFACE_MODE_RXAUI:
 	case PHY_INTERFACE_MODE_KR:
 		if (pause->autoneg) {
-			pr_err("10G port doesn't suport fc autoneg\n");
+			pr_err("10G port doesn't support fc autoneg\n");
 			return -EINVAL;
 			}
 		if (pause->rx_pause)
