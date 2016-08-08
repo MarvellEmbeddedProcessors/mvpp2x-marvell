@@ -3714,7 +3714,7 @@ static void mv_pp2x_get_port_stats(struct mv_pp2x_port *port)
 	link_is_up = mv_gop110_port_is_link_up(gop, &port->mac_data);
 
 	if (link_is_up)
-		mv_gop110_mib_counters_update_stat(gop, gop_port, gop_statistics);
+		mv_gop110_mib_counters_stat_update(gop, gop_port, gop_statistics);
 }
 
 static void mv_pp2x_get_device_stats(struct work_struct *work)
