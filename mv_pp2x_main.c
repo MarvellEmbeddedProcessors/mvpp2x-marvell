@@ -4092,7 +4092,7 @@ static int mv_pp2x_init(struct platform_device *pdev, struct mv_pp2x *priv)
 	stats_delay = (stats_delay_msec * HZ) / 1000;
 
 	/* Checks for hardware constraints */
-	if (0 >= mv_pp2x_num_cos_queues || mv_pp2x_num_cos_queues > MVPP2_MAX_TXQ) {
+	if (mv_pp2x_num_cos_queues <= 0 || mv_pp2x_num_cos_queues > MVPP2_MAX_TXQ) {
 		dev_err(&pdev->dev, "Illegal num_cos_queue parameter\n");
 		return -EINVAL;
 	}
