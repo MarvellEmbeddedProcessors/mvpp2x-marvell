@@ -356,7 +356,7 @@ EXPORT_SYMBOL(mv_pp2x_cls_c2_mtu_set);
 */
 int mv_pp2x_cos_classifier_get(struct mv_pp2x_port *port)
 {
-	return port->priv->pp2_cfg.cos_cfg.cos_classifier;
+	return port->cos_cfg.cos_classifier;
 }
 EXPORT_SYMBOL(mv_pp2x_cos_classifier_get);
 
@@ -366,7 +366,7 @@ EXPORT_SYMBOL(mv_pp2x_cos_classifier_get);
 */
 int mv_pp2x_cos_pri_map_get(struct mv_pp2x_port *port)
 {
-	return port->priv->pp2_cfg.cos_cfg.pri_map;
+	return port->cos_cfg.pri_map;
 }
 EXPORT_SYMBOL(mv_pp2x_cos_pri_map_get);
 
@@ -376,7 +376,7 @@ EXPORT_SYMBOL(mv_pp2x_cos_pri_map_get);
 
 int mv_pp2x_cos_default_value_get(struct mv_pp2x_port *port)
 {
-	return port->priv->pp2_cfg.cos_cfg.default_cos;
+	return port->cos_cfg.default_cos;
 }
 EXPORT_SYMBOL(mv_pp2x_cos_default_value_get);
 
