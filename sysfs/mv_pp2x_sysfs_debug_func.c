@@ -55,7 +55,7 @@ int mv_pp2x_port_bind_cpu_set(struct mv_pp2x_port *port, u8 bind_cpu)
 	int ret = 0;
 	u8 bound_cpu_first_rxq;
 
-	if (port->priv->pp2_cfg.rss_cfg.rss_en) {
+	if (port->rss_cfg.rss_en) {
 		netdev_err(port->dev,
 			"cannot bind cpu to port when rss is enabled\n");
 		return -EINVAL;
