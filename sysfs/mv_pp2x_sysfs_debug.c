@@ -201,6 +201,7 @@ static ssize_t mv_debug_store_mac(struct device *dev,
 		if (mv_pp2x_parse_mac_address(mac, b)) {
 			pr_err("%s: illegal mac address input\n", mac);
 			err = 1;
+			goto error;
 		}
 		for (i = 0; i < ETH_ALEN; i++)
 			mac_uc[i] = (u8)b[i];
@@ -209,6 +210,7 @@ static ssize_t mv_debug_store_mac(struct device *dev,
 		if (mv_pp2x_parse_mac_address(mac, b)) {
 			pr_err("%s: illegal mac address input\n", mac);
 			err = 1;
+			goto error;
 		}
 		for (i = 0; i < ETH_ALEN; i++)
 			mac_uc[i] = (u8)b[i];
@@ -231,6 +233,7 @@ static ssize_t mv_debug_store_mac(struct device *dev,
 		printk("%s: illegal operation <%s>\n", __func__, attr->attr.name);
 	}
 
+error:
 	if (err)
 		printk("%s: error %d\n", __func__, err);
 
