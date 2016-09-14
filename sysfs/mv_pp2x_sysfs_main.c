@@ -93,6 +93,22 @@ static int mv_pp2_sysfs_init(void)
 		return -1;
 	}
 
+	for (cpn_index = 0; cpn_index < MAX_NUM_CP_110; cpn_index++) {
+		pp2_dev = bus_find_device_by_name(&platform_bus_type, NULL,
+						  pp2_dev_name[cpn_index]);
+		if (!pp2_dev)
+			continue;
+
+		priv = dev_get_drvdata(pp2_dev);
+		pp2_plat_dev = to_platform_device(pp2_dev);
+		mv_pp2x_pp2_basic_print(pp2_plat_dev, priv);
+		mv_pp2x_pp2_ports_print(priv);
+		if (cpn_index == 0) {
+			sysfs_cur_priv = priv;
+			sysfs_cur_hw = &priv->hw;
+		}
+	}
+
 	mv_pp2_prs_high_sysfs_init(&pd->kobj);
 	mv_pp2_cls_sysfs_init(&pd->kobj);
 	mv_pp2_cls2_sysfs_init(&pd->kobj);
@@ -128,23 +144,6 @@ static int mv_pp2_sysfs_init(void)
 	mv_gop_sysfs_init(&pd->kobj);
 	mv_fca_sysfs_init(&pd->kobj);
 //	mv_pp2_dbg_sysfs_init(&pd->kobj);
-
-	for (cpn_index=0;cpn_index<MAX_NUM_CP_110;cpn_index++)
-	{
-		pp2_dev = bus_find_device_by_name(&platform_bus_type, NULL, pp2_dev_name[cpn_index]);
-		if (!pp2_dev) {
-			continue;
-		}
-		priv = dev_get_drvdata(pp2_dev);
-		pp2_plat_dev = to_platform_device(pp2_dev);
-		mv_pp2x_pp2_basic_print(pp2_plat_dev, priv);
-		mv_pp2x_pp2_ports_print(priv);
-		if (cpn_index == 0) {
-			sysfs_cur_priv = priv;
-			sysfs_cur_hw = &priv->hw;
-		}
-	}
-
 
 	return 0;
 }
