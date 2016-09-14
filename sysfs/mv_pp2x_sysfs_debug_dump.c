@@ -311,7 +311,7 @@ void mvPp2PortRxqRegs(struct mv_pp2x *pp2, int port, int rxq)
 
 	DBG_MSG("\n[PPv2 RxQ registers: port=%d, local rxq=%d]\n", port, rxq);
 
-	if (rxq >= MVPP2_MAX_RXQ)
+	if (rxq >= pp2_port->num_rx_queues)
 		return;
 
 	if (!pp2_port)
@@ -1781,8 +1781,8 @@ int mv_pp2x_cls_c2_sw_dump(struct mv_pp2x_cls_c2_entry *c2)
 	DBG_MSG(
 		"%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t",
 		((c2->sram.regs.actions &
-			MVPP2_CLS2_ACT_DATA_TBL_COLOR_MASK) >>
-			MVPP2_CLS2_ACT_DATA_TBL_COLOR_OFF),
+			MVPP2_CLS2_ACT_COLOR_MASK) >>
+			MVPP2_CLS2_ACT_COLOR_OFF),
 		((c2->sram.regs.actions &
 			MVPP2_CLS2_ACT_PRI_MASK) >>
 			MVPP2_CLS2_ACT_PRI_OFF),
@@ -1790,14 +1790,14 @@ int mv_pp2x_cls_c2_sw_dump(struct mv_pp2x_cls_c2_entry *c2)
 			MVPP2_CLS2_ACT_DSCP_MASK) >>
 			MVPP2_CLS2_ACT_DSCP_OFF),
 		((c2->sram.regs.actions &
-			MVPP2_CLS2_ACT_DATA_TBL_GEM_ID_MASK) >>
-			MVPP2_CLS2_ACT_DATA_TBL_GEM_ID_OFF),
+			MVPP2_CLS2_ACT_GEM_MASK) >>
+			MVPP2_CLS2_ACT_GEM_OFF),
 		((c2->sram.regs.actions &
-			MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_MASK) >>
-			MVPP2_CLS2_ACT_DATA_TBL_LOW_Q_OFF),
+			MVPP2_CLS2_ACT_QL_MASK) >>
+			MVPP2_CLS2_ACT_QL_OFF),
 		((c2->sram.regs.actions &
-			MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_MASK) >>
-			MVPP2_CLS2_ACT_DATA_TBL_HIGH_Q_OFF),
+			MVPP2_CLS2_ACT_QH_MASK) >>
+			MVPP2_CLS2_ACT_QH_OFF),
 		((c2->sram.regs.actions &
 			MVPP2_CLS2_ACT_FRWD_MASK) >>
 			MVPP2_CLS2_ACT_FRWD_OFF),
