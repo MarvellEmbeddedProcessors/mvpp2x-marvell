@@ -274,7 +274,7 @@ static inline void mv_pp2x_bm_hw_pool_create(struct mv_pp2x_hw *hw,
 
 	mv_pp2x_write(hw, MVPP2_BM_POOL_BASE_ADDR_REG(pool),
 		      lower_32_bits(pool_addr));
-#ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
+#if defined(CONFIG_ARCH_DMA_ADDR_T_64BIT) && defined(CONFIG_PHYS_ADDR_T_64BIT)
 	mv_pp2x_write(hw, MVPP22_BM_POOL_BASE_ADDR_HIGH_REG,
 		      (upper_32_bits(pool_addr) & MVPP22_ADDR_HIGH_MASK));
 #endif
@@ -287,15 +287,16 @@ static inline void mv_pp2x_bm_hw_pool_create(struct mv_pp2x_hw *hw,
 
 /* Release buffer to BM */
 static inline void mv_pp2x_bm_pool_put(struct mv_pp2x_hw *hw, u32 pool,
-					      dma_addr_t buf_phys_addr,
-					      u8 *buf_virt_addr)
+					      dma_addr_t buf_phys_addr)
 {
 
-	mv_pp2x_relaxed_write(hw, MVPP2_BM_VIRT_RLS_REG,
-			      lower_32_bits((uintptr_t)buf_virt_addr));
-	mv_pp2x_relaxed_write(hw, MVPP2_BM_PHY_RLS_REG(pool),
-		      lower_32_bits(buf_phys_addr));
+#ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
+	mv_pp2x_relaxed_write(hw, MVPP22_BM_PHY_VIRT_HIGH_RLS_REG,
+			upper_32_bits(buf_phys_addr));
+#endif
 
+	mv_pp2x_relaxed_write(hw, MVPP2_BM_PHY_RLS_REG(pool),
+				lower_32_bits(buf_phys_addr));
 }
 
 /* Release multicast buffer */
@@ -313,8 +314,7 @@ static inline void mv_pp2x_bm_pool_mc_put(struct mv_pp2x_port *port, int pool,
 	 */
 	mv_pp2x_bm_pool_put(&(port->priv->hw), pool,
 			    (dma_addr_t)(buf_phys_addr |
-			    MVPP2_BM_PHY_RLS_MC_BUFF_MASK),
-			    (u8 *)(u64)(buf_virt_addr));
+			    MVPP2_BM_PHY_RLS_MC_BUFF_MASK));
 }
 
 static inline void mv_pp2x_port_interrupts_enable(struct mv_pp2x_port *port)
@@ -445,7 +445,7 @@ static inline dma_addr_t mv_pp22_rxdesc_phys_addr_get(
 {
 	return((dma_addr_t)
 		(rx_desc->u.pp22.buf_phys_addr_key_hash &
-		DMA_BIT_MASK(32)));
+		DMA_BIT_MASK(40)));
 }
 
 static inline struct sk_buff *mv_pp21_txdesc_cookie_get(
@@ -575,7 +575,7 @@ void mv_pp2x_bm_pool_bufsize_set(struct mv_pp2x_hw *hw,
 				 struct mv_pp2x_bm_pool *bm_pool,
 				 int buf_size);
 void mv_pp2x_pool_refill(struct mv_pp2x *priv, u32 pool,
-			 dma_addr_t phys_addr, u8 *cookie);
+			 dma_addr_t phys_addr);
 
 void mv_pp21_rxq_long_pool_set(struct mv_pp2x_hw *hw,
 			       int prxq, int long_pool);
