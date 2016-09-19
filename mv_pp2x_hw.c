@@ -3824,9 +3824,17 @@ void mv_pp21_port_reset(struct mv_pp2x_port *port)
 
 /* Refill BM pool */
 void mv_pp2x_pool_refill(struct mv_pp2x *priv, u32 pool,
-			 dma_addr_t phys_addr, u8 *cookie, int cpu)
+			 dma_addr_t phys_addr, int cpu)
 {
-	mv_pp2x_bm_pool_put(&priv->hw, pool, phys_addr, cookie, cpu);
+	mv_pp2x_bm_pool_put(&priv->hw, pool, phys_addr, cpu);
+}
+
+void mv_pp2x_pool_refill_virtual(struct mv_pp2x *priv, u32 pool,
+	dma_addr_t phys_addr, u8 *cookie)
+{
+	int cpu = smp_processor_id();
+
+	mv_pp2x_bm_pool_put_virtual(&priv->hw, pool, phys_addr, cookie, cpu);
 }
 
 /* Set pool buffer size */
