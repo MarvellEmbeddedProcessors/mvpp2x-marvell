@@ -308,17 +308,20 @@ static int mv_pp2x_rx_refill_new(struct mv_pp2x_port *port,
 	data = mv_pp2x_frag_alloc(bm_pool);
 	if (!data)
 		return -ENOMEM;
+#ifdef CONFIG_64BIT
+	if (unlikely(bm_pool->data_high != ((u64)data & 0xffffffff00000000)))
+		return -ENOMEM;
+#endif
 
 	phys_addr = dma_map_single(port->dev->dev.parent, data,
 				   MVPP2_RX_BUF_SIZE(bm_pool->pkt_size),
 				   DMA_FROM_DEVICE);
-
 	if (unlikely(dma_mapping_error(port->dev->dev.parent, phys_addr))) {
 		mv_pp2x_frag_free(bm_pool, data);
 		return -ENOMEM;
 	}
 
-	mv_pp2x_pool_refill(port->priv, pool, phys_addr);
+	mv_pp2x_pool_refill(port->priv, pool, phys_addr, (u8 *)data);
 	atomic_dec(&bm_pool->in_use);
 	return 0;
 }
@@ -366,7 +369,13 @@ static int mv_pp2x_bm_pool_create(struct device *dev,
 	atomic_set(&bm_pool->in_use, 0);
 #ifdef CONFIG_64BIT
 {
-	bm_pool->data_high = 0xffffffc000000000;
+	void *data_tmp;
+
+	data_tmp = mv_pp2x_frag_alloc(bm_pool);
+	if (data_tmp) {
+		bm_pool->data_high = (u64)data_tmp & 0xffffffff00000000;
+		mv_pp2x_frag_free(bm_pool, data_tmp);
+	}
 }
 #endif
 
@@ -1140,7 +1149,7 @@ static void mv_pp2x_rxq_drop_pkts(struct mv_pp2x_port *port,
 			buf_phys_addr = mv_pp22_rxdesc_phys_addr_get(rx_desc);
 		}
 		mv_pp2x_pool_refill(port->priv, MVPP2_RX_DESC_POOL(rx_desc),
-			buf_phys_addr);
+			buf_phys_addr, buf_cookie);
 	}
 	preempt_enable();
 	mv_pp2x_rxq_status_update(port, rxq->id, rx_received, rx_received);
@@ -2288,13 +2297,14 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 			data = mv_pp21_rxdesc_cookie_get(rx_desc);
 			buf_phys_addr = mv_pp21_rxdesc_phys_addr_get(rx_desc);
 		} else {
+			data = mv_pp22_rxdesc_cookie_get(rx_desc);
 			buf_phys_addr = mv_pp22_rxdesc_phys_addr_get(rx_desc);
-			data = phys_to_virt(buf_phys_addr);
 		}
 
 #ifdef CONFIG_64BIT
 		data = (unsigned char *)((uintptr_t)data | bm_pool->data_high);
 #endif
+
 		/* Prefetch 128B packet_header */
 		prefetch(data + NET_SKB_PAD);
 		dma_sync_single_for_cpu(dev->dev.parent, buf_phys_addr,
@@ -2311,7 +2321,8 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 err_drop_frame:
 			dev->stats.rx_errors++;
 			mv_pp2x_rx_error(port, rx_desc);
-			mv_pp2x_pool_refill(port->priv, pool, buf_phys_addr);
+			mv_pp2x_pool_refill(port->priv, pool, buf_phys_addr,
+				data);
 			continue;
 		}
 
@@ -5035,7 +5046,7 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 	priv->pp2_version = priv->pp2xdata->pp2x_ver;
 
 	/* DMA Configruation */
-	err = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(40));
+	err = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
 	if (err) {
 		dev_err(&pdev->dev, "mvpp2: cannot set dma_mask\n");
 		goto err_clk;
