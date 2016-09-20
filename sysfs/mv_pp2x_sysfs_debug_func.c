@@ -351,6 +351,37 @@ int mv_pp2x_cls_c2_mtu_set(struct mv_pp2x_cls_c2_entry *c2, int mtu_inx)
 }
 EXPORT_SYMBOL(mv_pp2x_cls_c2_mtu_set);
 
+int mv_pp2x_cls_c2_dup_set(struct mv_pp2x_cls_c2_entry *c2, int dupid, int count)
+{
+	if (mv_pp2x_ptr_validate(c2) == MV_ERROR)
+		return MV_ERROR;
+
+	/*set flowid and count*/
+	c2->sram.regs.rss_attr &= ~(MVPP2_CLS2_ACT_DUP_ATTR_DUPID_MASK | MVPP2_CLS2_ACT_DUP_ATTR_DUPCNT_MASK);
+	c2->sram.regs.rss_attr |= (dupid << MVPP2_CLS2_ACT_DUP_ATTR_DUPID_OFF);
+	c2->sram.regs.rss_attr |= (count << MVPP2_CLS2_ACT_DUP_ATTR_DUPCNT_OFF);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mv_pp2x_cls_c2_dup_set);
+
+int mv_pp2x_cls_c2_mod_set(struct mv_pp2x_cls_c2_entry *c2, int data_ptr, int instr_offs, int l4_csum)
+{
+	if (mv_pp2x_ptr_validate(c2) == MV_ERROR)
+		return MV_ERROR;
+
+	c2->sram.regs.hwf_attr &= ~MVPP2_CLS2_ACT_HWF_ATTR_DPTR_MASK;
+	c2->sram.regs.hwf_attr &= ~MVPP2_CLS2_ACT_HWF_ATTR_IPTR_MASK;
+	c2->sram.regs.hwf_attr &= ~MVPP2_CLS2_ACT_HWF_ATTR_L4CHK_MASK;
+
+	c2->sram.regs.hwf_attr |= (data_ptr << MVPP2_CLS2_ACT_HWF_ATTR_DPTR_OFF);
+	c2->sram.regs.hwf_attr |= (instr_offs << MVPP2_CLS2_ACT_HWF_ATTR_IPTR_OFF);
+	c2->sram.regs.hwf_attr |= (l4_csum << MVPP2_CLS2_ACT_HWF_ATTR_L4CHK_OFF);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mv_pp2x_cls_c2_mod_set);
+
 /* mv_pp2x_cos_classifier_get
 *  -- Get the cos classifier on the port.
 */

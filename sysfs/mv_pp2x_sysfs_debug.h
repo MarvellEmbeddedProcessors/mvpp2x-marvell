@@ -99,6 +99,8 @@ int mv_pp2x_cls_c2_qos_color_set(struct mv_pp2x_cls_c2_qos_entry *qos,
 int mv_pp2x_cls_c2_queue_set(struct mv_pp2x_cls_c2_entry *c2, int cmd,
 			     int queue, int from);
 int mv_pp2x_cls_c2_mtu_set(struct mv_pp2x_cls_c2_entry *c2, int mtu_inx);
+int mv_pp2x_cls_c2_dup_set(struct mv_pp2x_cls_c2_entry *c2, int dupid, int count);
+int mv_pp2x_cls_c2_mod_set(struct mv_pp2x_cls_c2_entry *c2, int data_ptr, int instr_offs, int l4_csum);
 
 int mv_pp2x_prs_sw_dump(struct mv_pp2x_prs_entry *pe);
 int mv_pp2x_prs_hw_dump(struct mv_pp2x_hw *hw);

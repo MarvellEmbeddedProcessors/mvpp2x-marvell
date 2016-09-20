@@ -24,6 +24,23 @@ struct mv_pp2x_cls_c3_shadow_hash_entry mvCls3ShadowTbl[MVPP2_CLS_C3_HASH_TBL_SI
 int mvCls3ShadowExtTbl[MVPP2_CLS_C3_EXT_TBL_SIZE];
 static int SwInitCntSet;
 
+static void mv_pp2x_print_reg(struct mv_pp2x_hw *hw, unsigned int reg_addr,
+			      char *reg_name)
+{
+	DBG_MSG("  %-32s: 0x%x = 0x%08x\n", reg_name, reg_addr,
+		mv_pp2x_read(hw, reg_addr));
+}
+
+static void mv_pp2x_print_reg2(struct mv_pp2x_hw *hw, unsigned int reg_addr,
+			       char *reg_name, unsigned int index)
+{
+	char buf[64];
+
+	sprintf(buf, "%s[%d]", reg_name, index);
+	DBG_MSG("  %-32s: 0x%x = 0x%08x\n", reg_name, reg_addr,
+		mv_pp2x_read(hw, reg_addr));
+}
+
 /* Common utilities */
 static void mvPp2ClsC3ShadowSet(int hekSize, int index, int ext_index)
 {

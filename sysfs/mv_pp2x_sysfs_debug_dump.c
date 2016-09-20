@@ -1776,7 +1776,7 @@ int mv_pp2x_cls_c2_sw_dump(struct mv_pp2x_cls_c2_entry *c2)
 
 	DBG_MSG(
 		"ACT_CMD:	COLOR	PRIO	DSCP	GEMID	LOW_Q	HIGH_Q	FWD	POLICER	FID	RSS\n");
-	DBG_MSG("			");
+	DBG_MSG("		");
 
 	DBG_MSG(
 		"%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t%1.1d\t",
@@ -1891,11 +1891,17 @@ int mv_pp2x_cls_c2_sw_dump(struct mv_pp2x_cls_c2_entry *c2)
 	/*------------------------------*/
 	/*	CLSC2_ATTR2 0x1B6C	*/
 	/*------------------------------*/
-	DBG_MSG("RSS_ATTR:		RSS_EN\n");
-	DBG_MSG("			%d\n",
+	DBG_MSG("RSS_ATTR:		RSS_EN		DUP_COUNT	DUP_PTR\n");
+	DBG_MSG("			%d		%d		%d\n",
 		((c2->sram.regs.rss_attr &
 			MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_MASK) >>
-			MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_OFF));
+			MVPP2_CLS2_ACT_DUP_ATTR_RSSEN_OFF),
+		((c2->sram.regs.rss_attr &
+			MVPP2_CLS2_ACT_DUP_ATTR_DUPCNT_MASK) >>
+			MVPP2_CLS2_ACT_DUP_ATTR_DUPCNT_OFF),
+		((c2->sram.regs.rss_attr &
+			MVPP2_CLS2_ACT_DUP_ATTR_DUPID_MASK) >>
+			MVPP2_CLS2_ACT_DUP_ATTR_DUPID_OFF));
 	DBG_MSG("\n");
 
 	/*------------------------------*/

@@ -33,7 +33,7 @@ mvpp2x_sysfs-y := mv_pp2x_sysfs_main.o mv_pp2x_sysfs_prs_high.o mv_pp2x_sysfs_pr
 mvpp2x_sysfs-y += mv_pp2x_sysfs_eth_bm.o mv_pp2x_sysfs_eth_rx.o mv_pp2x_sysfs_eth_tx.o mv_pp2x_sysfs_rss.o mv_pp2x_sysfs_cos.o mv_pp2x_sysfs_debug.o mv_pp2x_sysfs_debug_dump.o mv_pp2x_sysfs_debug_func.o
 mvpp2x_sysfs-y += mv_pp2x_sysfs_eth_tx_sched.o mv_pp2x_sysfs_eth.o mv_pp2x_sysfs_eth_gop.o mv_pp2x_sysfs_eth_fca.o
 ifeq (SOC_TEST,$(TARGET))
-mvpp2x_sysfs-y += mv_pp2x_sysfs_cls3.o mv_pp2x_sysfs_cls4.o mv_sysfs_pp2x_pme.o mv_pp2x_sysfs_cls_mc.o
+mvpp2x_sysfs-y += mv_pp2x_sysfs_cls3.o mv_pp2x_sysfs_cls4.o mv_pp2x_sysfs_pme.o mv_pp2x_sysfs_cls_mc.o
 ccflags-y += -DMVPP2_SOC_TEST
 endif
 

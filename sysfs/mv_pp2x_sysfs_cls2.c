@@ -82,6 +82,10 @@ static ssize_t mv_cls2_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE, "echo cmd id bank   > act_sw_rss             - set RSS command <cmd> and enable RSS.\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "echo en            > act_sw_flowid          - set FlowID enable/disable <1/0> to action table SW entry.\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "echo idx           > act_sw_mtu             - set MTU index to action table SW entry\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo id cnt        > act_sw_dup             - set packet duplication parameters <id,cnt> to action table SW entry.\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "echo d i cs        > act_sw_mdf             - set modification parameters to action table SW entry\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "                                              data pointer <d>, instruction pointrt <i>,\n");
+	off += scnprintf(buf + off, PAGE_SIZE, "                                              <cs> enable L4 checksum generation.\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "echo               > cnt_clr_all            - clear all hit counters from action tabe.\n");
 	off += scnprintf(buf + off, PAGE_SIZE, "echo idx           > cnt_read               - show hit counter for action table entry.\n");
@@ -185,6 +189,10 @@ static ssize_t mv_cls2_store(struct device *dev,
 		mv_pp2x_cls_c2_mtu_set(&c2_entry, a);
 	else if (!strcmp(name, "act_sw_flowid"))
 		mv_pp2x_cls_c2_flow_id_en(&c2_entry, a);
+	else if (!strcmp(name, "act_sw_dup"))
+		mv_pp2x_cls_c2_dup_set(&c2_entry, a, b);
+	else if (!strcmp(name, "act_sw_mdf"))
+		mv_pp2x_cls_c2_mod_set(&c2_entry, a, b, c);
 	else {
 		err = 1;
 		printk(KERN_ERR "%s: illegal operation <%s>\n", __func__, attr->attr.name);
@@ -231,6 +239,8 @@ static DEVICE_ATTR(cnt_clr_all,		S_IWUSR, mv_cls2_show, mv_cls2_store);
 static DEVICE_ATTR(act_sw_qos,		S_IWUSR, mv_cls2_show, mv_cls2_store);
 static DEVICE_ATTR(cnt_read,		S_IWUSR, mv_cls2_show, mv_cls2_store);
 static DEVICE_ATTR(act_sw_flowid,	S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_dup,		S_IWUSR, mv_cls2_show, mv_cls2_store);
+static DEVICE_ATTR(act_sw_mdf,		S_IWUSR, mv_cls2_show, mv_cls2_store);
 
 static struct attribute *cls2_attrs[] = {
 	&dev_attr_prio_hw_dump.attr,
@@ -265,6 +275,8 @@ static struct attribute *cls2_attrs[] = {
 	&dev_attr_act_sw_qos.attr,
 	&dev_attr_cnt_read.attr,
 	&dev_attr_act_sw_flowid.attr,
+	&dev_attr_act_sw_dup.attr,
+	&dev_attr_act_sw_mdf.attr,
 	NULL
 };
 
