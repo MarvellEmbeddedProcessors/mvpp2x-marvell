@@ -2255,8 +2255,6 @@ struct mv_pp2x_bm_pool {
 	/* Ports using BM pool */
 	u32 port_map;
 
-	/* Occupied buffers indicator */
-	atomic_t in_use;
 	int in_use_thresh;
 #ifdef CONFIG_64BIT
 	u64 data_high;

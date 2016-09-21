@@ -130,8 +130,8 @@ void mv_pp2x_pool_status(struct mv_pp2x *priv, int log_pool_num)
 		"\n%12s log_pool=%d, phy_pool=%d: pkt_size=%d, buf_size=%d total_size=%d\n",
 		mv_pp2x_pool_description_get(log_pool_num), log_pool_num,
 		pool, bm_pool->pkt_size, bm_pool->buf_size, total_size);
-	DBG_MSG("\tcapacity=%d, buf_num=%d, in_use=%u, in_use_thresh=%u\n",
-		bm_pool->size, bm_pool->buf_num, atomic_read(&bm_pool->in_use),
+	DBG_MSG("\tcapacity=%d, buf_num=%d, in_use_thresh=%u\n",
+		bm_pool->size, bm_pool->buf_num,
 		bm_pool->in_use_thresh);
 }
 EXPORT_SYMBOL(mv_pp2x_pool_status);
