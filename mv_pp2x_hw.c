@@ -3830,7 +3830,7 @@ void mv_pp2x_pool_refill(struct mv_pp2x *priv, u32 pool,
 }
 
 void mv_pp2x_pool_refill_virtual(struct mv_pp2x *priv, u32 pool,
-	dma_addr_t phys_addr, u8 *cookie)
+			 dma_addr_t phys_addr, u8 *cookie)
 {
 	int cpu = smp_processor_id();
 

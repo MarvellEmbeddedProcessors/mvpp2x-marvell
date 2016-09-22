@@ -898,7 +898,7 @@ int mv_pp2x_txq_reserved_desc_num_proc(
 #endif
 
 	txq_pcpu->reserved_num += mv_pp2x_txq_alloc_reserved_desc(priv, txq,
-							MVPP2_CPU_DESC_CHUNK, cpu);
+							req, cpu);
 
 	/* OK, the descriptor cound has been updated: check again. */
 	if (txq_pcpu->reserved_num < num)
@@ -5031,7 +5031,8 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 
 	err = mv_pp2x_platform_data_get(pdev, priv, &cell_index, &port_count);
 	if (err) {
-		dev_err(&pdev->dev, "mvpp2: platform_data get failed\n");
+		if (err != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "mvpp2: platform_data get failed\n");
 		goto err_clk;
 	}
 	priv->pp2_version = priv->pp2xdata->pp2x_ver;
