@@ -2644,3 +2644,341 @@ int mvpp2_rss_hash_sel_set(struct mv_pp2x_hw *hw, enum mv_pp2_rss_hash_select se
 }
 EXPORT_SYMBOL(mvpp2_rss_hash_sel_set);
 
+/* Policer */
+void mvPp2PlcrHwRegs(struct mv_pp2x_hw *hw)
+{
+	int    i;
+	u32 val;
+
+	pr_info("\n[PLCR registers: %d policers]\n", MVPP2_PLCR_NUM);
+	mv_pp2x_print_reg(hw, MVPP2_PLCR_MODE_REG,	"MVPP2_PLCR_MODE_REG");
+	mv_pp2x_print_reg(hw, MVPP2_PLCR_BASE_PERIOD_REG,	"MVPP2_PLCR_BASE_PERIOD_REG");
+	mv_pp2x_print_reg(hw, MVPP2_PLCR_MIN_PKT_LEN_REG,	"MVPP2_PLCR_MIN_PKT_LEN_REG");
+	mv_pp2x_print_reg(hw, MVPP2_PLCR_EDROP_EN_REG,		"MVPP2_PLCR_EDROP_EN_REG");
+
+	for (i = 0; i < MVPP2_PLCR_NUM; i++) {
+		pr_info("\n[Policer %d registers]\n", i);
+
+		mv_pp2x_write(hw, MVPP2_PLCR_TABLE_INDEX_REG, i);
+		mv_pp2x_print_reg(hw, MVPP2_PLCR_COMMIT_TOKENS_REG, "MVPP2_PLCR_COMMIT_TOKENS_REG");
+		mv_pp2x_print_reg(hw, MVPP2_PLCR_EXCESS_TOKENS_REG, "MVPP2_PLCR_EXCESS_TOKENS_REG");
+		mv_pp2x_print_reg(hw, MVPP2_PLCR_BUCKET_SIZE_REG,   "MVPP2_PLCR_BUCKET_SIZE_REG");
+		mv_pp2x_print_reg(hw, MVPP2_PLCR_TOKEN_CFG_REG,     "MVPP2_PLCR_TOKEN_CFG_REG");
+	}
+
+	pr_info("\nEarly Drop Thresholds for SW and HW forwarding\n");
+
+	for (i = 0; i < MVPP2_V1_PLCR_EDROP_THRESH_NUM; i++) {
+		mv_pp2x_print_reg2(hw, MVPP2_V1_PLCR_EDROP_CPU_TR_REG(i),   "MVPP2_V1_PLCR_EDROP_CPU_TR_REG", i);
+		mv_pp2x_print_reg2(hw, MVPP2_V1_PLCR_EDROP_HWF_TR_REG(i),   "MVPP2_V1_PLCR_EDROP_HWF_TR_REG", i);
+	}
+
+	pr_info("\nPer RXQ: Non zero early drop thresholds\n");
+	for (i = 0; i < MVPP2_RXQ_TOTAL_NUM; i++) {
+		mv_pp2x_write(hw, MVPP2_PLCR_EDROP_RXQ_REG, i);
+		val = mv_pp2x_read(hw, MVPP2_PLCR_EDROP_RXQ_TR_REG);
+		if (val != 0)
+			pr_info("  %-32s: 0x%x = 0x%08x\n", "MVPP2_PLCR_EDROP_RXQ_TR_REG", MVPP2_PLCR_EDROP_RXQ_TR_REG, val);
+	}
+	pr_info("\nPer TXQ: Non zero Early Drop Thresholds\n");
+	for (i = 0; i < MVPP2_TXQ_TOTAL_NUM; i++) {
+		mv_pp2x_write(hw, MVPP2_PLCR_EDROP_TXQ_REG, i);
+		val = mv_pp2x_read(hw, MVPP2_PLCR_EDROP_TXQ_TR_REG);
+		if (val != 0)
+			pr_info("  %-32s: 0x%x = 0x%08x\n", "MVPP2_PLCR_EDROP_TXQ_TR_REG", MVPP2_PLCR_EDROP_TXQ_TR_REG, val);
+	}
+}
+EXPORT_SYMBOL(mvPp2PlcrHwRegs);
+
+static void mvPp2PlcrHwDumpTitle(struct mv_pp2x_hw *hw)
+{
+	u32 val;
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_BASE_PERIOD_REG);
+	pr_info("PLCR status: %d policers, period=%d (%s), ",
+				MVPP2_PLCR_NUM, val & MVPP2_PLCR_BASE_PERIOD_ALL_MASK,
+				val & MVPP2_PLCR_ADD_TOKENS_EN_MASK ? "En" : "Dis");
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_EDROP_EN_REG);
+	pr_info("edrop=%s, ", val & MVPP2_PLCR_EDROP_EN_MASK ? "En" : "Dis");
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_MIN_PKT_LEN_REG);
+	pr_info("min_pkt=%d bytes\n", (val & MVPP2_PLCR_MIN_PKT_LEN_ALL_MASK) >> MVPP2_PLCR_MIN_PKT_LEN_OFFS);
+
+	pr_info("PLCR: enable period  unit   type  tokens  color  c_size  e_size  c_tokens  e_tokens\n");
+}
+
+static void mvPp2PlcrHwDump(struct mv_pp2x_hw *hw, int plcr)
+{
+	int units, type, tokens, color, enable;
+	u32 val;
+
+	mv_pp2x_write(hw, MVPP2_PLCR_TABLE_INDEX_REG, plcr);
+	pr_info("%3d:  ", plcr);
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_TOKEN_CFG_REG);
+	units = val & MVPP2_PLCR_TOKEN_UNIT_MASK;
+	color = val & MVPP2_PLCR_COLOR_MODE_MASK;
+	type = (val & MVPP2_PLCR_TOKEN_TYPE_ALL_MASK) >> MVPP2_PLCR_TOKEN_TYPE_OFFS;
+	tokens =  (val & MVPP2_PLCR_TOKEN_VALUE_ALL_MASK) >> MVPP2_PLCR_TOKEN_VALUE_OFFS;
+
+	enable = val & MVPP2_PLCR_ENABLE_MASK;
+	pr_info("%4s", enable ? "Yes" : "No");
+
+	pr_info("   %-5s  %2d   %5d", units ? "pkts" : "bytes", type, tokens);
+	pr_info("  %-5s", color ? "aware" : "blind");
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_BASE_PERIOD_REG);
+	pr_info("  %6d", val & MVPP2_PLCR_BASE_PERIOD_ALL_MASK);
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_BUCKET_SIZE_REG);
+	pr_info("    %04x    %04x",
+			(val & MVPP2_PLCR_COMMIT_SIZE_ALL_MASK) >> MVPP2_PLCR_COMMIT_SIZE_OFFS,
+			(val & MVPP2_PLCR_EXCESS_SIZE_ALL_MASK) >> MVPP2_PLCR_EXCESS_SIZE_OFFS);
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_COMMIT_TOKENS_REG);
+	pr_info("    %08x", val);
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_EXCESS_TOKENS_REG);
+	pr_info("  %08x", val);
+
+	pr_info("\n");
+}
+
+void mvPp2PlcrHwDumpAll(struct mv_pp2x_hw *hw)
+{
+	int i;
+
+	mvPp2PlcrHwDumpTitle(hw);
+	for (i = 0; i < MVPP2_PLCR_NUM; i++)
+		mvPp2PlcrHwDump(hw, i);
+}
+EXPORT_SYMBOL(mvPp2PlcrHwDumpAll);
+
+void mvPp2PlcrHwDumpSingle(struct mv_pp2x_hw *hw, int plcr)
+{
+	mvPp2PlcrHwDumpTitle(hw);
+	mvPp2PlcrHwDump(hw, plcr);
+}
+EXPORT_SYMBOL(mvPp2PlcrHwDumpSingle);
+
+int mvPp2PlcrHwBaseRateGenEnable(struct mv_pp2x_hw *hw, int enable)
+{
+	u32 val;
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_BASE_PERIOD_REG);
+	if (enable)
+		val |= MVPP2_PLCR_ADD_TOKENS_EN_MASK;
+	else
+		val &= ~MVPP2_PLCR_ADD_TOKENS_EN_MASK;
+
+	mv_pp2x_write(hw, MVPP2_PLCR_BASE_PERIOD_REG, val);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2PlcrHwBaseRateGenEnable);
+
+int mvPp2PlcrHwBasePeriodSet(struct mv_pp2x_hw *hw, int period)
+{
+	u32 val;
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_BASE_PERIOD_REG);
+	val &= ~MVPP2_PLCR_BASE_PERIOD_ALL_MASK;
+	val |= MVPP2_PLCR_BASE_PERIOD_MASK(period);
+	mv_pp2x_write(hw, MVPP2_PLCR_BASE_PERIOD_REG, val);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2PlcrHwBasePeriodSet);
+
+int mvPp2PlcrHwMode(struct mv_pp2x_hw *hw, int mode)
+{
+	mv_pp2x_write(hw, MVPP2_PLCR_MODE_REG, mode);
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2PlcrHwMode);
+
+int mvPp2PlcrHwEnable(struct mv_pp2x_hw *hw, int plcr, int enable)
+{
+	u32 val;
+
+	mv_pp2x_write(hw, MVPP2_PLCR_TABLE_INDEX_REG, plcr);
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_TOKEN_CFG_REG);
+	if (enable)
+		val |= MVPP2_PLCR_ENABLE_MASK;
+	else
+		val &= ~MVPP2_PLCR_ENABLE_MASK;
+
+	mv_pp2x_write(hw, MVPP2_PLCR_TOKEN_CFG_REG, val);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2PlcrHwEnable);
+
+int mvPp2PlcrHwMinPktLen(struct mv_pp2x_hw *hw, int bytes)
+{
+	u32 val;
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_MIN_PKT_LEN_REG);
+	val &= ~MVPP2_PLCR_MIN_PKT_LEN_ALL_MASK;
+	val |= MVPP2_PLCR_MIN_PKT_LEN_MASK(bytes);
+	mv_pp2x_write(hw, MVPP2_PLCR_MIN_PKT_LEN_REG, val);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2PlcrHwMinPktLen);
+
+int mvPp2PlcrHwEarlyDropSet(struct mv_pp2x_hw *hw, int enable)
+{
+	u32 val;
+
+	val = mv_pp2x_read(hw, MVPP2_PLCR_EDROP_EN_REG);
+	if (enable)
+		val |= MVPP2_PLCR_EDROP_EN_MASK;
+	else
+		val &= ~MVPP2_PLCR_EDROP_EN_MASK;
+
+	mv_pp2x_write(hw, MVPP2_PLCR_EDROP_EN_REG, val);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2PlcrHwEarlyDropSet);
+
+int mvPp2PlcrHwTokenConfig(struct mv_pp2x_hw *hw, int plcr, int unit, int type)
+{
+	u32 val;
+
+	mv_pp2x_write(hw, MVPP2_PLCR_TABLE_INDEX_REG, plcr);
+	val = mv_pp2x_read(hw, MVPP2_PLCR_TOKEN_CFG_REG);
+	if (unit)
+		val |= MVPP2_PLCR_TOKEN_UNIT_MASK;
+	else
+		val &= ~MVPP2_PLCR_TOKEN_UNIT_MASK;
+
+	val &= ~MVPP2_PLCR_TOKEN_TYPE_ALL_MASK;
+	val |= MVPP2_PLCR_TOKEN_TYPE_MASK(type);
+
+	mv_pp2x_write(hw, MVPP2_PLCR_TOKEN_CFG_REG, val);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2PlcrHwTokenConfig);
+
+int mvPp2PlcrHwTokenValue(struct mv_pp2x_hw *hw, int plcr, int value)
+{
+	u32 val;
+
+	mv_pp2x_write(hw, MVPP2_PLCR_TABLE_INDEX_REG, plcr);
+	val = mv_pp2x_read(hw, MVPP2_PLCR_TOKEN_CFG_REG);
+
+	val &= ~MVPP2_PLCR_TOKEN_VALUE_ALL_MASK;
+	val |= MVPP2_PLCR_TOKEN_VALUE_MASK(value);
+	mv_pp2x_write(hw, MVPP2_PLCR_TOKEN_CFG_REG, val);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2PlcrHwTokenValue);
+
+int mvPp2PlcrHwColorModeSet(struct mv_pp2x_hw *hw, int plcr, int enable)
+{
+	u32 val;
+
+	mv_pp2x_write(hw, MVPP2_PLCR_TABLE_INDEX_REG, plcr);
+	val = mv_pp2x_read(hw, MVPP2_PLCR_TOKEN_CFG_REG);
+	if (enable)
+		val |= MVPP2_PLCR_COLOR_MODE_MASK;
+	else
+		val &= ~MVPP2_PLCR_COLOR_MODE_MASK;
+
+	mv_pp2x_write(hw, MVPP2_PLCR_TOKEN_CFG_REG, val);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2PlcrHwColorModeSet);
+
+int mvPp2PlcrHwBucketSizeSet(struct mv_pp2x_hw *hw, int plcr, int commit, int excess)
+{
+	u32 val;
+
+	mv_pp2x_write(hw, MVPP2_PLCR_TABLE_INDEX_REG, plcr);
+	val = MVPP2_PLCR_EXCESS_SIZE_MASK(excess) | MVPP2_PLCR_COMMIT_SIZE_MASK(commit);
+	mv_pp2x_write(hw, MVPP2_PLCR_BUCKET_SIZE_REG, val);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2PlcrHwBucketSizeSet);
+
+/*ppv2.1 policer early drop threshold mechanism changed*/
+int mvPp2V0PlcrHwCpuThreshSet(struct mv_pp2x_hw *hw, int idx, int threshold)
+{
+	u32 val;
+
+	val = mv_pp2x_read(hw, MVPP2_V0_PLCR_EDROP_CPU_TR_REG(idx));
+	val &= ~MVPP2_V0_PLCR_EDROP_TR_ALL_MASK(idx);
+	val |= MVPP2_V0_PLCR_EDROP_TR_MASK(idx, threshold);
+	mv_pp2x_write(hw, MVPP2_V0_PLCR_EDROP_CPU_TR_REG(idx), val);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2V0PlcrHwCpuThreshSet);
+
+/*ppv2.1 policer early drop threshold mechanism changed*/
+int mvPp2V1PlcrHwCpuThreshSet(struct mv_pp2x_hw *hw, int idx, int threshold)
+{
+	mv_pp2x_write(hw, MVPP2_V1_PLCR_EDROP_CPU_TR_REG(idx), threshold);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2V1PlcrHwCpuThreshSet);
+
+/*ppv2.1 policer early drop threshold mechanism changed*/
+int mvPp2V0PlcrHwHwfThreshSet(struct mv_pp2x_hw *hw, int idx, int threshold)
+{
+	u32 val;
+
+	val = mv_pp2x_read(hw, MVPP2_V0_PLCR_EDROP_HWF_TR_REG(idx));
+	val &= ~MVPP2_V0_PLCR_EDROP_TR_ALL_MASK(idx);
+	val |= MVPP2_V0_PLCR_EDROP_TR_MASK(idx, threshold);
+	mv_pp2x_write(hw, MVPP2_V0_PLCR_EDROP_HWF_TR_REG(idx), val);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2V0PlcrHwHwfThreshSet);
+
+/*ppv2.1 policer early drop threshold mechanism changed*/
+int mvPp2V1PlcrHwHwfThreshSet(struct mv_pp2x_hw *hw, int idx, int threshold)
+{
+	mv_pp2x_write(hw, MVPP2_V1_PLCR_EDROP_HWF_TR_REG(idx), threshold);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2V1PlcrHwHwfThreshSet);
+
+int mvPp2PlcrHwRxqThreshSet(struct mv_pp2x_hw *hw, int rxq, int idx)
+{
+	mv_pp2x_write(hw, MVPP2_PLCR_EDROP_RXQ_REG, rxq);
+	mv_pp2x_write(hw, MVPP2_PLCR_EDROP_RXQ_TR_REG, idx);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2PlcrHwRxqThreshSet);
+
+int mvPp2PlcrHwTxqThreshSet(struct mv_pp2x_hw *hw, int txq, int idx)
+{
+	mv_pp2x_write(hw, MVPP2_PLCR_EDROP_TXQ_REG, txq);
+	mv_pp2x_write(hw, MVPP2_PLCR_EDROP_TXQ_TR_REG, idx);
+
+	return MV_OK;
+}
+EXPORT_SYMBOL(mvPp2PlcrHwTxqThreshSet);
+
+void mvPp2V1PlcrTbCntDump(struct mv_pp2x_hw *hw, int plcr)
+{
+	mv_pp2x_print_reg2(hw, MVPP2_V1_PLCR_PKT_GREEN_REG(plcr), "MVPP2_V1_PLCR_PKT_GREEN_REG", plcr);
+	mv_pp2x_print_reg2(hw, MVPP2_V1_PLCR_PKT_YELLOW_REG(plcr), "MVPP2_V1_PLCR_PKT_YELLOW_REG", plcr);
+	mv_pp2x_print_reg2(hw, MVPP2_V1_PLCR_PKT_RED_REG(plcr), "MVPP2_V1_PLCR_PKT_RED_REG", plcr);
+
+}
+EXPORT_SYMBOL(mvPp2V1PlcrTbCntDump);
+

@@ -116,7 +116,7 @@ static int mv_pp2_sysfs_init(void)
 	mv_pp2_cls3_sysfs_init(&pd->kobj);
 	mv_pp2_cls4_sysfs_init(&pd->kobj);
 	//mv_pp2_wol_sysfs_init(&pd->kobj);
-	//mv_pp2_plcr_sysfs_init(&pd->kobj);
+	mv_pp2_plcr_sysfs_init(&pd->kobj);
 	mv_pp2_pme_sysfs_init(&pd->kobj);
 	mv_pp2_mc_sysfs_init(&pd->kobj);
 #endif
@@ -166,6 +166,7 @@ static void mv_pp2_sysfs_exit(void)
 //#endif
 #ifdef MVPP2_SOC_TEST
 //	mv_pp2_wol_sysfs_exit(&pd->kobj);
+	mv_pp2_plcr_sysfs_exit(&pd->kobj);
 	mv_pp2_pme_sysfs_exit(&pd->kobj);
 
 	mv_pp2_mc_sysfs_exit(&pd->kobj);
@@ -182,7 +183,6 @@ static void mv_pp2_sysfs_exit(void)
 	mv_pp2_cos_sysfs_exit(&pd->kobj);
 	mv_pp2_debug_sysfs_exit(&pd->kobj);
 	mv_pp2_tx_sched_sysfs_exit(&pd->kobj);
-//	mv_pp2_plcr_sysfs_exit(&pd->kobj);
 	mv_pp2_gbe_sysfs_exit(&pd->kobj);
 	mv_gop_sysfs_exit(&pd->kobj);
 	mv_fca_sysfs_exit(&pd->kobj);

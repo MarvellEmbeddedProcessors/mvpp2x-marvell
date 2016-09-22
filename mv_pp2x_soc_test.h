@@ -189,4 +189,26 @@ int mvpp2_rss_tbl_entry_set(struct mv_pp2x_hw *hw, struct mv_pp22_rss_entry *rss
 			       u8 tbl_id, u8 tbl_line, u8 rxq, u8 width);
 int mvpp2_rss_hash_sel_set(struct mv_pp2x_hw *hw, enum mv_pp2_rss_hash_select sel);
 
+/* Policer */
+void mvPp2PlcrHwRegs(struct mv_pp2x_hw *hw);
+void mvPp2PlcrHwDumpAll(struct mv_pp2x_hw *hw);
+void mvPp2PlcrHwDumpSingle(struct mv_pp2x_hw *hw, int plcr);
+int mvPp2PlcrHwBaseRateGenEnable(struct mv_pp2x_hw *hw, int enable);
+int mvPp2PlcrHwBasePeriodSet(struct mv_pp2x_hw *hw, int period);
+int mvPp2PlcrHwMode(struct mv_pp2x_hw *hw, int mode);
+int mvPp2PlcrHwEnable(struct mv_pp2x_hw *hw, int plcr, int enable);
+int mvPp2PlcrHwMinPktLen(struct mv_pp2x_hw *hw, int bytes);
+int mvPp2PlcrHwEarlyDropSet(struct mv_pp2x_hw *hw, int enable);
+int mvPp2PlcrHwTokenConfig(struct mv_pp2x_hw *hw, int plcr, int unit, int type);
+int mvPp2PlcrHwTokenValue(struct mv_pp2x_hw *hw, int plcr, int value);
+int mvPp2PlcrHwColorModeSet(struct mv_pp2x_hw *hw, int plcr, int enable);
+int mvPp2PlcrHwBucketSizeSet(struct mv_pp2x_hw *hw, int plcr, int commit, int excess);
+int mvPp2V0PlcrHwCpuThreshSet(struct mv_pp2x_hw *hw, int idx, int threshold);
+int mvPp2V1PlcrHwCpuThreshSet(struct mv_pp2x_hw *hw, int idx, int threshold);
+int mvPp2V0PlcrHwHwfThreshSet(struct mv_pp2x_hw *hw, int idx, int threshold);
+int mvPp2V1PlcrHwHwfThreshSet(struct mv_pp2x_hw *hw, int idx, int threshold);
+int mvPp2PlcrHwRxqThreshSet(struct mv_pp2x_hw *hw, int rxq, int idx);
+int mvPp2PlcrHwTxqThreshSet(struct mv_pp2x_hw *hw, int txq, int idx);
+void mvPp2V1PlcrTbCntDump(struct mv_pp2x_hw *hw, int plcr);
+
 #endif /* _MV_PP2X_SOC_TEST_H_ */
