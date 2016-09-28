@@ -1973,10 +1973,6 @@ void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv)
 #endif
 	DBG_MSG("hw->base(%p)\n", priv->hw.base);
 	if (priv->pp2_version == PPV22) {
-		DBG_MSG("gop_addr: gmac(%p) xlg(%p) serdes(%p)\n",
-			priv->hw.gop.gop_110.gmac.base,
-			priv->hw.gop.gop_110.xlg_mac.base,
-			priv->hw.gop.gop_110.serdes.base);
 		DBG_MSG("gop_addr: xmib(%p) smi(%p) xsmi(%p)\n",
 			priv->hw.gop.gop_110.xmib.base,
 			priv->hw.gop.gop_110.smi_base,

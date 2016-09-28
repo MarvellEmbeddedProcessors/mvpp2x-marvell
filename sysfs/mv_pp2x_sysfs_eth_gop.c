@@ -44,7 +44,6 @@ static ssize_t mv_gop_help(char *b)
 	o += sprintf(b+o, "echo [p]        > gmacRegs        - show GMAC registers for port <p>\n");
 	o += sprintf(b+o, "echo [p]        > xlgmacRegs      - show XLG MAC registers for port <p>\n");
 	o += sprintf(b+o, "echo [p]        > mibCntrs        - show MIB counters for port <p>\n");
-	o += sprintf(b+o, "echo [p]        > serdesRegs      - show SERDES regsiters for port <p>.\n");
 	o += sprintf(b+o, "echo [p]        > xpcsLaneRegs    - show XPCS Lane registers for lane <p>\n");
 	return o;
 }
@@ -112,16 +111,10 @@ static ssize_t mv_gop_port_store(struct device *dev,
 		mv_gop110_xpcs_global_read(&sysfs_cur_hw->gop, p);
 	} else if (!strcmp(name, "xpcsGlobalWrite")) {
 		mv_gop110_xpcs_global_write(&sysfs_cur_hw->gop, p, v);
-	} else if (!strcmp(name, "serdesRead")) {
-		mv_gop110_serdes_read(&sysfs_cur_hw->gop, p, v);
-	} else if (!strcmp(name, "serdesWrite")) {
-		mv_gop110_serdes_write(&sysfs_cur_hw->gop, p, v, a);
 	} else if (!strcmp(name, "xlgmacRegs")) {
 		mv_gop110_xlg_mac_regs_dump(&sysfs_cur_hw->gop, p);
 	} else if (!strcmp(name, "mibCntrs")) {
 		mv_gop110_mib_counters_show(&sysfs_cur_hw->gop, p);
-	} else if (!strcmp(name, "serdesRegs")) {
-		mv_gop110_serdes_lane_regs_dump(&sysfs_cur_hw->gop, p);
 	} else if (!strcmp(name, "xpcsLaneRegs")) {
 		mv_gop110_xpcs_lane_regs_dump(&sysfs_cur_hw->gop, p);
 	} else if (!strcmp(name, "status_show")) {
@@ -155,11 +148,8 @@ static DEVICE_ATTR(xpcsLaneRead,      S_IWUSR, NULL, mv_gop_port_store);
 static DEVICE_ATTR(xpcsLaneWrite,      S_IWUSR, NULL, mv_gop_port_store);
 static DEVICE_ATTR(xpcsGlobalRead,      S_IWUSR, NULL, mv_gop_port_store);
 static DEVICE_ATTR(xpcsGlobalWrite,      S_IWUSR, NULL, mv_gop_port_store);
-static DEVICE_ATTR(serdesRead,      S_IWUSR, NULL, mv_gop_port_store);
-static DEVICE_ATTR(serdesWrite,      S_IWUSR, NULL, mv_gop_port_store);
 static DEVICE_ATTR(xlgmacRegs,    S_IWUSR, NULL, mv_gop_port_store);
 static DEVICE_ATTR(mibCntrs,      S_IWUSR, NULL, mv_gop_port_store);
-static DEVICE_ATTR(serdesRegs,    S_IWUSR, NULL, mv_gop_port_store);
 static DEVICE_ATTR(xpcsLaneRegs,  S_IWUSR, NULL, mv_gop_port_store);
 static DEVICE_ATTR(status_show,    S_IWUSR, NULL, mv_gop_port_store);
 
@@ -179,13 +169,10 @@ static struct attribute *mv_gop_attrs[] = {
 	&dev_attr_xpcsLaneWrite.attr,
 	&dev_attr_xpcsGlobalRead.attr,
 	&dev_attr_xpcsGlobalWrite.attr,
-	&dev_attr_serdesRead.attr,
-	&dev_attr_serdesWrite.attr,
 	&dev_attr_xpcsGlRegs.attr,
 	&dev_attr_gmacRegs.attr,
 	&dev_attr_xlgmacRegs.attr,
 	&dev_attr_mibCntrs.attr,
-	&dev_attr_serdesRegs.attr,
 	&dev_attr_xpcsLaneRegs.attr,
 	&dev_attr_status_show.attr,
 	NULL
