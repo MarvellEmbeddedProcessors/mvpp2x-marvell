@@ -65,10 +65,13 @@ disclaimer.
 
 struct mv_pp2x *sysfs_cur_priv;
 struct mv_pp2x_hw *sysfs_cur_hw;
-char *pp2_dev_name[MAX_NUM_CP_110] = {"f2000000.ppv22", "f4000000.ppv22"};
-
 static struct platform_device * pp2_sysfs;
 
+#ifdef MVPP21
+  char *pp2_dev_name[MAX_NUM_CP_110] = {"f10f0000.ethernet", "Null"};
+#else
+  char *pp2_dev_name[MAX_NUM_CP_110] = {"f2000000.ppv22", "f4000000.ppv22"};
+#endif
 
 extern void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv);
 extern void mv_pp2x_pp2_ports_print(struct mv_pp2x *priv);

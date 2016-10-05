@@ -55,12 +55,18 @@ static ssize_t mv_pp2_show(struct device *dev,
 {
 	const char *name = attr->attr.name;
 	int off = 0;
+	int stop;
+
+	if (sysfs_cur_priv->pp2xdata->pp2x_ver == PPV21)
+		stop = 31;
+	else
+		stop = 38;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
 	if (!strcmp(name, "rxDmaRegs"))
-		mvPp2RxDmaRegsPrint(sysfs_cur_priv, 0, 0, 38);
+		mvPp2RxDmaRegsPrint(sysfs_cur_priv, 0, 0, stop);
 	else
 		off = mv_pp2_help(buf);
 

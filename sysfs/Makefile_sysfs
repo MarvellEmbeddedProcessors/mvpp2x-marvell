@@ -24,6 +24,7 @@ MACH_MVEBU_DIR = $(SYSFS_MOD_DIR)/mach-mvebu
 #export MACH_MVEBU_DIR
 ccflags-y := -I$(SYSFS_MOD_DIR)
 ccflags-y += -I${PP2_MOD_DIR}
+#ccflags-y += -DMVPP21
 #ccflags-y += -I${MV_EBU_NET_DIR}
 #ccflags-y += -I${MACH_MVEBU_DIR}
 
