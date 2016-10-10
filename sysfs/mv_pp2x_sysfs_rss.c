@@ -115,7 +115,7 @@ static ssize_t mv_rss_store(struct device *dev,
 
 	if (err)
 		printk("%s: error %d\n", __func__, err);
-
+	dev_put(netdev);
 	return err ? -EINVAL : len;
 }
 

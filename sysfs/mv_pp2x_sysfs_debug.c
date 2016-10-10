@@ -131,7 +131,7 @@ static ssize_t mv_debug_store(struct device *dev,
 
 	if (err)
 		printk("%s: error %d\n", __func__, err);
-
+	dev_put(netdev);
 	return err ? -EINVAL : len;
 }
 
@@ -236,7 +236,7 @@ static ssize_t mv_debug_store_mac(struct device *dev,
 error:
 	if (err)
 		printk("%s: error %d\n", __func__, err);
-
+	dev_put(netdev);
 	return err ? -EINVAL : len;
 }
 
