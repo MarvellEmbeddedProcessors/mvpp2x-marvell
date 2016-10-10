@@ -1968,9 +1968,6 @@ void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv)
 	DBG_MSG("first_bm_pool(%d)\n", priv->pp2_cfg.first_bm_pool);
 	DBG_MSG("cell_index(%d) num_ports(%d)\n",
 		priv->pp2_cfg.cell_index, priv->num_ports);
-#ifdef CONFIG_64BIT
-	DBG_MSG("skb_base_addr(%p)\n", (void *)priv->pp2xdata->skb_base_addr);
-#endif
 	DBG_MSG("hw->base(%p)\n", priv->hw.base);
 	if (priv->pp2_version == PPV22) {
 		DBG_MSG("gop_addr: xmib(%p) smi(%p) xsmi(%p)\n",
