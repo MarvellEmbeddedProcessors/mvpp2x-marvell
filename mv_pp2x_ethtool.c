@@ -860,10 +860,10 @@ static int mv_pp2x_ethtool_get_rxnfc(struct net_device *dev,
 	int ret = -EOPNOTSUPP;
 
 	if (port->priv->pp2_version == PPV21)
-		return ret;
+		return -EOPNOTSUPP;
 
 	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
-		return ret;
+		return -EOPNOTSUPP;
 
 	if (!port)
 		return -EIO;
@@ -927,11 +927,11 @@ static int mv_pp2x_ethtool_set_rxnfc(struct net_device *dev, struct ethtool_rxnf
 	int ret = -EOPNOTSUPP;
 
 	if (port->priv->pp2_version == PPV21)
-		return ret;
+		return -EOPNOTSUPP;
 
 	/* Single mode doesn't support RSS features */
 	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
-		return ret;
+		return -EOPNOTSUPP;
 
 	switch (cmd->cmd) {
 	case ETHTOOL_SRXFH:

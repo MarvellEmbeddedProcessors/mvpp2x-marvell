@@ -1133,13 +1133,13 @@ static void mv_pp2x_rxq_drop_pkts(struct mv_pp2x_port *port,
 		struct mv_pp2x_rx_desc *rx_desc =
 			mv_pp2x_rxq_next_desc_get(rxq);
 
-		if (port->priv->pp2_version == PPV21) {
+		if (port->priv->pp2_version == PPV21)
 			buf_phys_addr = mv_pp21_rxdesc_phys_addr_get(rx_desc);
-			buf_cookie = phys_to_virt(dma_to_phys(port->dev->dev.parent, buf_phys_addr));
-		} else {
+		else
 			buf_phys_addr = mv_pp22_rxdesc_phys_addr_get(rx_desc);
-			buf_cookie = phys_to_virt(dma_to_phys(port->dev->dev.parent, buf_phys_addr));
-		}
+
+		buf_cookie = phys_to_virt(dma_to_phys(port->dev->dev.parent, buf_phys_addr));
+
 		mv_pp2x_pool_refill(port->priv, MVPP2_RX_DESC_POOL(rx_desc),
 			buf_phys_addr, cpu);
 	}
@@ -2349,13 +2349,12 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 			continue;
 		}
 
-		if (port->priv->pp2_version == PPV21) {
+		if (port->priv->pp2_version == PPV21)
 			buf_phys_addr = mv_pp21_rxdesc_phys_addr_get(rx_desc);
-			data = phys_to_virt(dma_to_phys(port->dev->dev.parent, buf_phys_addr));
-		} else {
+		else
 			buf_phys_addr = mv_pp22_rxdesc_phys_addr_get(rx_desc);
-			data = phys_to_virt(dma_to_phys(port->dev->dev.parent, buf_phys_addr));
-		}
+
+		data = phys_to_virt(dma_to_phys(port->dev->dev.parent, buf_phys_addr));
 
 		/* Prefetch 128B packet_header */
 		prefetch(data + NET_SKB_PAD);
