@@ -19,6 +19,7 @@
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <linux/module.h>
+#include <linux/capability.h>
 
 #ifdef ARMADA_390
 #include "common/mv_sw_if.h"

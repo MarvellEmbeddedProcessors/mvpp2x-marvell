@@ -23,6 +23,7 @@
 
 /* includes */
 #include <linux/kernel.h>
+#include <linux/sched.h>
 #include <linux/platform_device.h>
 
 #ifdef ARMADA_390
