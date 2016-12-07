@@ -1,0 +1,245 @@
+PPv2.2 Features
+===============
+
+Table of Contents
+-----------------
+- Interface/link control
+- L2 filtering
+- TX/RX Queues
+- Offload features
+- RX QoS configuration
+- RSS configuration
+- Wake-on-LAN
+
+Related Documentation
+---------------------
+The features described in this section can be operated through several interfaces and mechanisms.
+Please refer to the proper documentation for the related mechanisms:
+	- Linux ifconfig command: see http://linuxcommand.org/man_pages/ifconfig8.html
+	- Linux ethtool commands: see http://linuxcommand.org/man_pages/ethtool8.html
+	- PPv2.2 module parameters: see "PPv2.2 Kernel Module Parameters" documentation section.
+	- PPv2.2 proprietary sysfs commands: see "PPv2.2 Sysfs Support" documentation section.
+
+Interface/Link Control 
+-------------------------
+1. Start/Stop network interface:
+	Start/Stop network interface is supported via ifconfig command.
+
+2. Manual speed/duplex configuration:
+	Speed/duplex configuration is supported via ethtool command.
+	
+	Limitations:
+	- Speed/Duplex configuration is not supported for Peridot module.
+	- To enable 10G<->1G / 100M / 10M transition, port should support XLG mode and 
+		comphy selector should be set in MAC device tree node.
+		See Linux Kernel Documentation/devicetree/bindings/net/marvell-pp2x.txt
+	  
+3. Speed/duplex/FC auto-negotiation: 
+	Speed/duplex/flow-ctrl auto-negotiation configuration is supported via ethtool command.
+	
+	Limitations:
+	- Auto-negotiation is not supported on 10G ports.
+	- Only RX flow control is supported.
+
+4. MTU configuration per interface
+	MTU configuration per interface is supported via ifconfig command.
+	
+5. Ethtool status and MAC statistics
+	Ethtool status and MAC statistics are supported via ethtool command. Supported statistics:
+		- rx_bytes
+		- rx_frames
+		- rx_unicast
+		- rx_mcast
+		- rx_bcast
+		- tx_bytes
+		- tx_frames
+		- tx_unicast
+		- tx_mcast
+		- tx_bcast
+		- tx_pause
+		- rx_pause
+		- rx_overrun
+		- rx_crc
+		- rx_runt
+		- rx_giant
+		- rx_fragments_err
+		- rx_mac_err
+		- rx_jabber 
+		- rx_sw_drop
+		- rx_total_err
+		- tx_drop
+		- tx_crc_sent
+		- collision
+		- late_collision
+		  
+
+L2 filtering
+---------------
+Unicast MAC address/Multicast MAC addresses filtering description:
+	- The MAC filtering is implemented by hardware on A70x0 and A80x0. MAC filtering is done in parser TCAM by parsing the DMAC field.
+		- Filtering capability:
+			For each port, the capability of UC and MC entrys is 36.
+			There is a parameter of “uc_filter_max” in the driver, whose value should be multiple of 4. The default value is 4.
+			Parameter determinate maximum number of UC entrys.
+			The MC filtering capability is (36 - uc_filter_max).
+		- MAC range:
+			There is a MAC range is created in parser TCAM, and the TCAM entries in the range are reserved only for MAC parsing.
+			There are 4 ports each PP22 including loopback port, so only 3 ports will support Rx MAC filtering.
+			So the range size is defined as 36 * 3 + 4 (M2M entry) + 1 (BC) = 113.
+		- MAC filtering behavior:
+			The filtering behaviors are defined as following.
+				- UC filtering: If uc_entry_num > uc_filter_max, put the port to promisc mode.
+				- MC filtering: If mc_entry_num > (36- uc_filter_max), put the port to all-multi mode.
+
+			From the behavior definition, there are 3 states for each port:
+				- State1: non-promisc & non-allmulti
+				- State2: Promisc mode
+				- State3: non-promisc & allmulti
+				
+	- Unicast MAC address/Multicast MAC addresses configuration:
+		- uc_filter_max - can be set via module parameter.
+		- Unicast MAC address filtering could be added, deleted or dumped by sysfs commands.
+		  or Linux callbacks: dev_uc_add, dev_uc_del and netdev_for_each_uc_addr
+		- Multicast MAC address filtering could be added, deleted or dumped by ip maddr commands. See https://linux.die.net/man/8/ip
+
+		
+TX/RX Queues
+---------------
+TX/RX descriptors ring size is the number of descriptors in each TX/RX queue. This parameter is set for all queues, per port.
+	- TX/RX descriptors ring size could be set via module parameter or ethtool command.
+	- Descriptors ring size range:
+		- TX: 32-1024 (in multiples of 16), default is 1024
+		- RX: 16-1024 (in multiples of 16), default is 1024
+
+TX/RX coalescing set the delay between the tx and rx events and the generation of interrupts for those events.
+There are two delay criterions: number of frames and time.
+
+The frames parameters specifies how many packets are received/transmitted in specific queue ring before generating an interrupt.
+The time parameters specifies how many microseconds after at least 1 packet is received/transmitted before generating an interrupt.
+Parameter could be set by port.
+  - TX/RX coalescing could be set via ethtool command.
+  - TX/RX coalescing range:
+		- RX/TX coalescing in number of frames:
+			- Range: 0-16383
+			- TX default: 64
+			- RX default: 32
+		- RX/TX time coalescing depends on HW clock:
+			- Range: 0-0xfffff0 HW clocks
+			- TX default: 10000 usec
+			- RX default: 64 usec
+
+The number of RX/TX CoS queues is applied for all interfaces. Each port has its own RX queues and TX queues.
+	- TX/RX descriptors ring size could be set via module parameter.
+	- RX/TX CoS queues range: 1-8, default is 4
+
+
+Offload Features
+-------------------
+	1. TSO - enabled by default. Can be configured via ethtool command.
+	2. GRO - enabled by default. Can be configured via ethtool command.
+	3. TX/RX L4 checksum - enabled by default. Can be configured via ethtool command.
+	
+		Limitation:
+			L4 TX checksum is not supported on ports 1,2 for MTU value greater than 1518.
+			
+	4. RX parsing: VLAN, IPv4, IPv6, PPPoE, TCP/UDP. Always enabled.
+
+
+
+RX QoS Configuration
+-----------------------
+RX CoS is done with parser and classifier module in the SoC.
+The goal is to classify the packets with the CoS value they have in order to let different packets to be handled with different priority.
+Each packet has its own CoS value, which is ranged from 0 to 7.
+
+ There are four packet CoS classification modes:
+	- VLAN_PRI mode
+		If system works in this mode, the CoS value equals to their VLAN priority (p-bit). If the packet is untagged, there will be a default CoS value
+		assigned to it.
+	- DSCP_PRI mode
+		If system works in this mode, the CoS value is determined by the high 3 bits of DSCP field, that is DSCP[5:3] >> 3. If the packet is non-IP packet,
+		there will also a default CoS value assigned to it.
+	- VLAN_DSCP_PRI mode
+		In this mode, if the packet is tagged, VLAN priority is taken as CoS value, if it is IP packet untagged, DSCP priority will be used as DSCP_PRI mode.
+		For non-IP packet untagged, the default CoS value will be assigned.
+	- DSCP_VLAN_PRI mode.
+		In this mode, if the packet is IP, DSCP priority is taken as CoS value, if it is non-IP packet but tagged, VLAN priority will be used as VLAN_PRI mode.
+		For non-IP packet untagged, the default CoS value will be assigned. CoS value to relevant RX queues mapping done by pri_map parameter for each eth port,
+		each nibble of the mapping data will map a CoS value to a RX queue.
+	
+CoS value should be mapped to relevant different RX queues.
+There will be a mapping parameter (pri_map) of 32 bits for each eth port, each nibble of the mapping data will map a CoS value to a RX queue.
+For example: there is mapping data pri_map=0x22221100, it maps cos=0,1 to rxq0, cos=2,3 to rxq1 etc. Mapping data pri_map=0x22221100 can map all
+packets to 3 RX queues, rxq0, rxq1 and rxq2. So the port must have 3 RX queues allocated at least to support the mapping. A third parameter
+num_cos_queues(See number of queues configuration) configures the number of rx_queues that create different classes of service. num_cos_queues must
+be large enough to support the pri_map.
+
+CoS parameters (all can be set via module parameter or sysfs commands):
+	- cos_classifier:
+		- It has 4 options: 0 – VLAN_MODE, 1 – DSCP_MODE, 2 – VLAN_DSCP_MODE, 3 – DSCP_VLAN_MODE
+	- num_cos_queues:
+		- The number of rx_queues that create different classes of service
+	- pri_map:
+		- The data mapping CoS value to rx queue
+	- default_cos:
+		- The default CoS for untagged packets (VLAN mode) or non-IP packets (DSCP mode)
+		
+
+RSS Configuration
+--------------------
+In PP22 there are 8 RSS tables, and each one has 32 RSS entries which contain the remapping RX queues.
+All RX queues in one RSS table entries have the same priority, and the priority equals to the priority of the CoS RX queue which owns the RSS table.
+In RSS table, the entries are indexed by HASH value of packets, so each IP packet can find its relevant entry in the table with its HASH value.
+According to the value of RSS table entry, the CoS RX queue is remapped to RSS RX queues.
+
+RSS is not mandatory, but it determines the interrupt structure, so a parameter (queue_mode) indicates interrupt structure.
+The parameter could not be updated at run time.
+RSS can be enabled or disabled, and different CPU weight can be updated with ethtool:
+	
+		ethtool -K|--offload devname [rxhash on|off]
+
+Offloading parameter (rxhash) is used as a toggle to enable/disable RSS, which is equivalent to running the first command in Table 2. It updates the parameter of rss_enable.
+For example:
+		
+		ethtool -K eth0 rxhash on
+			
+The example enables RSS on port 0, parameter rss_enable equals to 1 after the command.
+		
+		ethtool -X|--set-rxfh-indir devname [ equal N | weight W0 W1 ... ]
+
+Strictly speaking, the ethtool command is not supported by PP22, because RSS tables are global, so in PP22 driver the command will affect other ports.
+For example:
+	
+		ethtool –X eth0 weight 1 3
+	
+Sets the first CPU one quarter of the whole hash, and 3 quarters on the second CPU.
+	
+		ethtool –X eth0 equal 2
+	
+Spreads the hash evenly between the first 2 CPUs.
+If there are 4 CPUs in the SOC, and only CPU2 and CPU3 are online, then the first CPU is CPU2 and second CPU is CPU3.
+
+RSS tables are configured per CPN, so on A8040 each CPN group of ports has his own RSS tables configurations.
+
+There are 2 kinds of way to calculate the HASH value, one is based on 5T and another is based on 2T.
+In general, for TCP packets it is always based on 5T, but for UDP packets both ways are OK, and it is configurable.
+So there is a parameter (rss_mode) supplied to tell system the way to calculate UDP HASH value.
+There is a special case, IP fragment packet, regardless of L4 protocol,	its HASH value is always based on 2T.
+Because HASH value only exists in IP packets, another parameter (default_cpu) is supplied to tell system which CPU should handle the non-IP packets.
+
+RSS parameters:
+	- queue_mode: has 2 options:
+		- 0 – SINGLE_MODE, means single mode (shared) rx interrupt.
+		- 1 – MULTI_MODE, means multi mode (RSS) rx interrupt.
+	- rss_mode: has 2 options:
+		- 0 – UDP_2TUPLE, means UDP packets hash based on 2T
+		- 1 – UDP_5TUPLE, means UDP packets hash based on 5T
+	- default_cpu: the default CPU to handle non-IP packets
+		
+	while queue_mode can be set only via module parameter, rss_mode and default_cpu can be set via either module parameter or sysfs command.
+		
+
+Wake-on-LAN
+-----------
+Wake-on-LAN is not supported.
+

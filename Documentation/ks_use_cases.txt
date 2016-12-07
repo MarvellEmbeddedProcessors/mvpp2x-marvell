@@ -1,0 +1,314 @@
+Kernel Network Use Cases
+========================
+
+Table of Contents
+-----------------
+1. Bridge use case
+2. Routing use case
+3. Iperf use case
+4. NAT use case
+5. Building Kernel image for Bridge/Routing/Iperf use case
+6. Building Kernel image for NAT use case
+
+
+1. Bridge Use Case
+--------------------
+Run the use cases using use case images from the release.
+Image can be found in: <release>/kernel/binaries/binaries-armv8le-net-bm-a70x0-a80x0-ga-16.12.0.zip.
+
+Setup description:
+
+	A8040: Two 10G ports connected to the traffic generator.
+
+		 ----   10G   ------   10G   ----
+		| TG | <---> |A8040 | <---> | TG |
+		 ----         ------         ----
+
+	A7040: One 10G port and one 1G port connected to the traffic generator.
+
+		 ----   10G   ------   1G    ----
+		| TG | <---> |A7040 | <---> | TG |
+		 ----         ------         ----
+
+To run the use case:
+	1. In U-Boot:
+		- Reset board and stop system in boot by hitting on any button
+		- Set multi queue mode:
+
+				set extra_params mvpp2x.queue_mode=1
+				save
+
+		- Press boot to start Linux
+
+	2. In Linux:
+		- Set interfaces in promiscuous mode:
+
+				ifconfig eth2 promisc
+				ifconfig eth0 promisc
+
+		- Create bridge between interfaces:
+
+				brctl addbr br0
+				brctl addif br0 eth0
+				brctl addif br0 eth2
+
+		- Start interfaces and bridge:
+
+				ifconfig eth2 up
+				ifconfig eth0 up
+				ifconfig br0 up
+
+		- Enable RSS hash distribution:
+
+				ethtool -K eth2 rxhash on
+				ethtool -K eth0 rxhash on
+
+		- Set configuration for 1 core, 2 cores or 4 cores:
+
+				1 core:
+				ethtool -K eth2 rxhash on
+				ethtool -K eth0 rxhash on
+				ethtool -X eth2 weight 1 0 0 0
+				ethtool -X eth0 weight 1 0 0 0
+
+				2 cores:
+				ethtool -K eth2 rxhash on
+				ethtool -K eth0 rxhash on
+				ethtool -X eth2 weight 0 1 0 0
+				ethtool -X eth0 weight 1 0 0 0
+
+				4 cores:
+				ethtool -K eth2 rxhash on
+				ethtool -K eth0 rxhash on
+				ethtool -X eth2 weight 0 0 1 1
+				ethtool -X eth0 weight 1 1 0 0
+
+	3. Traffic generator:
+		- Configure UDP traffic with same destination & source MAC address,
+		  same destination IP and different source IP for different flows.
+		- Generate bi/one directional traffic
+
+
+2. Routing Use Case
+--------------------
+Run the use cases using use case images from the release.
+Image can be found in: <release>/kernel/binaries/binaries-armv8le-net-bm-a70x0-a80x0-ga-16.12.0.zip.
+
+Setup description:
+
+	A8040: Two 10G ports connected to the traffic generator.
+
+		 ----   10G   ------   10G   ----
+		| TG | <---> |A8040 | <---> | TG |
+		 ----         ------         ----
+
+	A7040: One 10G port and one 1G port connected to the traffic generator.
+
+		 ----   10G   ------   1G    ----
+		| TG | <---> |A7040 | <---> | TG |
+		 ----         ------         ----
+
+To run the use case:
+	1. In U-Boot:
+		- Reset board and stop system in boot by hitting on any button.
+		- Set multi queue mode:
+
+				set extra_params mvpp2x.queue_mode=1
+				save
+
+		- Press boot to start Linux
+
+In Linux:
+		- Start interfaces in different subnets:
+
+				ifconfig eth0 12.12.13.12 up
+				ifconfig eth2 11.11.12.11 up
+
+		- Enable routing:
+
+				echo 1 > /proc/sys/net/ipv4/ip_forward
+
+		- Configure ARP's:
+
+				arp -i eth0 -s 12.12.13.13 00:00:01:00:00:00
+				arp -i eth2 -s 11.11.11.10 00:00:03:00:00:00
+
+		- Enable RSS hash distribution:
+
+				ethtool -K eth2 rxhash on
+				ethtool -K eth0 rxhash on
+
+		- Set configuration for 1 core, 2 cores or 4 cores:
+
+				1 core:
+				ethtool -K eth2 rxhash on
+				ethtool -K eth0 rxhash on
+				ethtool -X eth2 weight 1 0 0 0
+				ethtool -X eth0 weight 1 0 0 0
+
+				2 cores:
+				ethtool -K eth2 rxhash on
+				ethtool -K eth0 rxhash on
+				ethtool -X eth2 weight 0 1 0 0
+				ethtool -X eth0 weight 1 0 0 0
+
+				4 cores:
+				ethtool -K eth2 rxhash on
+				ethtool -K eth0 rxhash on
+				ethtool -X eth2 weight 0 0 1 1
+				ethtool -X eth0 weight 1 1 0 0
+
+	3. Traffic generator:
+		- Configure UDP traffic with same destination & source MAC address,
+		  same destination IP and different source IP for different flows.
+		- Generate bi-directional or uni-directional traffic as required.
+
+
+
+3. Iperf Use Case
+------------------
+Run the use cases using use case images from the release.
+Image can be found in: <release>/kernel/binaries/binaries-armv8le-net-bm-a70x0-a80x0-ga-16.12.0.zip.
+
+Setup description:
+
+	A8040/A7040: Connect 10G board port to Linux server 10G port.
+
+		 --------------   10G   ------------
+		| Linux server | <---> |A8040/A7040 |
+		 --------------         ------------
+
+To run the use case:
+	1. In Linux board side:
+		- Start interface:
+
+				ifconfig eth0 1.1.1.1 up
+
+		- Start iperf server:
+
+				iperf3 -s -A 1 -D
+
+	2. In Linux server side:
+		- Start interface:
+
+				ifconfig eth0 1.1.1.2 up
+
+		- Start iperf client session:
+
+				iperf3 -c 1.1.1.1 / iperf3 -R -c 1.1.1.1
+
+
+
+4. NAT Use Case
+----------------
+Run the use cases using NAT use case images from the release.
+Image can be found in: <release>/kernel/binaries/binaries-armv8le-net-bm-nat-a70x0-a80x0-ga-16.12.0.zip.
+
+Setup description:
+
+	A8040: Two 10G ports connected to the traffic generator.
+
+		 ----   10G   ------   10G   ----
+		| TG | <---> |A8040 | <---> | TG |
+		 ----         ------         ----
+
+	A7040: One 10G port and one 1G port connected to the traffic generator.
+
+		 ----   10G   ------   1G    ----
+		| TG | <---> |A7040 | <---> | TG |
+		 ----         ------         ----
+
+To run the use case:
+	1. In U-Boot:
+
+		- Reset board and stop system in boot by hitting on any button
+		- Set multi queue mode:
+
+				set extra_params mvpp2x.queue_mode=1
+				save
+
+		- Press boot to start Linux
+
+	2. In Linux:
+		- Start interfaces in different subnets:
+
+				ifconfig eth0 12.12.13.12 up
+				ifconfig eth2 11.11.12.11 up
+
+		- Enable routing:\
+
+				echo 1 > /proc/sys/net/ipv4/ip_forward
+
+		- Configure ARP's:
+
+				arp -i eth0 -s 12.12.13.13 00:00:01:00:00:00
+				arp -i eth2 -s 11.11.11.10 00:00:03:00:00:00
+
+		- Configure NAT postrouting masquerade:
+
+				iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+				iptables -t nat -A POSTROUTING -o eth2 -j MASQUERADE
+
+		- Enable RSS hash distribution:
+
+				ethtool -K eth2 rxhash on
+				ethtool -K eth0 rxhash on
+
+		- Set configuration for 1 core, 2 cores or 4 cores:
+
+				1 core:
+				ethtool -K eth2 rxhash on
+				ethtool -K eth0 rxhash on
+				ethtool -X eth2 weight 1 0 0 0
+				ethtool -X eth0 weight 1 0 0 0
+
+				2 cores:
+				ethtool -K eth2 rxhash on
+				ethtool -K eth0 rxhash on
+				ethtool -X eth2 weight 0 1 0 0
+				ethtool -X eth0 weight 1 0 0 0
+
+				4 cores:
+				ethtool -K eth2 rxhash on
+				ethtool -K eth0 rxhash on
+				ethtool -X eth2 weight 0 0 1 1
+				ethtool -X eth0 weight 1 1 0 0
+
+	3. Traffic generator:
+		- Configure UDP traffic with same destination & source MAC address,
+		  same destination IP and different source IP for different flows.
+		- Generate bi/one directional traffic
+
+
+5. Building Kernel Image for Bridge/Routing/Iperf Use Case
+----------------------------------------------------------
+To build the Kernel image:
+	1. Soucres, compiler and defconfig from release should be used
+	2. make mrproper
+	3. make mvebu_v8_lsp_defconfig
+	4. Choose in menuconfig:
+		- Kernel Features ---> Preemption Model ---> No Forced Preemption (Server)
+		- Kernel hacking --->  Kernel debugging ---> Set to No
+	5. make
+
+
+6. Building Kernel Image for NAT Use Case
+-----------------------------------------
+To build the Kernel image:
+	1. Soucres, compiler and defconfig from release should be used
+	2. make mrproper
+	3. make mvebu_v8_lsp_defconfig
+	4. Choose in menuconfig:
+		- Kernel Features ---> Preemption Model ---> No Forced Preemption (Server)
+		- Kernel hacking --->  Kernel debugging ---> Set to No
+		- For NAT enable in menuconfig:
+			- Network packet filtering framework (Netfilter)
+			- Netfilter connection tracking support
+			- IP tables support (required for filtering/masq/NAT)
+			- IPv4 connection tracking support (required for NAT)
+			- iptables NAT support
+			- Netfilter nf_tables support
+			- IPv4 masquerade support
+			- Packet filtering
+			- MASQUERADE target support
+	5. make

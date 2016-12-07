@@ -1,0 +1,200 @@
+PPv2.2 Sysfs Support
+====================
+
+Table of Contents
+-----------------
+1. Sysfs overview
+2. Sysfs build instructions
+3. Sysfs general information
+4. Sysfs RSS configuration
+5. Sysfs Rx CoS configuration
+6. Sysfs UC MAC filtering configuration
+
+
+Sysfs overview
+-----------------
+Sysfs is a pseudo file system provided by the Linux kernel that exports information
+about various kernel subsystems, hardware devices, and associated device drivers from
+the kernel's device model to user space through virtual files. In addition to providing
+information about various devices and kernel subsystems, exported virtual files are also
+used for their configuring. Sysfs compiled as internal ko module and insmod should be done
+before use.
+  
+  
+Sysfs Build Instructions
+----------------------------------------------------------------------
+1. Folder with sysfs sources should be copied to Linux kernel mvpp2x driver directory:
+
+		# cp -rf sysfs/ drivers/net/ethernet/marvell/mvpp2x/
+		
+2. Set path to toolchain, kernel directory and architecture type:
+
+		# export ARCH=arm64
+		# export CROSS_COMPILE=<toolchain_dir>
+		# export KDIR=<kernel_dir>
+
+3. Copy Makefile in sysfs directory:
+
+		# cp Makefile_sysfs Makefile
+		
+4. Clean sysfs directory and make module
+
+		# make clean
+		# make
+		
+5. mvpp2x_sysfs.ko module would be created in sysfs directory
+			
+
+Sysfs Usage
+----------------------------------------------------------------------
+1. Insmod mvpp2x_sysfs.ko module in your system:
+
+		# insmod mvpp2x_sysfs.ko
+		
+2. mvpp22 sysfs directory would be created.
+
+		# /sys/devices/platform/pp2
+		
+3. In each mvpp22 sysfs folder exsist help file. Example:
+
+		# cd /sys/devices/platform/pp2/rss
+		# cat help
+
+			cat                         rss_hw_dump  - dump rxq in rss table entry from hardware.
+			echo [if_name] [mode]    >  rss_mode     - Set the hash mode for non-frag UDP packet
+													[mode]      - 0 - 2-Tuple
+																- 1 - 5-Tuple
+			echo [if_name] [cpu]     >  rss_dflt_cpu - Set cpu to handle the non-IP packet
+			
+4. To set specific parameter write configurations into config file with echo command:
+
+		# echo eth0 1  >  rss_mode
+
+
+Sysfs RSS configuration
+----------------------------------------------------------------------
+Different RSS parameters could be set by RSS syssf commands.
+- RSS syssf directory: /sys/devices/platform/pp2/rss
+- Supported commands:
+	- rss_mode - Set UDP HASH calculate mode
+	
+		Command is per port. Usage:
+		
+			# echo device mode > rss_mode
+	
+		Example:
+		
+			# echo eth0 1  >  rss_mode
+		
+	- rss_dflt_cpu - echo device cpu > default_cpu
+
+		Command is per port. Usage:
+
+			# echo device cpu > default_cpu
+		
+		Example:
+
+			# echo eth0 1  >  default_cpu
+
+		
+Sysfs Rx CoS configuration
+----------------------------------------------------------------------
+- Different Rx CoS parameters could be set by CoS syssf commands.
+- RSS syssf directory: /sys/devices/platform/pp2/cos
+- Supported commands:
+	- cos_classifier - Set CoS one of CoS modes.  
+	  It has 4 options:
+		- 0 – VLAN_MODE
+		- 1 – DSCP_MODE
+		- 2 – VLAN_DSCP_MODE
+		- 3 – DSCP_VLAN_MODE
+
+		Command is per port. Usage:
+		
+			# echo device cos_mode > cos_classifier_set
+			
+		Example:
+		
+			# echo eth0 1  >  cos_classifier_set
+		
+		To show parameter:
+		
+			# echo device > cos_classifier_show
+		
+		Example:
+		
+			# echo eth0 >  cos_classifier_show
+		
+	- default_cos - Set default CoS value for untagged or non-IP
+
+		Command is per port. Usage:
+
+			# echo device cos_value > default_cos_set
+		
+		Example:
+		
+			# echo eth0 2  >  default_cos_set
+		
+		To show parameter:
+		
+			# echo device > default_cos_show
+		
+		Example:
+		
+			# echo eth0 >  default_cos_show
+		
+	- pri_map - Set mapping data from CoS to RX queue
+
+		Command is per port. Usage:
+		
+			# echo device map_data > pri_map_set
+			
+		Example:
+		
+			# echo eth0 0x22221100  >  pri_map_set
+			
+		To show parameter:
+		
+			# echo device > pri_map_show
+			
+		Example:
+		
+			# echo eth0 >  pri_map_show
+		
+	
+Sysfs Unicast MAC filtering configuration
+------------------------------------------
+- UC MAC address could be added, deleted and dumped by syssf commands.
+- RSS syssf directory: /sys/devices/platform/pp2/debug
+- Supported commands:
+	- uc_filter_add - Add UC MAC to filter list on the device
+
+		Command is per port. Usage:
+		
+			# echo device mac_addr > uc_filter_add
+			
+		Example:
+		
+			# echo eth0 11:11:11:11:11:11  >  uc_filter_add	
+		
+	- uc_filter_del - Delete UC MAC from filter list on the device
+
+		Command is per port. Usage:
+		
+			# echo device mac_addr > uc_filter_del
+			
+		Example:
+		
+			# echo eth0 11:11:11:11:11:11  >  uc_filter_del	
+		
+	- uc_filter_dump - Dump UC MAC in filter list on the device mac_addr format: ff:ff:ff:ff:ff:ff
+
+		Command is per port. Usage:
+		
+			# echo device > uc_filter_dump
+			
+		Example:
+		
+			# echo eth0   >  uc_filter_dump
+		
+		

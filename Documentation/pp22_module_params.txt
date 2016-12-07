@@ -1,0 +1,161 @@
+PPv2.2 Kernel Module Parameters
+===============================
+
+Table of Contents
+-----------------
+1. Module parameters overview
+2. queue_mode module parameter
+3. num_cos_queues module parameter
+4. rss_mode module parameter
+5. default_cpu module parameter
+6. cos_classifer module parameter
+7. pri_map module parameter
+8. default_cos module parameter
+9. rx_queue_size module parameter
+10. tx_queue_size module parameter
+11. uc_filter_max module parameter
+12. stats_delay_msec module parameter
+
+
+Module parameters overview 
+-------------------------------
+	- module_param allowing drivers to declare parameters that the user can specify on either boot or module load and
+	  then have these parameters exposed in the driver as global variables.
+	- Parameter is common for all ports.
+	- module_param could be set in u-boot extra_params. Example:
+	
+			# set extra_params mvpp2x.queue_mode=1
+			# save
+			
+	  or during module insmod. Example:
+	  
+			# insmod mvpp2x.ko queue_mode=1
+
+			
+queue_mode module parameter
+-----------------------------
+	- queue_mode determines the interrupt structure. It has 2 options:
+		- 0  – SINGLE_MODE, means single mode (shared) - rx interrupt.
+		- 1  – MULTI_MODE, means multi mode (RSS) - rx interrupt.
+	- In SINGLE_MODE each online CPU will has his own TX interrupt and all CPU's will has common RX interrupt.
+	  RX smp_affinity could be changed by changing proc/irq/*/smp_affinity. 
+		Example: 
+		
+			# echo 1 > proc/irq/160/smp_affinity
+
+	- In MULTI_MODE each online CPU will has his own TX and RX common interrupt. Traffic distribution could be changed by RSS feature.
+	- Parameter is per port and set for all ports.
+	- Example:
+	
+			# insmod mvpp2x.ko queue_mode=1
+
+
+num_cos_queues module parameter
+--------------------------------
+	- num_cos_queues determinate number of CoS queues. Number of RXQ's and TXQ's depend on num_cos_queues:
+		- Number of TXQ's = num_cos_queues * numper_of_ports
+		- Number of RXQ's if queue singe mode set = num_cos_queues * numper_of_ports
+		- Number of RXQ's if queue singe mode set = num_cos_queues * numper_of_ports * online_cpus
+	- Configuration range(1-8): 1-8, default is 4
+	- Parameter is common for all ports.
+	- Example:
+	
+			# insmod mvpp2x.ko num_cos_queues=1
+
+			
+rss_mode module parameter
+-----------------------------
+	- rss_mode determinate the way to calculate UDP HASH value for RSS. It has 2 options:
+		- 0 – UDP_2TUPLE, means UDP packets hash based on 2T
+		- 1 – UDP_5TUPLE, means UDP packets hash based on 5T
+	- Parameter is per port and set for all ports.
+	- Example:
+	
+			# insmod mvpp2x.ko rss_mode=1
+		
+
+default_cpu module parameter
+------------------------------
+	- default_cpu determinate default CPU to handle non-IP packets with enabled RSS mode.
+	- Parameter is per port and set for all ports.
+	- Configuration range: one of online CPU's should be set
+	- Example:
+	
+			# insmod mvpp2x.ko default_cpu=1
+			
+			
+cos_classifer module parameter
+-------------------------------
+	- cos_classifer determinate CoS classification modes. It has 4 options:
+		- 0 – VLAN_PRI mode
+			- If system works in this mode, the CoS value equals to their VLAN priority (p-bit). If the packet is untagged, there will be a default CoS value
+			assigned to it.
+		- 1 – DSCP_PRI mode
+			- If system works in this mode, the CoS value is determined by the high 3 bits of DSCP field, that is DSCP[5:3] >> 3. If the packet is non-IP packet,
+			there will also a default CoS value assigned to it.
+		- 2 – VLAN_DSCP_PRI mode
+			- In this mode, if the packet is tagged, VLAN priority is taken as CoS value, if it is IP packet untagged, DSCP priority will be used as DSCP_PRI mode.
+			For non-IP packet untagged, the default CoS value will be assigned.
+		- 3 – DSCP_VLAN_PRI mode.
+			- In this mode, if the packet is IP, DSCP priority is taken as CoS value, if it is non-IP packet but tagged, VLAN priority will be used as VLAN_PRI mode.
+			For non-IP packet untagged, the default CoS value will be assigned. CoS value to relevant RX queues mapping done by pri_map parameter for each eth port,
+			each nibble of the mapping data will map a CoS value to a RX queue.
+	- Parameter is per port and set for all ports.			
+	- Example:
+	
+			# insmod mvpp2x.ko cos_classifer=3	
+
+			
+pri_map module parameter
+--------------------------
+	- pri_map determinate a mapping parameter of 32 bits for each eth port, each nibble of the mapping data will map a CoS value to a RX queue.
+	- Parameter is per port and set for all ports.
+	- Configuration range: only exist RXQ should be set by pri_map
+	- For example, there is mapping data pri_map=0x22221100, it maps cos=0,1 to rxq0, cos=2,3 to rxq1 if num_cos_queues=4:
+	
+			# insmod mvpp2x.ko pri_map=0x22221100
+
+
+default_cos module parameter
+-------------------------------
+	- default_cos determinate default CoS for untagged packets (VLAN mode) or non-IP packets (DSCP mode)
+	- Parameter is per port and set for all ports.
+	- Configuration range: one of exist CoS should be set
+	- Example:
+	
+			# insmod mvpp2x.ko default_cos=3
+			
+
+rx_queue_size module parameter
+---------------------------------
+	- rx_queue_size determinate RX descriptors ring size.
+	- Parameter is per port and set for all ports.
+	- Descriptors ring size range: 32-1024 (in multiples of 16), default is 1024
+	- Example:
+	
+			# insmod mvpp2x.ko rx_queue_size=512
+
+		
+tx_queue_size module parameter
+--------------------------------
+	- tx_queue_size determinate RX descriptors ring size.
+	- Parameter is per port and set for all ports.
+	- Descriptors ring size range: 16-1024 (in multiples of 16), default is 1024
+	- Example:
+	
+			# insmod mvpp2x.ko tx_queue_size=512
+		
+		
+uc_filter_max module parameter
+----------------------------------------------------------------------
+	- uc_filter_max determinate maximum UC MAC entrys before entring promisc mode.
+	- Parameter is common for all ports.
+	- uc_filter_max range: 0-33 (in multiples of 4), default is 4
+
+	
+stats_delay_msec module parameter
+----------------------------------------------------------------------
+	- stats_delay_msec determinate delay between MAC statistic update in msec units.
+	- Parameter is common for all ports.
+	- Default parameter is 250 msec
+	
