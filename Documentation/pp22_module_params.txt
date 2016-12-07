@@ -130,7 +130,7 @@ rx_queue_size module parameter
 ---------------------------------
 	- rx_queue_size determinate RX descriptors ring size.
 	- Parameter is per port and set for all ports.
-	- Descriptors ring size range: 32-1024 (in multiples of 16), default is 1024
+	- Descriptors ring size range: 16-1024 (in multiples of 16), default is 1024
 	- Example:
 	
 			# insmod mvpp2x.ko rx_queue_size=512
@@ -140,7 +140,7 @@ tx_queue_size module parameter
 --------------------------------
 	- tx_queue_size determinate RX descriptors ring size.
 	- Parameter is per port and set for all ports.
-	- Descriptors ring size range: 16-1024 (in multiples of 16), default is 1024
+	- Descriptors ring size range: 32-2048 (in multiples of 16), default is 2048
 	- Example:
 	
 			# insmod mvpp2x.ko tx_queue_size=512

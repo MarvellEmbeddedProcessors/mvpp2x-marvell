@@ -86,6 +86,7 @@ To run the use case:
 	3. Traffic generator:
 		- Configure UDP traffic with same destination & source MAC address,
 		  same destination IP and different source IP for different flows.
+		- Set TG's source/designation MAC address in L2 packet payload
 		- Generate bi/one directional traffic
 
 

@@ -108,7 +108,7 @@ TX/RX Queues
 TX/RX descriptors ring size is the number of descriptors in each TX/RX queue. This parameter is set for all queues, per port.
 	- TX/RX descriptors ring size could be set via module parameter or ethtool command.
 	- Descriptors ring size range:
-		- TX: 32-1024 (in multiples of 16), default is 1024
+		- TX: 32-2048 (in multiples of 16), default is 2048
 		- RX: 16-1024 (in multiples of 16), default is 1024
 
 TX/RX coalescing set the delay between the tx and rx events and the generation of interrupts for those events.
@@ -125,7 +125,7 @@ Parameter could be set by port.
 			- RX default: 32
 		- RX/TX time coalescing depends on HW clock:
 			- Range: 0-0xfffff0 HW clocks
-			- TX default: 10000 usec
+			- TX default: 1000 usec
 			- RX default: 64 usec
 
 The number of RX/TX CoS queues is applied for all interfaces. Each port has its own RX queues and TX queues.
