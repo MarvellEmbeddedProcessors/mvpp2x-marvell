@@ -20,30 +20,30 @@ Please refer to the proper documentation for the related mechanisms:
 	- PPv2.2 module parameters: see "PPv2.2 Kernel Module Parameters" documentation section.
 	- PPv2.2 proprietary sysfs commands: see "PPv2.2 Sysfs Support" documentation section.
 
-Interface/Link Control 
+Interface/Link Control
 -------------------------
 1. Start/Stop network interface:
 	Start/Stop network interface is supported via ifconfig command.
 
 2. Manual speed/duplex configuration:
 	Speed/duplex configuration is supported via ethtool command.
-	
+
 	Limitations:
 	- Speed/Duplex configuration is not supported for Peridot module.
-	- To enable 10G<->1G / 100M / 10M transition, port should support XLG mode and 
+	- To enable 10G<->1G / 100M / 10M transition, port should support XLG mode and
 		comphy selector should be set in MAC device tree node.
 		See Linux Kernel Documentation/devicetree/bindings/net/marvell-pp2x.txt
-	  
-3. Speed/duplex/FC auto-negotiation: 
+
+3. Speed/duplex/FC auto-negotiation:
 	Speed/duplex/flow-ctrl auto-negotiation configuration is supported via ethtool command.
-	
+
 	Limitations:
 	- Auto-negotiation is not supported on 10G ports.
 	- Only RX flow control is supported.
 
 4. MTU configuration per interface
 	MTU configuration per interface is supported via ifconfig command.
-	
+
 5. Ethtool status and MAC statistics
 	Ethtool status and MAC statistics are supported via ethtool command. Supported statistics:
 		- rx_bytes
@@ -64,14 +64,14 @@ Interface/Link Control
 		- rx_giant
 		- rx_fragments_err
 		- rx_mac_err
-		- rx_jabber 
+		- rx_jabber
 		- rx_sw_drop
 		- rx_total_err
 		- tx_drop
 		- tx_crc_sent
 		- collision
 		- late_collision
-		  
+
 
 L2 filtering
 ---------------
@@ -95,14 +95,14 @@ Unicast MAC address/Multicast MAC addresses filtering description:
 				- State1: non-promisc & non-allmulti
 				- State2: Promisc mode
 				- State3: non-promisc & allmulti
-				
+
 	- Unicast MAC address/Multicast MAC addresses configuration:
 		- uc_filter_max - can be set via module parameter.
 		- Unicast MAC address filtering could be added, deleted or dumped by sysfs commands.
 		  or Linux callbacks: dev_uc_add, dev_uc_del and netdev_for_each_uc_addr
 		- Multicast MAC address filtering could be added, deleted or dumped by ip maddr commands. See https://linux.die.net/man/8/ip
 
-		
+
 TX/RX Queues
 ---------------
 TX/RX descriptors ring size is the number of descriptors in each TX/RX queue. This parameter is set for all queues, per port.
@@ -138,10 +138,10 @@ Offload Features
 	1. TSO - enabled by default. Can be configured via ethtool command.
 	2. GRO - enabled by default. Can be configured via ethtool command.
 	3. TX/RX L4 checksum - enabled by default. Can be configured via ethtool command.
-	
+
 		Limitation:
 			L4 TX checksum is not supported on ports 1,2 for MTU value greater than 1518.
-			
+
 	4. RX parsing: VLAN, IPv4, IPv6, PPPoE, TCP/UDP. Always enabled.
 
 
@@ -166,7 +166,7 @@ Each packet has its own CoS value, which is ranged from 0 to 7.
 		In this mode, if the packet is IP, DSCP priority is taken as CoS value, if it is non-IP packet but tagged, VLAN priority will be used as VLAN_PRI mode.
 		For non-IP packet untagged, the default CoS value will be assigned. CoS value to relevant RX queues mapping done by pri_map parameter for each eth port,
 		each nibble of the mapping data will map a CoS value to a RX queue.
-	
+
 CoS value should be mapped to relevant different RX queues.
 There will be a mapping parameter (pri_map) of 32 bits for each eth port, each nibble of the mapping data will map a CoS value to a RX queue.
 For example: there is mapping data pri_map=0x22221100, it maps cos=0,1 to rxq0, cos=2,3 to rxq1 etc. Mapping data pri_map=0x22221100 can map all
@@ -183,7 +183,7 @@ CoS parameters (all can be set via module parameter or sysfs commands):
 		- The data mapping CoS value to rx queue
 	- default_cos:
 		- The default CoS for untagged packets (VLAN mode) or non-IP packets (DSCP mode)
-		
+
 
 RSS Configuration
 --------------------
@@ -195,27 +195,27 @@ According to the value of RSS table entry, the CoS RX queue is remapped to RSS R
 RSS is not mandatory, but it determines the interrupt structure, so a parameter (queue_mode) indicates interrupt structure.
 The parameter could not be updated at run time.
 RSS can be enabled or disabled, and different CPU weight can be updated with ethtool:
-	
+
 		ethtool -K|--offload devname [rxhash on|off]
 
 Offloading parameter (rxhash) is used as a toggle to enable/disable RSS, which is equivalent to running the first command in Table 2. It updates the parameter of rss_enable.
 For example:
-		
+
 		ethtool -K eth0 rxhash on
-			
+
 The example enables RSS on port 0, parameter rss_enable equals to 1 after the command.
-		
+
 		ethtool -X|--set-rxfh-indir devname [ equal N | weight W0 W1 ... ]
 
 Strictly speaking, the ethtool command is not supported by PP22, because RSS tables are global, so in PP22 driver the command will affect other ports.
 For example:
-	
+
 		ethtool –X eth0 weight 1 3
-	
+
 Sets the first CPU one quarter of the whole hash, and 3 quarters on the second CPU.
-	
+
 		ethtool –X eth0 equal 2
-	
+
 Spreads the hash evenly between the first 2 CPUs.
 If there are 4 CPUs in the SOC, and only CPU2 and CPU3 are online, then the first CPU is CPU2 and second CPU is CPU3.
 
@@ -235,9 +235,9 @@ RSS parameters:
 		- 0 – UDP_2TUPLE, means UDP packets hash based on 2T
 		- 1 – UDP_5TUPLE, means UDP packets hash based on 5T
 	- default_cpu: the default CPU to handle non-IP packets
-		
+
 	while queue_mode can be set only via module parameter, rss_mode and default_cpu can be set via either module parameter or sysfs command.
-		
+
 
 Wake-on-LAN
 -----------
