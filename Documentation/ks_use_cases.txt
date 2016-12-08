@@ -187,7 +187,18 @@ To run the use case:
 
 		- Start iperf server:
 
-				iperf3 -s -A 1 -D
+				1 core:
+				iperf3 -s -A 1 -D -p 10010
+
+				2 cores:
+				iperf3 -s -A 1 -D -p 10010
+				iperf3 -s -A 2 -D -p 10020
+
+				4 cores:
+				iperf3 -s -A 0 -D -p 10000
+				iperf3 -s -A 1 -D -p 10010
+				iperf3 -s -A 2 -D -p 10020
+				iperf3 -s -A 3 -D -p 10030
 
 	2. In Linux server side:
 		- Start interface:
@@ -196,8 +207,18 @@ To run the use case:
 
 		- Start iperf client session:
 
-				iperf3 -c 1.1.1.1 / iperf3 -R -c 1.1.1.1
+				1 core:
+				iperf3 -c 1.1.1.1 -p 10010 / iperf3 -R -c 1.1.1.1 -p 10010
 
+				2 cores:
+				iperf3 -c 1.1.1.1 -t 10 -b 5000000 -p 10010& iperf3 -c 1.1.1.1 -t 10 -b 5000000 -p 10020& /
+				iperf3 -c 1.1.1.1 -t 10 -b 5000000 -R -p 10010& iperf3 -c 1.1.1.1 -t 10 -b 5000000 -R -p 10020&
+
+				4 cores:
+				iperf3 -c 1.1.1.1 -t 10 -b 2500000 -p 10010& iperf3 -c 1.1.1.1 -t 10 -b 2500000 -p 10020&
+				iperf3 -c 1.1.1.1 -t 10 -b 2500000 -p 10000& iperf3 -c 1.1.1.1 -t 10 -b 2500000 -p 10030& /
+				iperf3 -c 1.1.1.1 -t 10 -b 2500000 -R -p 10010& iperf3 -c 1.1.1.1 -t 10 -b 2500000 -R -p 10020&
+				iperf3 -c 1.1.1.1 -t 10 -b 2500000 -R -p 10000& iperf3 -c 1.1.1.1 -t 10 -b 2500000 -R -p 10030&
 
 
 4. NAT Use Case
