@@ -211,14 +211,14 @@ To run the use case:
 				iperf3 -c 1.1.1.1 -p 10010 / iperf3 -R -c 1.1.1.1 -p 10010
 
 				2 cores:
-				iperf3 -c 1.1.1.1 -t 10 -b 5000000 -p 10010& iperf3 -c 1.1.1.1 -t 10 -b 5000000 -p 10020& /
-				iperf3 -c 1.1.1.1 -t 10 -b 5000000 -R -p 10010& iperf3 -c 1.1.1.1 -t 10 -b 5000000 -R -p 10020&
+				iperf3 -c 1.1.1.1 -t 10 -b 5000000000 -p 10010& iperf3 -c 1.1.1.1 -t 10 -b 5000000000 -p 10020& /
+				iperf3 -c 1.1.1.1 -t 10 -b 5000000000 -R -p 10010& iperf3 -c 1.1.1.1 -t 10 -b 5000000000 -R -p 10020&
 
 				4 cores:
-				iperf3 -c 1.1.1.1 -t 10 -b 2500000 -p 10010& iperf3 -c 1.1.1.1 -t 10 -b 2500000 -p 10020&
-				iperf3 -c 1.1.1.1 -t 10 -b 2500000 -p 10000& iperf3 -c 1.1.1.1 -t 10 -b 2500000 -p 10030& /
-				iperf3 -c 1.1.1.1 -t 10 -b 2500000 -R -p 10010& iperf3 -c 1.1.1.1 -t 10 -b 2500000 -R -p 10020&
-				iperf3 -c 1.1.1.1 -t 10 -b 2500000 -R -p 10000& iperf3 -c 1.1.1.1 -t 10 -b 2500000 -R -p 10030&
+				iperf3 -c 1.1.1.1 -t 10 -b 2500000000 -p 10010& iperf3 -c 1.1.1.1 -t 10 -b 2500000000 -p 10020&
+				iperf3 -c 1.1.1.1 -t 10 -b 2500000000 -p 10000& iperf3 -c 1.1.1.1 -t 10 -b 2500000000 -p 10030& /
+				iperf3 -c 1.1.1.1 -t 10 -b 2500000000 -R -p 10010& iperf3 -c 1.1.1.1 -t 10 -b 2500000000 -R -p 10020&
+				iperf3 -c 1.1.1.1 -t 10 -b 2500000000 -R -p 10000& iperf3 -c 1.1.1.1 -t 10 -b 2500000000 -R -p 10030&
 
 
 4. NAT Use Case
@@ -311,6 +311,7 @@ To build the Kernel image:
 	4. Choose in menuconfig:
 		- Kernel Features ---> Preemption Model ---> No Forced Preemption (Server)
 		- Kernel hacking --->  Kernel debugging ---> Set to No
+		- Kernel hacking --->  CoreSight Tracing Support---> Set to No
 	5. make
 
 
@@ -323,6 +324,7 @@ To build the Kernel image:
 	4. Choose in menuconfig:
 		- Kernel Features ---> Preemption Model ---> No Forced Preemption (Server)
 		- Kernel hacking --->  Kernel debugging ---> Set to No
+		- Kernel hacking --->  CoreSight Tracing Support---> Set to No
 		- For NAT enable in menuconfig:
 			- Network packet filtering framework (Netfilter)
 			- Netfilter connection tracking support
