@@ -217,21 +217,21 @@ static void mvPp2RxQueueDetailedShow(struct mv_pp2x *priv,
 	struct mv_pp2x_rx_desc *rx_desc = pp_rxq->first_desc;
 
 	for (i = 0; i < pp_rxq->size; i++) {
-		DBG_MSG("%3d. desc=%p, status=%08x, data_size=%4d",
+		DBG_MSG("%3d. desc=%p, status=%08x, data_size=%4d, ",
 			i, rx_desc+i, rx_desc[i].status,
 			rx_desc[i].data_size);
 		if (priv->pp2_version == PPV21) {
-			DBG_MSG("buf_addr=%lx, buf_cookie=%p",
+			DBG_MSG("buf_addr=%lx, buf_cookie=%p, ",
 				(unsigned long)
-				mv_pp21_rxdesc_phys_addr_get(rx_desc),
-				mv_pp21_rxdesc_cookie_get(rx_desc));
+				mv_pp21_rxdesc_phys_addr_get(&rx_desc[i]),
+				mv_pp21_rxdesc_cookie_get(&rx_desc[i]));
 		} else {
-			DBG_MSG("buf_addr=%lx, buf_cookie=%p",
+			DBG_MSG("buf_addr=%lx, buf_cookie=%p, ",
 				(unsigned long)
-				mv_pp22_rxdesc_phys_addr_get(rx_desc),
-				mv_pp22_rxdesc_cookie_get(rx_desc));
+				mv_pp22_rxdesc_phys_addr_get(&rx_desc[i]),
+				mv_pp22_rxdesc_cookie_get(&rx_desc[i]));
 		}
-		DBG_MSG("parser_info=%03x\n", rx_desc->rsrvd_parser);
+		DBG_MSG("parser_info=%03x\n", rx_desc[i].rsrvd_parser);
 	}
 }
 
