@@ -53,9 +53,9 @@ queue_mode module parameter
 num_cos_queues module parameter
 --------------------------------
 	- num_cos_queues determinate number of CoS queues. Number of RXQ's and TXQ's depend on num_cos_queues:
-		- Number of TXQ's = num_cos_queues * numper_of_ports
-		- Number of RXQ's if queue singe mode set = num_cos_queues * numper_of_ports
-		- Number of RXQ's if queue singe mode set = num_cos_queues * numper_of_ports * online_cpus
+		- Number of TXQ's = num_cos_queues * number_of_ports
+		- Number of RXQ's if queue singe mode set = num_cos_queues * number_of_ports
+		- Number of RXQ's if queue singe mode set = num_cos_queues * number_of_ports * online_cpus
 	- Configuration range(1-8): 1-8, default is 4
 	- Parameter is common for all ports.
 	- Example:
@@ -76,7 +76,7 @@ rss_mode module parameter
 
 default_cpu module parameter
 ------------------------------
-	- default_cpu determinate default CPU to handle non-IP packets with enabled RSS mode.
+	- default_cpu define default CPU to handle non-IP packets with enabled RSS mode.
 	- Parameter is per port and set for all ports.
 	- Configuration range: one of online CPU's should be set
 	- Example:
@@ -120,7 +120,7 @@ default_cos module parameter
 -------------------------------
 	- default_cos determinate default CoS for untagged packets (VLAN mode) or non-IP packets (DSCP mode)
 	- Parameter is per port and set for all ports.
-	- Configuration range: one of exist CoS should be set
+	- Configuration range: one of existing CoS should be set
 	- Example:
 
 			# insmod mvpp2x.ko default_cos=3
@@ -128,7 +128,7 @@ default_cos module parameter
 
 rx_queue_size module parameter
 ---------------------------------
-	- rx_queue_size determinate RX descriptors ring size.
+	- rx_queue_size define RX descriptors ring size.
 	- Parameter is per port and set for all ports.
 	- Descriptors ring size range: 16-1024 (in multiples of 16), default is 1024
 	- Example:
@@ -138,7 +138,7 @@ rx_queue_size module parameter
 
 tx_queue_size module parameter
 --------------------------------
-	- tx_queue_size determinate RX descriptors ring size.
+	- tx_queue_size define RX descriptors ring size.
 	- Parameter is per port and set for all ports.
 	- Descriptors ring size range: 32-2048 (in multiples of 16), default is 2048
 	- Example:
@@ -148,14 +148,14 @@ tx_queue_size module parameter
 
 uc_filter_max module parameter
 ----------------------------------------------------------------------
-	- uc_filter_max determinate maximum UC MAC entrys before entring promisc mode.
+	- uc_filter_max determinate maximum UC MAC entries before entering promisc mode.
 	- Parameter is common for all ports.
 	- uc_filter_max range: 0-33 (in multiples of 4), default is 4
 
 
 stats_delay_msec module parameter
 ----------------------------------------------------------------------
-	- stats_delay_msec determinate delay between MAC statistic update in msec units.
+	- stats_delay_msec define delay between MAC statistic update in msec units.
 	- Parameter is common for all ports.
 	- Default parameter is 250 msec
 

@@ -78,13 +78,13 @@ L2 filtering
 Unicast MAC address/Multicast MAC addresses filtering description:
 	- The MAC filtering is implemented by hardware on A70x0 and A80x0. MAC filtering is done in parser TCAM by parsing the DMAC field.
 		- Filtering capability:
-			For each port, the capability of UC and MC entrys is 36.
+			For each port, the capability of UC and MC entries is 36.
 			There is a parameter of “uc_filter_max” in the driver, whose value should be multiple of 4. The default value is 4.
-			Parameter determinate maximum number of UC entrys.
+			Parameter define maximum number of UC entries.
 			The MC filtering capability is (36 - uc_filter_max).
 		- MAC range:
-			There is a MAC range is created in parser TCAM, and the TCAM entries in the range are reserved only for MAC parsing.
-			There are 4 ports each PP22 including loopback port, so only 3 ports will support Rx MAC filtering.
+			There is a MAC range created in parser TCAM, and the TCAM entries in the range are reserved only for MAC parsing.
+			3 ports support Rx MAC filtering(per CP).
 			So the range size is defined as 36 * 3 + 4 (M2M entry) + 1 (BC) = 113.
 		- MAC filtering behavior:
 			The filtering behaviors are defined as following.

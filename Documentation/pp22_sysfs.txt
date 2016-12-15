@@ -17,7 +17,7 @@ Sysfs is a pseudo file system provided by the Linux kernel that exports informat
 about various kernel subsystems, hardware devices, and associated device drivers from
 the kernel's device model to user space through virtual files. In addition to providing
 information about various devices and kernel subsystems, exported virtual files are also
-used for their configuring. Sysfs compiled as internal ko module and insmod should be done
+used for their configurations. Sysfs compiled as internal ko module and insmod should be done
 before use.
 
 
@@ -55,7 +55,7 @@ Sysfs Usage
 
 		# /sys/devices/platform/pp2
 
-3. In each mvpp22 sysfs folder exsist help file. Example:
+3. Refer to the help file in each of the pp2 sysfs folders. Example:
 
 		# cd /sys/devices/platform/pp2/rss
 		# cat help
@@ -73,8 +73,8 @@ Sysfs Usage
 
 Sysfs RSS configuration
 ----------------------------------------------------------------------
-Different RSS parameters could be set by RSS syssf commands.
-- RSS syssf directory: /sys/devices/platform/pp2/rss
+Different RSS parameters could be set by RSS sysfs commands.
+- RSS sysfs directory: /sys/devices/platform/pp2/rss
 - Supported commands:
 	- rss_mode - Set UDP HASH calculate mode
 
@@ -99,8 +99,8 @@ Different RSS parameters could be set by RSS syssf commands.
 
 Sysfs Rx CoS configuration
 ----------------------------------------------------------------------
-- Different Rx CoS parameters could be set by CoS syssf commands.
-- RSS syssf directory: /sys/devices/platform/pp2/cos
+- Different Rx CoS parameters could be set by CoS sysfs commands.
+- COS sysfs directory: /sys/devices/platform/pp2/cos
 - Supported commands:
 	- cos_classifier - Set CoS one of CoS modes.
 	  It has 4 options:
@@ -164,8 +164,8 @@ Sysfs Rx CoS configuration
 
 Sysfs Unicast MAC filtering configuration
 ------------------------------------------
-- UC MAC address could be added, deleted and dumped by syssf commands.
-- RSS syssf directory: /sys/devices/platform/pp2/debug
+- UC MAC address could be added, deleted and dumped by sysfs commands.
+- Debug sysfs directory: /sys/devices/platform/pp2/debug
 - Supported commands:
 	- uc_filter_add - Add UC MAC to filter list on the device
 

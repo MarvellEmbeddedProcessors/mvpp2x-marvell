@@ -305,7 +305,7 @@ To run the use case:
 5. Building Kernel Image for Bridge/Routing/Iperf Use Case
 ----------------------------------------------------------
 To build the Kernel image:
-	1. Soucres, compiler and defconfig from release should be used
+	1. Source, compiler and defconfig from release should be used
 	2. make mrproper
 	3. make mvebu_v8_lsp_defconfig
 	4. Choose in menuconfig:
@@ -318,7 +318,7 @@ To build the Kernel image:
 6. Building Kernel Image for NAT Use Case
 -----------------------------------------
 To build the Kernel image:
-	1. Soucres, compiler and defconfig from release should be used
+	1. Source, compiler and defconfig from release should be used
 	2. make mrproper
 	3. make mvebu_v8_lsp_defconfig
 	4. Choose in menuconfig:
