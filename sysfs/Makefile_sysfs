@@ -17,7 +17,12 @@ obj-m := mvpp2x_sysfs.o
 #obj-$m += mv_pp2.o
 
 SYSFS_MOD_DIR = $(M)
+ifdef KERNEL_SOURCES
+PP2_MOD_DIR = $(KDIR)/drivers/net/ethernet/marvell/mvpp2x
+else
 PP2_MOD_DIR = $(SYSFS_MOD_DIR)/..
+endif
+
 MV_EBU_NET_DIR = $(SYSFS_MOD_DIR)/mvebu_net
 MACH_MVEBU_DIR = $(SYSFS_MOD_DIR)/mach-mvebu
 
@@ -75,6 +80,7 @@ ccflags-y       += $(MVEBU_NET_FLAGS)
 
 
 all:
+	echo 'PP2_MOD_DIR=$(PP2_MOD_DIR)'
 	make -C ${KDIR} M=$(M) modules
 
 clean:
