@@ -1427,14 +1427,14 @@ int mvPp2ClsC4HwRead(struct mv_pp2x_hw *hw, struct mv_pp2x_cls_c4_entry *C4, int
 	regVal = (set << MVPP2_CLS4_RL_INDEX_GRP) | (rule << MVPP2_CLS4_RL_INDEX_RULE);
 	mv_pp2x_write(hw, MVPP2_CLS4_RL_INDEX_REG, regVal);
 
-	C4->ruleIndex = rule;
-	C4->setIndex = set;
+	C4->rule_index = rule;
+	C4->set_index = set;
 	/* read entry rule fields*/
 	C4->rules.regs.attr[0] = mv_pp2x_read(hw, MVPP2_CLS4_FATTR1_REG);
 	C4->rules.regs.attr[1] = mv_pp2x_read(hw, MVPP2_CLS4_FATTR2_REG);
 
 	for (regInd = 0; regInd < MVPP2_CLS_C4_TBL_DATA_WORDS; regInd++)
-		C4->rules.regs.fdataArr[regInd] = mv_pp2x_read(hw, MVPP2_CLS4_FDATA_REG(regInd));
+		C4->rules.regs.fdata_arr[regInd] = mv_pp2x_read(hw, MVPP2_CLS4_FDATA_REG(regInd));
 
 	/* read entry from action table */
 	C4->sram.regs.actions = mv_pp2x_read(hw, MVPP2_CLS4_ACT_REG);
@@ -1458,7 +1458,7 @@ int mvPp2ClsC4HwWrite(struct mv_pp2x_hw *hw, struct mv_pp2x_cls_c4_entry *C4, in
 	mv_pp2x_write(hw, MVPP2_CLS4_FATTR2_REG, C4->rules.regs.attr[1]);
 
 	for (regInd = 0; regInd < MVPP2_CLS_C4_TBL_DATA_WORDS; regInd++)
-		mv_pp2x_write(hw, MVPP2_CLS4_FDATA_REG(regInd), C4->rules.regs.fdataArr[regInd]);
+		mv_pp2x_write(hw, MVPP2_CLS4_FDATA_REG(regInd), C4->rules.regs.fdata_arr[regInd]);
 
 	/* read entry from action table */
 	mv_pp2x_write(hw, MVPP2_CLS4_ACT_REG, C4->sram.regs.actions);
@@ -1473,7 +1473,7 @@ int mvPp2ClsC4SwDump(struct mv_pp2x_cls_c4_entry *C4)
 {
 	int index;
 
-	pr_info("SET: %d	RULE: %d\n", C4->setIndex, C4->ruleIndex);
+	pr_info("SET: %d	RULE: %d\n", C4->set_index, C4->rule_index);
 	pr_info("FIELD  ID  OP	DATA\n");
 
 	/*------------------------------*/
@@ -1486,7 +1486,7 @@ int mvPp2ClsC4SwDump(struct mv_pp2x_cls_c4_entry *C4)
 				MVPP2_CLS4_FATTR_ID_VAL(index, C4->rules.regs.attr[GET_FIELD_ATRR(index)]),
 				MVPP2_CLS4_FATTR_OPCODE_VAL(index, C4->rules.regs.attr[GET_FIELD_ATRR(index)]));
 
-		pr_info(FLD_FMT, FLD_VAL(index, C4->rules.regs.fdataArr));
+		pr_info(FLD_FMT, FLD_VAL(index, C4->rules.regs.fdata_arr));
 		pr_info("\n");
 	}
 
@@ -1499,7 +1499,7 @@ int mvPp2ClsC4SwDump(struct mv_pp2x_cls_c4_entry *C4)
 			index,
 			MVPP2_CLS4_FATTR_ID_VAL(index, C4->rules.regs.attr[GET_FIELD_ATRR(index)]),
 			MVPP2_CLS4_FATTR_OPCODE_VAL(index, C4->rules.regs.attr[GET_FIELD_ATRR(index)]));
-	printk(FLD4_FMT, FLD4_VAL(C4->rules.regs.fdataArr));
+	printk(FLD4_FMT, FLD4_VAL(C4->rules.regs.fdata_arr));
 	pr_info("\n");
 
 	/*------------------------------*/
@@ -1511,15 +1511,15 @@ int mvPp2ClsC4SwDump(struct mv_pp2x_cls_c4_entry *C4)
 			index,
 			MVPP2_CLS4_FATTR_ID_VAL(index, C4->rules.regs.attr[GET_FIELD_ATRR(index)]),
 			MVPP2_CLS4_FATTR_OPCODE_VAL(index, C4->rules.regs.attr[GET_FIELD_ATRR(index)]));
-	printk(FLD5_FMT, FLD5_VAL(C4->rules.regs.fdataArr));
+	printk(FLD5_FMT, FLD5_VAL(C4->rules.regs.fdata_arr));
 	pr_info("\n");
 	pr_info("\n");
 	pr_info("VLAN: %d  PPPOE: %d  MACME: %d  L4INFO: %d  L3INFO: %d\n",
-			MVPP2_CLS4_VLAN_VAL(C4->rules.regs.fdataArr[6]),
-			MVPP2_CLS4_PPPOE_VAL(C4->rules.regs.fdataArr[6]),
-			MVPP2_CLS4_MACME_VAL(C4->rules.regs.fdataArr[6]),
-			MVPP2_CLS4_L4INFO_VAL(C4->rules.regs.fdataArr[6]),
-			MVPP2_CLS4_L3INFO_VAL(C4->rules.regs.fdataArr[6]));
+			MVPP2_CLS4_VLAN_VAL(C4->rules.regs.fdata_arr[6]),
+			MVPP2_CLS4_PPPOE_VAL(C4->rules.regs.fdata_arr[6]),
+			MVPP2_CLS4_MACME_VAL(C4->rules.regs.fdata_arr[6]),
+			MVPP2_CLS4_L4INFO_VAL(C4->rules.regs.fdata_arr[6]),
+			MVPP2_CLS4_L3INFO_VAL(C4->rules.regs.fdata_arr[6]));
 	pr_info("\n");
 	/*------------------------------*/
 	/*	actions	0x1E80		*/
@@ -1676,18 +1676,18 @@ int mvPp2ClsC4FieldsShortSet(struct mv_pp2x_cls_c4_entry *C4, int field, unsigne
 
 	if (field < 4) {
 		/* fields 0,1,2,3 lenght is 2 bytes */
-		C4->rules.regs.fdataArr[field/2] &= ~(0xFFFF << (16 * (field % 2)));
-		C4->rules.regs.fdataArr[field/2] |= (data << (16 * (field % 2)));
+		C4->rules.regs.fdata_arr[field/2] &= ~(0xFFFF << (16 * (field % 2)));
+		C4->rules.regs.fdata_arr[field/2] |= (data << (16 * (field % 2)));
 	}
 
 	else if (field == 4) {
 		/* field 4 lenght is 16 bytes */
-		C4->rules.regs.fdataArr[5 - offs/4] &= ~(0xFFFF << (16 * ((offs / 2) % 2)));
-		C4->rules.regs.fdataArr[5 - offs/4] |= (data << (16 * ((offs / 2) % 2)));
+		C4->rules.regs.fdata_arr[5 - offs/4] &= ~(0xFFFF << (16 * ((offs / 2) % 2)));
+		C4->rules.regs.fdata_arr[5 - offs/4] |= (data << (16 * ((offs / 2) % 2)));
 	} else {
 		/* field 5 lenght is 6 bytes */
-		C4->rules.regs.fdataArr[7 - offs/4] &= ~(0xFFFF << (16 * ((offs / 2) % 2)));
-		C4->rules.regs.fdataArr[7 - offs/4] |= (data << (16 * ((offs / 2) % 2)));
+		C4->rules.regs.fdata_arr[7 - offs/4] &= ~(0xFFFF << (16 * ((offs / 2) % 2)));
+		C4->rules.regs.fdata_arr[7 - offs/4] |= (data << (16 * ((offs / 2) % 2)));
 	}
 
 	return MV_OK;
@@ -1710,8 +1710,8 @@ EXPORT_SYMBOL(mvPp2ClsC4FieldsParamsSet);
 /*-------------------------------------------------------------------------------*/
 int mvPp2ClsC4SwVlanSet(struct mv_pp2x_cls_c4_entry *C4, int vlan)
 {
-	C4->rules.regs.fdataArr[6] &= ~MVPP2_CLS4_VLAN_MASK;
-	C4->rules.regs.fdataArr[6] |= (vlan << MVPP2_CLS4_FDATA7_VLAN);
+	C4->rules.regs.fdata_arr[6] &= ~MVPP2_CLS4_VLAN_MASK;
+	C4->rules.regs.fdata_arr[6] |= (vlan << MVPP2_CLS4_FDATA7_VLAN);
 
 	return MV_OK;
 }
@@ -1719,8 +1719,8 @@ EXPORT_SYMBOL(mvPp2ClsC4SwVlanSet);
 /*-------------------------------------------------------------------------------*/
 int mvPp2ClsC4SwPppoeSet(struct mv_pp2x_cls_c4_entry *C4, int pppoe)
 {
-	C4->rules.regs.fdataArr[6] &= ~MVPP2_CLS4_PPPOE_MASK;
-	C4->rules.regs.fdataArr[6] |= (pppoe << MVPP2_CLS4_FDATA7_PPPOE);
+	C4->rules.regs.fdata_arr[6] &= ~MVPP2_CLS4_PPPOE_MASK;
+	C4->rules.regs.fdata_arr[6] |= (pppoe << MVPP2_CLS4_FDATA7_PPPOE);
 
 	return MV_OK;
 }
@@ -1728,8 +1728,8 @@ EXPORT_SYMBOL(mvPp2ClsC4SwPppoeSet);
 /*-------------------------------------------------------------------------------*/
 int mvPp2ClsC4SwMacMeSet(struct mv_pp2x_cls_c4_entry *C4, int mac)
 {
-	C4->rules.regs.fdataArr[6] &= ~MVPP2_CLS4_MACME_MASK;
-	C4->rules.regs.fdataArr[6] |= (mac << MVPP2_CLS4_FDATA7_MACME);
+	C4->rules.regs.fdata_arr[6] &= ~MVPP2_CLS4_MACME_MASK;
+	C4->rules.regs.fdata_arr[6] |= (mac << MVPP2_CLS4_FDATA7_MACME);
 
 	return MV_OK;
 }
@@ -1737,8 +1737,8 @@ EXPORT_SYMBOL(mvPp2ClsC4SwMacMeSet);
 /*-------------------------------------------------------------------------------*/
 int mvPp2ClsC4SwL4InfoSet(struct mv_pp2x_cls_c4_entry *C4, int info)
 {
-	C4->rules.regs.fdataArr[6] &= ~MVPP2_CLS4_L4INFO_MASK;
-	C4->rules.regs.fdataArr[6] |= (info << MVPP2_CLS4_FDATA7_L4INFO);
+	C4->rules.regs.fdata_arr[6] &= ~MVPP2_CLS4_L4INFO_MASK;
+	C4->rules.regs.fdata_arr[6] |= (info << MVPP2_CLS4_FDATA7_L4INFO);
 
 	return MV_OK;
 }
@@ -1746,8 +1746,8 @@ EXPORT_SYMBOL(mvPp2ClsC4SwL4InfoSet);
 /*-------------------------------------------------------------------------------*/
 int mvPp2ClsC4SwL3InfoSet(struct mv_pp2x_cls_c4_entry *C4, int info)
 {
-	C4->rules.regs.fdataArr[6] &= ~MVPP2_CLS4_L3INFO_MASK;
-	C4->rules.regs.fdataArr[6] |= (info << MVPP2_CLS4_FDATA7_L3INFO);
+	C4->rules.regs.fdata_arr[6] &= ~MVPP2_CLS4_L3INFO_MASK;
+	C4->rules.regs.fdata_arr[6] |= (info << MVPP2_CLS4_FDATA7_L3INFO);
 
 	return MV_OK;
 }

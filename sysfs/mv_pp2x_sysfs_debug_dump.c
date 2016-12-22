@@ -1619,23 +1619,23 @@ int mvPp2ClsC2QosSwDump(struct mv_pp2x_cls_c2_qos_entry *qos)
 	DBG_MSG("0x%2.2x\t", qos->tbl_line);
 
 	/* priority */
-	status |= mvPp2ClsC2QosPrioGet(qos, &int32bit);
+	status |= mv_pp2_cls_c2_qos_prio_get(qos, &int32bit);
 	DBG_MSG("0x%1.1x\t", int32bit);
 
 	/* dscp */
-	status |= mvPp2ClsC2QosDscpGet(qos, &int32bit);
+	status |= mv_pp2_cls_c2_qos_dscp_get(qos, &int32bit);
 	DBG_MSG("0x%2.2x\t", int32bit);
 
 	/* color */
-	status |= mvPp2ClsC2QosColorGet(qos, &int32bit);
+	status |= mv_pp2_cls_c2_qos_color_get(qos, &int32bit);
 	DBG_MSG("0x%1.1x\t", int32bit);
 
 	/* gem port id */
-	status |= mvPp2ClsC2QosGpidGet(qos, &int32bit);
+	status |= mv_pp2_cls_c2_qos_gpid_get(qos, &int32bit);
 	DBG_MSG("0x%3.3x\t", int32bit);
 
 	/* queue */
-	status |= mvPp2ClsC2QosQueueGet(qos, &int32bit);
+	status |= mv_pp2_cls_c2_qos_queue_get(qos, &int32bit);
 	DBG_MSG("0x%2.2x", int32bit);
 
 	DBG_MSG("\n");
@@ -1658,13 +1658,13 @@ int mv_pp2x_cls_c2_qos_dscp_hw_dump(struct mv_pp2x_hw *hw)
 			mv_pp2x_cls_c2_qos_hw_read(hw, tbl_id,
 				1/*DSCP*/, tbl_line, &qos);
 			DBG_MSG("0x%2.2x\t", qos.tbl_line);
-			mvPp2ClsC2QosDscpGet(&qos, &int32bit);
+			mv_pp2_cls_c2_qos_dscp_get(&qos, &int32bit);
 			DBG_MSG("0x%2.2x\t", int32bit);
-			mvPp2ClsC2QosColorGet(&qos, &int32bit);
+			mv_pp2_cls_c2_qos_color_get(&qos, &int32bit);
 			DBG_MSG("0x%1.1x\t", int32bit);
-			mvPp2ClsC2QosGpidGet(&qos, &int32bit);
+			mv_pp2_cls_c2_qos_gpid_get(&qos, &int32bit);
 			DBG_MSG("0x%3.3x\t", int32bit);
-			mvPp2ClsC2QosQueueGet(&qos, &int32bit);
+			mv_pp2_cls_c2_qos_queue_get(&qos, &int32bit);
 			DBG_MSG("0x%2.2x", int32bit);
 			DBG_MSG("\n");
 		}
@@ -1691,13 +1691,13 @@ int mv_pp2x_cls_c2_qos_prio_hw_dump(struct mv_pp2x_hw *hw)
 			mv_pp2x_cls_c2_qos_hw_read(hw, tbl_id,
 				0/*PRIO*/, tbl_line, &qos);
 			DBG_MSG("0x%2.2x\t", qos.tbl_line);
-			mvPp2ClsC2QosPrioGet(&qos, &int32bit);
+			mv_pp2_cls_c2_qos_prio_get(&qos, &int32bit);
 			DBG_MSG("0x%1.1x\t", int32bit);
-			mvPp2ClsC2QosColorGet(&qos, &int32bit);
+			mv_pp2_cls_c2_qos_color_get(&qos, &int32bit);
 			DBG_MSG("0x%1.1x\t", int32bit);
-			mvPp2ClsC2QosGpidGet(&qos, &int32bit);
+			mv_pp2_cls_c2_qos_gpid_get(&qos, &int32bit);
 			DBG_MSG("0x%3.3x\t", int32bit);
-			mvPp2ClsC2QosQueueGet(&qos, &int32bit);
+			mv_pp2_cls_c2_qos_queue_get(&qos, &int32bit);
 			DBG_MSG("0x%2.2x", int32bit);
 			DBG_MSG("\n");
 		}
@@ -2131,7 +2131,7 @@ int mv_pp2x_cls_sw_flow_dump(struct mv_pp2x_cls_flow_entry *fe)
 	DBG_MSG("\n");
 	DBG_MSG("\n");
 	DBG_MSG("       PPPEO   VLAN   MACME   UDF7   SELECT SEQ_CTRL\n");
-	DBG_MSG("         %1d      %1d      %1d       %1d      %1d      %1d\n",
+	DBG_MSG("         %1u      %1u      %1u       %1u      %1lu      %1u\n",
 		(fe->data[0] & MVPP2_FLOW_PPPOE_MASK) >> MVPP2_FLOW_PPPOE,
 		(fe->data[0] & MVPP2_FLOW_VLAN_MASK) >> MVPP2_FLOW_VLAN,
 		(fe->data[0] & MVPP2_FLOW_MACME_MASK) >> MVPP2_FLOW_MACME,
