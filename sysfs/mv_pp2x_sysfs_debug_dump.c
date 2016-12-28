@@ -544,12 +544,6 @@ void mvPp2PhysTxqRegs(struct mv_pp2x *priv, int txq)
 			  "MVPP2_TXQ_PENDING_REG");
 	mv_pp2x_print_reg(hw, MVPP2_TXQ_INT_STATUS_REG,
 			  "MVPP2_TXQ_INT_STATUS_REG");
-	if (priv->pp2_version == PPV21)
-		mv_pp2x_print_reg(hw, MVPP21_TXQ_SENT_REG(txq),
-				  "MVPP21_TXQ_SENT_REG");
-	else
-		mv_pp2x_print_reg(hw, MVPP22_TXQ_SENT_REG(txq),
-				  "MVPP22_TXQ_SENT_REG");
 }
 EXPORT_SYMBOL(mvPp2PhysTxqRegs);
 
