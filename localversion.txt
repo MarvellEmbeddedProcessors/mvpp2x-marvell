@@ -1,1 +1,1 @@
-mvpp2x-devel-16.12.0
+mvpp2x-devel-17.01.0
