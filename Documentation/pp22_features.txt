@@ -98,8 +98,8 @@ Unicast MAC address/Multicast MAC addresses filtering description:
 
 	- Unicast MAC address/Multicast MAC addresses configuration:
 		- uc_filter_max - can be set via module parameter.
-		- Unicast MAC address filtering could be added, deleted or dumped by sysfs commands.
-		  or Linux callbacks: dev_uc_add, dev_uc_del and netdev_for_each_uc_addr
+		- Unicast MAC address filtering could be added, deleted, flushed or dumped by sysfs commands.
+		  or Linux callbacks: dev_uc_add, dev_uc_del, dev_uc_flush and netdev_for_each_uc_addr
 		- Multicast MAC address filtering could be added, deleted or dumped by ip maddr commands. See https://linux.die.net/man/8/ip
 
 
