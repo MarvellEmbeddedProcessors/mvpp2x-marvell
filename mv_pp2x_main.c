@@ -48,7 +48,7 @@
 #include <net/busy_poll.h>
 #include <asm/cacheflush.h>
 #include <linux/dma-mapping.h>
-#include <dt-bindings/phy/phy-mvebu-comphy.h>
+#include <dt-bindings/phy/phy-comphy-mvebu.h>
 
 #include "mv_pp2x.h"
 #include "mv_pp2x_hw.h"
@@ -840,9 +840,10 @@ static inline void *mv_pp2_extra_pool_get(struct mv_pp2x_port *port)
 	return ext_buf;
 }
 
-static inline int mv_pp2_extra_pool_put(struct mv_pp2x_port *port, void *ext_buf)
+static inline int mv_pp2_extra_pool_put(struct mv_pp2x_port *port, void *ext_buf,
+					int cpu)
 {
-	struct mv_pp2x_port_pcpu *port_pcpu = this_cpu_ptr(port->pcpu);
+	struct mv_pp2x_port_pcpu *port_pcpu = per_cpu_ptr(port->pcpu, cpu);
 	struct mv_pp2x_ext_buf_struct *ext_buf_struct;
 
 	if (port_pcpu->ext_buf_pool->buf_pool_in_use >= port_pcpu->ext_buf_pool->buf_pool_size) {
@@ -969,7 +970,7 @@ static void mv_pp2x_txq_bufs_free(struct mv_pp2x_port *port,
 
 		if (skb & MVPP2_ETH_SHADOW_EXT) {
 			skb &= ~MVPP2_ETH_SHADOW_EXT;
-			mv_pp2_extra_pool_put(port, (void *)skb);
+			mv_pp2_extra_pool_put(port, (void *)skb, txq_pcpu->cpu);
 			mv_pp2x_txq_inc_get(txq_pcpu);
 			continue;
 		}
@@ -983,19 +984,18 @@ static void mv_pp2x_txq_bufs_free(struct mv_pp2x_port *port,
 }
 
 static void mv_pp2x_txq_buf_free(struct mv_pp2x_port *port, uintptr_t skb,
-				 dma_addr_t  buf_phys_addr, int data_size)
+				 dma_addr_t  buf_phys_addr, int data_size,
+				 int cpu)
 {
 	dma_unmap_single(port->dev->dev.parent, buf_phys_addr,
 			 data_size, DMA_TO_DEVICE);
 
 	if (skb & MVPP2_ETH_SHADOW_EXT) {
 		skb &= ~MVPP2_ETH_SHADOW_EXT;
-		mv_pp2_extra_pool_put(port, (void *)skb);
+		mv_pp2_extra_pool_put(port, (void *)skb, cpu);
 		return;
 	}
 
-	if (!skb)
-		return;
 	if (skb & MVPP2_ETH_SHADOW_SKB) {
 		skb &= ~MVPP2_ETH_SHADOW_SKB;
 		dev_kfree_skb_any((struct sk_buff *)skb);
@@ -1308,6 +1308,7 @@ error:
 		txq_pcpu = per_cpu_ptr(txq->pcpu, cpu);
 		kfree(txq_pcpu->tx_skb);
 		kfree(txq_pcpu->tx_buffs);
+		kfree(txq_pcpu->data_size);
 	}
 
 	dma_free_coherent(port->dev->dev.parent,
@@ -2356,7 +2357,7 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 		pool = MVPP2_RX_DESC_POOL(rx_desc);
 		bm_pool = &port->priv->bm_pools[pool - first_bm_pool];
 		/* Check if buffer header is used */
-		if (rx_status & MVPP2_RXD_BUF_HDR) {
+		if (unlikely(rx_status & MVPP2_RXD_BUF_HDR)) {
 			mv_pp2x_buff_hdr_rx(port, rx_desc, cpu);
 			continue;
 		}
@@ -2379,7 +2380,7 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 		 * by the hardware, and the information about the buffer is
 		 * comprised by the RX descriptor.
 		 */
-		if (rx_status & MVPP2_RXD_ERR_SUMMARY) {
+		if (unlikely(rx_status & MVPP2_RXD_ERR_SUMMARY)) {
 			netdev_warn(port->dev, "MVPP2_RXD_ERR_SUMMARY\n");
 err_drop_frame:
 			dev->stats.rx_errors++;
@@ -2390,7 +2391,7 @@ err_drop_frame:
 
 		skb = build_skb(data, bm_pool->frag_size > PAGE_SIZE ? 0 :
 				bm_pool->frag_size);
-		if (!skb) {
+		if (unlikely(!skb)) {
 			netdev_warn(port->dev, "skb build failed\n");
 			goto err_drop_frame;
 		}
@@ -2398,7 +2399,7 @@ err_drop_frame:
 		err = mv_pp2x_rx_refill_new(port, bm_pool,
 					    bm_pool->log_id, 0, cpu);
 
-		if (err)
+		if (unlikely(err))
 			netdev_err(port->dev, "failed to refill BM pools\n");
 
 		dma_unmap_single(dev->dev.parent, buf_phys_addr,
@@ -2426,7 +2427,7 @@ err_drop_frame:
 		napi_gro_receive(napi, skb);
 	}
 
-	if (rcvd_pkts) {
+	if (likely(rcvd_pkts)) {
 		struct mv_pp2x_pcpu_stats *stats = this_cpu_ptr(port->stats);
 
 		u64_stats_update_begin(&stats->syncp);
@@ -2685,7 +2686,7 @@ static inline int mv_pp2_tx_tso(struct sk_buff *skb, struct net_device *dev,
 			 struct mv_pp2x_aggr_tx_queue *aggr_txq, int cpu)
 {
 	int frag = 0, i;
-	int total_len, hdr_len, size, frag_size, data_left, txq_id;
+	int total_len, hdr_len, size, frag_size, data_left;
 	int total_desc_num, total_bytes = 0, max_desc_num = 0;
 	char *frag_ptr;
 	struct mv_pp2x_tx_desc *tx_desc;
@@ -2695,26 +2696,22 @@ static inline int mv_pp2_tx_tso(struct sk_buff *skb, struct net_device *dev,
 	u32 tcp_seq = 0;
 	skb_frag_t *skb_frag_ptr;
 	const struct tcphdr *th = tcp_hdr(skb);
-	struct netdev_queue *nq;
 
-	if (mv_pp2_tso_validate(skb, dev))
+	if (unlikely(mv_pp2_tso_validate(skb, dev)))
 		return 0;
-
-	txq_id = skb_get_queue_mapping(skb) % mv_pp2x_txq_number;
-	nq = netdev_get_tx_queue(dev, (txq_id + (cpu * mv_pp2x_txq_number)));
 
 	/* Calculate expected number of TX descriptors */
 	max_desc_num = skb_shinfo(skb)->gso_segs * 2 + skb_shinfo(skb)->nr_frags;
 
 	/* Check number of available descriptors */
-	if (mv_pp2x_aggr_desc_num_check(port->priv, aggr_txq, max_desc_num, cpu) ||
-	    mv_pp2x_tso_txq_reserved_desc_num_proc(port->priv, txq,
-						   txq_pcpu, max_desc_num, cpu)) {
+	if (unlikely(mv_pp2x_aggr_desc_num_check(port->priv, aggr_txq, max_desc_num, cpu) ||
+		     mv_pp2x_tso_txq_reserved_desc_num_proc(port->priv, txq,
+							    txq_pcpu, max_desc_num, cpu))) {
 		return 0;
 	}
 
 	if (unlikely(max_desc_num > port->txq_stop_limit))
-		if (mv_pp2x_txq_free_count(txq_pcpu) < max_desc_num)
+		if (likely(mv_pp2x_txq_free_count(txq_pcpu) < max_desc_num))
 			return 0;
 
 	total_len = skb->len;
@@ -2727,7 +2724,7 @@ static inline int mv_pp2_tx_tso(struct sk_buff *skb, struct net_device *dev,
 	frag_size = skb_headlen(skb);
 	frag_ptr = skb->data;
 
-	if (frag_size < hdr_len) {
+	if (unlikely(frag_size < hdr_len)) {
 		pr_err("frag_size=%d, hdr_len=%d\n", frag_size, hdr_len);
 		return 0;
 	}
@@ -2748,27 +2745,26 @@ static inline int mv_pp2_tx_tso(struct sk_buff *skb, struct net_device *dev,
 	total_desc_num = 0;
 
 	/* Each iteration - create new TCP segment */
-	while (total_len > 0) {
+	while (likely(total_len > 0)) {
 		u8 *data;
 
 		data_left = min((int)(skb_shinfo(skb)->gso_size), total_len);
 
 		/* Sanity check */
-		if (total_desc_num >= max_desc_num) {
+		if (unlikely(total_desc_num >= max_desc_num)) {
 			pr_err("%s: Used TX descriptors number %d is larger than allocated %d\n",
 			       __func__, total_desc_num, max_desc_num);
 			goto out_no_tx_desc;
 		}
 
 		data = mv_pp2_extra_pool_get(port);
-		if (!data) {
+		if (unlikely(!data)) {
 			pr_err("Can't allocate extra buffer for TSO\n");
 			goto out_no_tx_desc;
 		}
 		tx_desc = mv_pp2x_txq_next_desc_get(aggr_txq);
 		tx_desc->phys_txq = txq->id;
 
-		total_desc_num++;
 		total_len -= data_left;
 
 		/* prepare packet headers: MAC + IP + TCP */
@@ -2776,17 +2772,18 @@ static inline int mv_pp2_tx_tso(struct sk_buff *skb, struct net_device *dev,
 						 txq_pcpu, mh, hdr_len,
 						 data_left, tcp_seq, ip_id,
 						 total_len);
-		if (size < 0)
+		if (unlikely(size < 0))
 			goto out_no_tx_desc;
+		total_desc_num++;
 
 		total_bytes += size;
 
 		/* Update packet's IP ID */
 		ip_id++;
 
-		while (data_left > 0) {
+		while (likely(data_left > 0)) {
 			/* Sanity check */
-			if (total_desc_num >= max_desc_num) {
+			if (unlikely(total_desc_num >= max_desc_num)) {
 				pr_err("%s: Used TX descriptors number %d is larger than allocated %d\n",
 				       __func__, total_desc_num, max_desc_num);
 				goto out_no_tx_desc;
@@ -2797,7 +2794,7 @@ static inline int mv_pp2_tx_tso(struct sk_buff *skb, struct net_device *dev,
 			size = mv_pp2_tso_build_data_desc(port, tx_desc, skb, txq_pcpu,
 							  frag_ptr, frag_size, data_left, total_len);
 
-			if (size < 0)
+			if (unlikely(size < 0))
 				goto out_no_tx_desc;
 
 			total_desc_num++;
@@ -2822,12 +2819,12 @@ static inline int mv_pp2_tx_tso(struct sk_buff *skb, struct net_device *dev,
 		}
 	}
 
-	/* Prevent shadow_q override, stop tx_queue until tx_done is called*/
-	if (mv_pp2x_txq_free_count(txq_pcpu) < port->txq_stop_limit)
-		netif_tx_stop_queue(nq);
-
-	/* TCP segment is ready - transmit it */
-	mv_pp2x_aggr_txq_pend_desc_add(port, total_desc_num);
+	aggr_txq->xmit_bulk += total_desc_num;
+	if (!skb->xmit_more) {
+		/* Transmit TCP segment with bulked descriptors*/
+		mv_pp2x_aggr_txq_pend_desc_add(port, aggr_txq->xmit_bulk);
+		aggr_txq->xmit_bulk = 0;
+	}
 
 	txq_pcpu->reserved_num -= total_desc_num;
 	txq_pcpu->count += total_desc_num;
@@ -2850,10 +2847,10 @@ out_no_tx_desc:
 
 		shadow_skb = txq_pcpu->tx_skb[txq_pcpu->txq_put_index];
 		shadow_buf = txq_pcpu->tx_buffs[txq_pcpu->txq_put_index];
-		data_size = txq_pcpu->data_size[txq_pcpu->txq_get_index];
+		data_size = txq_pcpu->data_size[txq_pcpu->txq_put_index];
 
 		mv_pp2x_txq_buf_free(port, (uintptr_t)shadow_skb, shadow_buf,
-				     data_size);
+				     data_size, cpu);
 
 		mv_pp2x_txq_prev_desc_get(aggr_txq);
 	}
@@ -2878,10 +2875,19 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 
 	/* Set relevant physical TxQ and Linux netdev queue */
 	txq_id = skb_get_queue_mapping(skb) % mv_pp2x_txq_number;
-	nq = netdev_get_tx_queue(dev, (txq_id + (cpu * mv_pp2x_txq_number)));
 	txq = port->txqs[txq_id];
 	txq_pcpu = this_cpu_ptr(txq->pcpu);
 	aggr_txq = &port->priv->aggr_txqs[cpu];
+
+	/* Prevent shadow_q override, stop tx_queue until tx_done is called*/
+	if (unlikely(mv_pp2x_txq_free_count(txq_pcpu) < port->txq_stop_limit)) {
+		if ((txq->log_id + (cpu * mv_pp2x_txq_number)) == skb_get_queue_mapping(skb)) {
+			nq = netdev_get_tx_queue(dev, skb_get_queue_mapping(skb));
+			netif_tx_stop_queue(nq);
+		}
+		frags = 0;
+		goto out;
+	}
 
 	/* GSO/TSO */
 	if (skb_is_gso(skb)) {
@@ -2893,9 +2899,9 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 	pr_debug("txq_id=%d, frags=%d\n", txq_id, frags);
 
 	/* Check number of available descriptors */
-	if (mv_pp2x_aggr_desc_num_check(port->priv, aggr_txq, frags, cpu) ||
-	    mv_pp2x_txq_reserved_desc_num_proc(port->priv, txq,
-					       txq_pcpu, frags, cpu)) {
+	if (unlikely(mv_pp2x_aggr_desc_num_check(port->priv, aggr_txq, frags, cpu) ||
+		     mv_pp2x_txq_reserved_desc_num_proc(port->priv, txq,
+							txq_pcpu, frags, cpu))) {
 		frags = 0;
 		goto out;
 	}
@@ -2965,7 +2971,7 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 				    txq_pcpu, NULL, tx_desc);
 
 		/* Continue with other skb fragments */
-		if (mv_pp2x_tx_frag_process(port, skb, aggr_txq, txq)) {
+		if (unlikely(mv_pp2x_tx_frag_process(port, skb, aggr_txq, txq))) {
 			mv_pp2x_txq_inc_error(txq_pcpu, 1);
 			tx_desc_unmap_put(port->dev->dev.parent, txq, tx_desc);
 			frags = 0;
@@ -2981,17 +2987,13 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 	mv_pp2_is_pkt_ptp_tx_proc(port, tx_desc, skb);
 #endif
 
-	/* Prevent shadow_q override, stop tx_queue until tx_done is called*/
-
-	if (mv_pp2x_txq_free_count(txq_pcpu) < port->txq_stop_limit)
-		netif_tx_stop_queue(nq);
 	/* Enable transmit */
-	if (!skb->xmit_more || netif_xmit_stopped(nq)) {
+	if (!skb->xmit_more) {
 		mv_pp2x_aggr_txq_pend_desc_add(port, aggr_txq->xmit_bulk);
 		aggr_txq->xmit_bulk = 0;
 	}
 out:
-	if (frags > 0) {
+	if (likely(frags > 0)) {
 		struct mv_pp2x_pcpu_stats *stats = this_cpu_ptr(port->stats);
 
 		u64_stats_update_begin(&stats->syncp);
@@ -2999,6 +3001,11 @@ out:
 		stats->tx_bytes += skb->len;
 		u64_stats_update_end(&stats->syncp);
 	} else {
+		/* Transmit bulked descriptors*/
+		if (aggr_txq->xmit_bulk > 0) {
+			mv_pp2x_aggr_txq_pend_desc_add(port, aggr_txq->xmit_bulk);
+			aggr_txq->xmit_bulk = 0;
+		}
 		dev->stats.tx_dropped++;
 		dev_kfree_skb_any(skb);
 	}
@@ -3186,23 +3193,28 @@ static void mv_serdes_port_init(struct mv_pp2x_port *port)
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
 		if (port->mac_data.flags & MV_EMAC_F_SGMII2_5)
-			mode = COMPHY_DEF(COMPHY_HS_SGMII_MODE, port->id);
+			mode = COMPHY_DEF(COMPHY_HS_SGMII_MODE, port->id,
+					  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
 		else
-			mode = COMPHY_DEF(COMPHY_SGMII_MODE, port->id);
+			mode = COMPHY_DEF(COMPHY_SGMII_MODE, port->id,
+					  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
 		phy_set_mode(port->comphy, mode);
 	break;
 	case PHY_INTERFACE_MODE_XAUI:
 	case PHY_INTERFACE_MODE_RXAUI:
-		mode = COMPHY_DEF(COMPHY_RXAUI_MODE, port->id);
+		mode = COMPHY_DEF(COMPHY_RXAUI_MODE, port->id,
+				  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
 		phy_set_mode(port->comphy, mode);
 	break;
 	case PHY_INTERFACE_MODE_KR:
 	case PHY_INTERFACE_MODE_SFI:
-		mode = COMPHY_DEF(COMPHY_SFI_MODE, port->id);
+		mode = COMPHY_DEF(COMPHY_SFI_MODE, port->id,
+				  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
 		phy_set_mode(port->comphy, mode);
 	break;
 	case PHY_INTERFACE_MODE_XFI:
-		mode = COMPHY_DEF(COMPHY_XFI_MODE, port->id);
+		mode = COMPHY_DEF(COMPHY_XFI_MODE, port->id,
+				  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
 		phy_set_mode(port->comphy, mode);
 	break;
 	default:
@@ -4665,6 +4677,9 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 		dev_err(&pdev->dev, "failed to register netdev\n");
 		goto err_free_port_pcpu;
 	}
+
+	/* Clear MIB counters statistic */
+	mv_gop110_mib_counters_clear(&port->priv->hw.gop, port->mac_data.gop_index);
 
 	mv_pp2x_port_irq_names_update(port);
 
