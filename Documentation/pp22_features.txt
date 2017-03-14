@@ -75,21 +75,23 @@ Interface/Link Control
 
 L2 filtering
 ---------------
-Unicast MAC address/Multicast MAC addresses filtering description:
-	- The MAC filtering is implemented by hardware on A70x0 and A80x0. MAC filtering is done in parser TCAM by parsing the DMAC field.
+1. Unicast MAC address/Multicast MAC addresses filtering:
+	- MAC filtering is implemented by hardware on A70x0 and A80x0. MAC filtering is done in a dedicated parser & L2 filtering TCAM 
+	  by parsing the DMAC field.
 		- Filtering capability:
-			For each port, the capability of UC and MC entries is 36.
-			There is a parameter of “uc_filter_max” in the driver, whose value should be multiple of 4. The default value is 4.
-			Parameter define maximum number of UC entries.
-			The MC filtering capability is (36 - uc_filter_max).
+			For each port, it is possible to configure up to 25 UC and MC filtering entries
+			By default, the maximum number of UC entries is 4, and the maximum number of MC entries is 21( 25 - max UC entries.
+			It is possible to change the maximum number of UC entries by configuring the uc_filter_max module parameter in the
+			driver.	The value should be a multiple of 4, and the default value is 4.
+			The MC filtering capability is (25 - uc_filter_max).
 		- MAC range:
-			There is a MAC range created in parser TCAM, and the TCAM entries in the range are reserved only for MAC parsing.
+			There is a MAC range created in parser TCAM, and the TCAM entries in this range are reserved for MAC parsing only.
 			3 ports support Rx MAC filtering(per CP).
-			So the range size is defined as 36 * 3 + 4 (M2M entry) + 1 (BC) = 113.
+			The range size is defined as 25 * 3 + 4 (M2M entry) + 1 (BC) = 80.
 		- MAC filtering behavior:
-			The filtering behaviors are defined as following.
-				- UC filtering: If uc_entry_num > uc_filter_max, put the port to promisc mode.
-				- MC filtering: If mc_entry_num > (36- uc_filter_max), put the port to all-multi mode.
+			The filtering behavior is defined as following:
+				- UC filtering: If UC entries > max UC entries, the port is set to promisc mode.
+			        - MC filtering: If MC entries > (25- max UC entries), the port is set to all-multi mode.
 
 			From the behavior definition, there are 3 states for each port:
 				- State1: non-promisc & non-allmulti
@@ -102,6 +104,17 @@ Unicast MAC address/Multicast MAC addresses filtering description:
 		  or Linux callbacks: dev_uc_add, dev_uc_del, dev_uc_flush and netdev_for_each_uc_addr
 		- Multicast MAC address filtering could be added, deleted or dumped by ip maddr commands. See https://linux.die.net/man/8/ip
 
+2. VLAN filtering
+	- VLAN filtering is implemented by hardware on A70x0 and A80x0. VLAN filtering is done in a dedicated parser &
+	  L2 filtering TCAM by parsing the VLAN ID field.
+
+		- Filtering capability:
+			For each MUSDK port, it is possible to configure up to 10 VLAN ID filtering entries.
+		- VLAN filtering behaviour:
+			- If no VLAN filtering entries are set, the system allows passing through all VLAN traffic.
+			- Whenever one or more VLAN ID filters are configured, all VLAN traffic matching one of the VLAN ID will pass
+                          through the system, while all VLAN traffic not matching none of the configured VLAN ID's will be dropped.
+			- All non-VLAN traffic will pass through the system independently of the VLAN filter configured.
 
 TX/RX Queues
 ---------------
