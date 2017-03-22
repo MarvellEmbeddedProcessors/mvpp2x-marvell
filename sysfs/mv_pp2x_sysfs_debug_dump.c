@@ -48,7 +48,7 @@
 void mv_pp2x_print_reg(struct mv_pp2x_hw *hw, unsigned int reg_addr,
 		       char *reg_name)
 {
-	DBG_MSG("  %-32s: 0x%x = 0x%08x\n", reg_name, reg_addr,
+	DBG_MSG("  %-32s: 0x%04x = 0x%08x\n", reg_name, reg_addr,
 		mv_pp2x_read(hw, reg_addr));
 }
 EXPORT_SYMBOL(mv_pp2x_print_reg);
@@ -88,6 +88,8 @@ void mv_pp2x_bm_pool_regs(struct mv_pp2x_hw *hw, int pool)
 			  "MVPP2_BM_INTR_CAUSE_REG");
 	mv_pp2x_print_reg(hw, MVPP2_BM_INTR_MASK_REG(pool),
 			  "MVPP2_BM_INTR_MASK_REG");
+	mv_pp2x_print_reg(hw, MVPP2_POOL_BUF_SIZE_REG(pool),
+			   "MVPP2_POOL_BUF_SIZE_REG");
 }
 EXPORT_SYMBOL(mv_pp2x_bm_pool_regs);
 
