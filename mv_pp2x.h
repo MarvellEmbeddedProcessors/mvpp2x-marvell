@@ -264,11 +264,13 @@ struct mv_mac_data {
 #define MV_EMAC_F_INIT_BIT	1
 #define MV_EMAC_F_SGMII2_5_BIT	2
 #define MV_EMAC_F_PORT_UP_BIT	3
+#define MV_EMAC_F_5G_BIT	4
 
 #define MV_EMAC_F_LINK_UP	BIT(MV_EMAC_F_LINK_UP_BIT)
 #define MV_EMAC_F_INIT		BIT(MV_EMAC_F_INIT_BIT)
 #define MV_EMAC_F_SGMII2_5	BIT(MV_EMAC_F_SGMII2_5_BIT)
 #define MV_EMAC_F_PORT_UP	BIT(MV_EMAC_F_PORT_UP_BIT)
+#define MV_EMAC_F_5G		BIT(MV_EMAC_F_5G_BIT)
 
 #define MVPP2_NO_LINK_IRQ	0
 
@@ -278,11 +280,6 @@ struct mv_pp2x_txq_pcpu {
 
 	/* Number of Tx DMA descriptors in the descriptor ring */
 	int size;
-
-	/* Number of currently used Tx DMA descriptor in the
-	 * descriptor ring
-	 */
-	int count;
 
 	/* Number of Tx DMA descriptors reserved for each CPU */
 	int reserved_num;

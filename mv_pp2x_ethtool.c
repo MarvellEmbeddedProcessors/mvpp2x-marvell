@@ -545,22 +545,32 @@ int mv_pp2x_get_new_comphy_mode(struct ethtool_cmd *cmd, int port_id)
 {
 	if (cmd->speed == SPEED_10000 && port_id == 0)
 		return COMPHY_DEF(COMPHY_SFI_MODE, port_id,
-				  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
+				  COMPHY_SPEED_10_3125G, COMPHY_POLARITY_NO_INVERT);
+	else if (cmd->speed == SPEED_5000 && port_id == 0)
+		return COMPHY_DEF(COMPHY_SFI_MODE, port_id,
+				  COMPHY_SPEED_5_15625G, COMPHY_POLARITY_NO_INVERT);
 	else if (cmd->speed == SPEED_2500)
 		return COMPHY_DEF(COMPHY_HS_SGMII_MODE, port_id,
-				  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
+				  COMPHY_SPEED_3_125G, COMPHY_POLARITY_NO_INVERT);
 	else if (cmd->speed == SPEED_1000 || cmd->speed == SPEED_100 ||
 		 cmd->speed == SPEED_10)
 		return COMPHY_DEF(COMPHY_SGMII_MODE, port_id,
-				  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
+				  COMPHY_SPEED_1_25G, COMPHY_POLARITY_NO_INVERT);
 	else
 		return -EINVAL;
 }
 
 void mv_pp2x_set_new_phy_mode(struct ethtool_cmd *cmd, struct mv_mac_data *mac)
 {
+	mac->flags &= ~(MV_EMAC_F_SGMII2_5 | MV_EMAC_F_5G);
+
 	if (cmd->speed == SPEED_10000) {
 		mac->phy_mode = PHY_INTERFACE_MODE_SFI;
+		mac->speed = SPEED_10000;
+	} else if (cmd->speed == SPEED_5000) {
+		mac->phy_mode = PHY_INTERFACE_MODE_SFI;
+		mac->speed = SPEED_5000;
+		mac->flags |= MV_EMAC_F_5G;
 	} else if (cmd->speed == SPEED_2500) {
 		mac->phy_mode = PHY_INTERFACE_MODE_SGMII;
 		mac->speed = SPEED_2500;
@@ -568,7 +578,6 @@ void mv_pp2x_set_new_phy_mode(struct ethtool_cmd *cmd, struct mv_mac_data *mac)
 	} else {
 		mac->phy_mode = PHY_INTERFACE_MODE_SGMII;
 		mac->speed = SPEED_1000;
-		mac->flags &= ~MV_EMAC_F_SGMII2_5;
 	}
 }
 
@@ -616,7 +625,7 @@ static int mv_pp2x_ethtool_set_settings(struct net_device *dev,
 			if (mac->flags & MV_EMAC_F_PORT_UP) {
 				netif_carrier_off(port->dev);
 				mv_gop110_port_events_mask(gop, mac);
-				mv_gop110_port_disable(gop, mac);
+				mv_gop110_port_disable(gop, mac, port->comphy);
 				phy_power_off(port->comphy);
 			}
 
@@ -633,9 +642,11 @@ static int mv_pp2x_ethtool_set_settings(struct net_device *dev,
 		mv_pp22_set_net_comp(port->priv);
 
 		if (mac->flags & MV_EMAC_F_PORT_UP) {
-			mv_gop110_port_events_unmask(gop, mac);
-			mv_gop110_port_enable(gop, mac);
+			mv_gop110_port_disable(gop, mac, port->comphy);
 			phy_power_on(port->comphy);
+			mv_gop110_port_events_unmask(gop, mac);
+			mv_gop110_port_enable(gop, mac, port->comphy);
+			netif_carrier_on(port->dev);
 		}
 	}
 

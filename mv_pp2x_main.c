@@ -37,6 +37,7 @@
 #include <linux/of_address.h>
 #include <linux/of_device.h>
 #include <linux/phy/phy.h>
+#include <linux/if_vlan.h>
 
 #include <linux/phy.h>
 #include <linux/clk.h>
@@ -260,6 +261,14 @@ static void mv_pp2x_txq_dec_put(struct mv_pp2x_txq_pcpu *txq_pcpu)
 		txq_pcpu->txq_put_index = txq_pcpu->size - 1;
 	else
 		txq_pcpu->txq_put_index--;
+}
+
+static void mv_pp2x_extra_pool_inc(struct mv_pp2x_ext_buf_pool *ext_buf_pool)
+{
+	if (unlikely(ext_buf_pool->buf_pool_next_free == ext_buf_pool->buf_pool_size - 1))
+		ext_buf_pool->buf_pool_next_free = 0;
+	else
+		ext_buf_pool->buf_pool_next_free++;
 }
 
 static u8 mv_pp2x_first_pool_get(struct mv_pp2x *priv)
@@ -826,8 +835,8 @@ static inline void *mv_pp2_extra_pool_get(struct mv_pp2x_port *port)
 	struct mv_pp2x_ext_buf_struct *ext_buf_struct;
 
 	if (!list_empty(&port_pcpu->ext_buf_port_list)) {
-		ext_buf_struct = list_first_entry(&port_pcpu->ext_buf_port_list,
-						  struct mv_pp2x_ext_buf_struct, ext_buf_list);
+		ext_buf_struct = list_last_entry(&port_pcpu->ext_buf_port_list,
+						 struct mv_pp2x_ext_buf_struct, ext_buf_list);
 		list_del(&ext_buf_struct->ext_buf_list);
 		port_pcpu->ext_buf_pool->buf_pool_in_use--;
 
@@ -850,15 +859,15 @@ static inline int mv_pp2_extra_pool_put(struct mv_pp2x_port *port, void *ext_buf
 		kfree(ext_buf);
 		return 1;
 	}
+	port_pcpu->ext_buf_pool->buf_pool_in_use++;
 
 	ext_buf_struct =
-		&port_pcpu->ext_buf_pool->ext_buf_struct[port_pcpu->ext_buf_pool->buf_pool_in_use];
-
+		&port_pcpu->ext_buf_pool->ext_buf_struct[port_pcpu->ext_buf_pool->buf_pool_next_free];
+	mv_pp2x_extra_pool_inc(port_pcpu->ext_buf_pool);
 	ext_buf_struct->ext_buf_data = ext_buf;
 
 	list_add(&ext_buf_struct->ext_buf_list,
 		 &port_pcpu->ext_buf_port_list);
-	port_pcpu->ext_buf_pool->buf_pool_in_use++;
 
 	return 0;
 }
@@ -1295,7 +1304,6 @@ static int mv_pp2x_txq_init(struct mv_pp2x_port *port,
 		if (!txq_pcpu->data_size)
 			goto error;
 
-		txq_pcpu->count = 0;
 		txq_pcpu->reserved_num = 0;
 		txq_pcpu->txq_put_index = 0;
 		txq_pcpu->txq_get_index = 0;
@@ -1726,7 +1734,7 @@ static void mv_pp22_link_event(struct net_device *dev)
 			mv_gop110_port_events_mask(&port->priv->hw.gop,
 						   &port->mac_data);
 			mv_gop110_port_enable(&port->priv->hw.gop,
-					      &port->mac_data);
+					      &port->mac_data, port->comphy);
 			mv_pp2x_egress_enable(port);
 			mv_pp2x_ingress_enable(port);
 			netif_carrier_on(dev);
@@ -1741,7 +1749,7 @@ static void mv_pp22_link_event(struct net_device *dev)
 			mv_gop110_port_events_mask(&port->priv->hw.gop,
 						   &port->mac_data);
 			mv_gop110_port_disable(&port->priv->hw.gop,
-					       &port->mac_data);
+					       &port->mac_data, port->comphy);
 			netif_carrier_off(dev);
 			netif_tx_stop_all_queues(dev);
 			port->mac_data.flags &= ~MV_EMAC_F_LINK_UP;
@@ -2311,6 +2319,8 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 	int rx_received, rx_filled, i;
 	u32 rcvd_pkts = 0;
 	u32 rcvd_bytes = 0;
+	u32 refill_array[MVPP2_BM_POOLS_NUM] = {0};
+	u8  num_pool = MVPP2_BM_SWF_NUM_POOLS;
 	u8  first_bm_pool = port->priv->pp2_cfg.first_bm_pool;
 	int cpu = smp_processor_id();
 
@@ -2341,7 +2351,6 @@ static int mv_pp2x_rx(struct mv_pp2x_port *port, struct napi_struct *napi,
 		int rx_bytes;
 		dma_addr_t buf_phys_addr;
 		unsigned char *data;
-		int err;
 
 #if defined(__BIG_ENDIAN)
 		if (port->priv->pp2_version == PPV21)
@@ -2396,15 +2405,10 @@ err_drop_frame:
 			goto err_drop_frame;
 		}
 
-		err = mv_pp2x_rx_refill_new(port, bm_pool,
-					    bm_pool->log_id, 0, cpu);
-
-		if (unlikely(err))
-			netdev_err(port->dev, "failed to refill BM pools\n");
-
 		dma_unmap_single(dev->dev.parent, buf_phys_addr,
 				 MVPP2_RX_BUF_SIZE(bm_pool->pkt_size),
 				 DMA_FROM_DEVICE);
+		refill_array[bm_pool->log_id]++;
 
 #ifdef MVPP2_VERBOSE
 		mv_pp2x_skb_dump(skb, rx_desc->data_size, 4);
@@ -2420,11 +2424,32 @@ err_drop_frame:
 		skb_put(skb, rx_bytes);
 		skb->protocol = eth_type_trans(skb, dev);
 		mv_pp2x_rx_csum(port, rx_status, skb);
-		skb_record_rx_queue(skb, (u16)rxq->id);
+		skb_record_rx_queue(skb, (u16)rxq->log_id);
 		mv_pp2x_set_skb_hash(rx_desc, rx_status, skb);
 		skb_mark_napi_id(skb, napi);
 
 		napi_gro_receive(napi, skb);
+	}
+
+	/* Refill pool */
+	for (i = 0; i < num_pool; i++) {
+		int err;
+		struct mv_pp2x_bm_pool *refill_bm_pool;
+
+		if (!refill_array[i])
+			continue;
+
+		refill_bm_pool = &port->priv->bm_pools[i];
+		while (likely(refill_array[i]--)) {
+			err = mv_pp2x_rx_refill_new(port, refill_bm_pool,
+						    refill_bm_pool->id, 0, cpu);
+			if (unlikely(err)) {
+				netdev_err(port->dev, "failed to refill BM pools\n");
+				refill_array[i]++;
+				rx_filled -= refill_array[i];
+				break;
+			}
+		}
 	}
 
 	if (likely(rcvd_pkts)) {
@@ -2827,7 +2852,6 @@ static inline int mv_pp2_tx_tso(struct sk_buff *skb, struct net_device *dev,
 	}
 
 	txq_pcpu->reserved_num -= total_desc_num;
-	txq_pcpu->count += total_desc_num;
 	aggr_txq->count += total_desc_num;
 
 	return total_desc_num;
@@ -3194,27 +3218,36 @@ static void mv_serdes_port_init(struct mv_pp2x_port *port)
 	case PHY_INTERFACE_MODE_QSGMII:
 		if (port->mac_data.flags & MV_EMAC_F_SGMII2_5)
 			mode = COMPHY_DEF(COMPHY_HS_SGMII_MODE, port->id,
-					  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
+					  COMPHY_SPEED_3_125G, COMPHY_POLARITY_NO_INVERT);
 		else
 			mode = COMPHY_DEF(COMPHY_SGMII_MODE, port->id,
-					  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
+					  COMPHY_SPEED_1_25G, COMPHY_POLARITY_NO_INVERT);
 		phy_set_mode(port->comphy, mode);
 	break;
 	case PHY_INTERFACE_MODE_XAUI:
 	case PHY_INTERFACE_MODE_RXAUI:
 		mode = COMPHY_DEF(COMPHY_RXAUI_MODE, port->id,
-				  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
+				  COMPHY_SPEED_10_3125G, COMPHY_POLARITY_NO_INVERT);
 		phy_set_mode(port->comphy, mode);
 	break;
 	case PHY_INTERFACE_MODE_KR:
 	case PHY_INTERFACE_MODE_SFI:
-		mode = COMPHY_DEF(COMPHY_SFI_MODE, port->id,
-				  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
+		if (port->mac_data.flags & MV_EMAC_F_5G)
+			mode = COMPHY_DEF(COMPHY_SFI_MODE, port->id,
+					  COMPHY_SPEED_5_15625G, COMPHY_POLARITY_NO_INVERT);
+		else
+			mode = COMPHY_DEF(COMPHY_SFI_MODE, port->id,
+					  COMPHY_SPEED_10_3125G, COMPHY_POLARITY_NO_INVERT);
 		phy_set_mode(port->comphy, mode);
 	break;
 	case PHY_INTERFACE_MODE_XFI:
-		mode = COMPHY_DEF(COMPHY_XFI_MODE, port->id,
-				  COMPHY_SPEED_DEFAULT, COMPHY_POLARITY_NO_INVERT);
+		if (port->mac_data.flags & MV_EMAC_F_5G)
+			mode = COMPHY_DEF(COMPHY_XFI_MODE, port->id,
+					  COMPHY_SPEED_5_15625G, COMPHY_POLARITY_NO_INVERT);
+		else
+			mode = COMPHY_DEF(COMPHY_XFI_MODE, port->id,
+					  COMPHY_SPEED_10_3125G, COMPHY_POLARITY_NO_INVERT);
+
 		phy_set_mode(port->comphy, mode);
 	break;
 	default:
@@ -3293,7 +3326,7 @@ void mv_pp2x_start_dev(struct mv_pp2x_port *port)
 	mv_pp2x_port_interrupts_enable(port);
 
 	if (port->comphy) {
-		mv_gop110_port_disable(gop, mac);
+		mv_gop110_port_disable(gop, mac, port->comphy);
 		phy_power_on(port->comphy);
 		}
 
@@ -3301,7 +3334,7 @@ void mv_pp2x_start_dev(struct mv_pp2x_port *port)
 		mv_pp21_port_enable(port);
 	} else {
 		mv_gop110_port_events_mask(gop, mac);
-		mv_gop110_port_enable(gop, mac);
+		mv_gop110_port_enable(gop, mac, port->comphy);
 	}
 
 	if (port->mac_data.phy_dev) {
@@ -3352,7 +3385,7 @@ void mv_pp2x_stop_dev(struct mv_pp2x_port *port)
 		mv_pp21_port_disable(port);
 	} else {
 		mv_gop110_port_events_mask(gop, mac);
-		mv_gop110_port_disable(gop, mac);
+		mv_gop110_port_disable(gop, mac, port->comphy);
 		port->mac_data.flags &= ~MV_EMAC_F_LINK_UP;
 		port->mac_data.flags &= ~MV_EMAC_F_PORT_UP;
 	}
@@ -3861,6 +3894,28 @@ error:
 	return err;
 }
 
+static int mv_pp2x_rx_add_vid(struct net_device *dev, u16 proto, u16 vid)
+{
+	int err;
+
+	if (vid >= VLAN_N_VID)
+		return -EINVAL;
+
+	err = mv_pp2x_prs_vid_entry_accept(dev, proto, vid, true);
+	return err;
+}
+
+static int mv_pp2x_rx_kill_vid(struct net_device *dev, u16 proto, u16 vid)
+{
+	int err;
+
+	if (vid >= VLAN_N_VID)
+		return -EINVAL;
+
+	err = mv_pp2x_prs_vid_entry_accept(dev, proto, vid, false);
+	return err;
+}
+
 static struct rtnl_link_stats64 *
 mv_pp2x_get_stats64(struct net_device *dev, struct rtnl_link_stats64 *stats)
 {
@@ -3983,6 +4038,8 @@ static const struct net_device_ops mv_pp2x_netdev_ops = {
 	.ndo_get_stats64	= mv_pp2x_get_stats64,
 	.ndo_do_ioctl		= mv_pp2x_ioctl,
 	.ndo_set_features	= mv_pp2x_netdev_set_features,
+	.ndo_vlan_rx_add_vid	= mv_pp2x_rx_add_vid,
+	.ndo_vlan_rx_kill_vid	= mv_pp2x_rx_kill_vid,
 };
 
 /* Driver initialization */
@@ -4221,15 +4278,15 @@ static int mv_pp2_init_emac_data(struct mv_pp2x_port *port,
 			/* check phy speed */
 			of_property_read_u32(emac_node, "phy-speed", &speed);
 			switch (speed) {
-			case 1000:
-				port->mac_data.speed = 1000; /* sgmii */
+			case SPEED_1000:
+				port->mac_data.speed = SPEED_1000; /* sgmii */
 				break;
-			case 2500:
-				port->mac_data.speed = 2500; /* sgmii */
+			case SPEED_2500:
+				port->mac_data.speed = SPEED_2500; /* sgmii */
 				port->mac_data.flags |= MV_EMAC_F_SGMII2_5;
 				break;
 			default:
-				port->mac_data.speed = 1000; /* sgmii */
+				port->mac_data.speed = SPEED_1000; /* sgmii */
 			}
 			break;
 		case PHY_INTERFACE_MODE_RXAUI:
@@ -4241,6 +4298,20 @@ static int mv_pp2_init_emac_data(struct mv_pp2x_port *port,
 		case PHY_INTERFACE_MODE_KR:
 		case PHY_INTERFACE_MODE_SFI:
 		case PHY_INTERFACE_MODE_XFI:
+			speed = 0;
+			/* check phy speed */
+			of_property_read_u32(emac_node, "phy-speed", &speed);
+			switch (speed) {
+			case SPEED_10000:
+				port->mac_data.speed = SPEED_10000;
+				break;
+			case SPEED_5000:
+				port->mac_data.speed = SPEED_5000;
+				port->mac_data.flags |= MV_EMAC_F_5G;
+				break;
+			default:
+				port->mac_data.speed = SPEED_10000;
+			}
 			break;
 
 		default:
@@ -4346,7 +4417,7 @@ static int mv_pp2x_port_init(struct mv_pp2x_port *port)
 	if (port->priv->pp2_version == PPV21)
 		mv_pp21_port_disable(port);
 	else
-		mv_gop110_port_disable(gop, mac);
+		mv_gop110_port_disable(gop, mac, port->comphy);
 
 	/* Allocate queues */
 	port->txqs = devm_kcalloc(dev, port->num_tx_queues, sizeof(*port->txqs),
@@ -4649,6 +4720,7 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 			}
 			list_add(&port_pcpu->ext_buf_pool->ext_buf_struct[i].ext_buf_list,
 				 &port_pcpu->ext_buf_port_list);
+			mv_pp2x_extra_pool_inc(port_pcpu->ext_buf_pool);
 			port_pcpu->ext_buf_pool->buf_pool_in_use++;
 		}
 	}
@@ -4669,6 +4741,9 @@ static int mv_pp2x_port_probe(struct platform_device *pdev,
 		port->txq_stop_limit = TXQ_LIMIT;
 
 	dev->vlan_features |= features;
+
+	/* Add support for VLAN filtering */
+	dev->features |= NETIF_F_HW_VLAN_CTAG_FILTER;
 
 	dev->priv_flags |= IFF_UNICAST_FLT;
 

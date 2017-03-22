@@ -251,6 +251,10 @@ static inline dma_addr_t mv_pp2x_bm_phys_addr_get(struct mv_pp2x_hw *hw, u32 poo
 
 	val = mv_pp2x_read(hw, MVPP2_BM_PHY_ALLOC_REG(pool));
 
+	/*  Disregard BM_ADDR_HIGH_ALLOC if Buffer Manager failed to return buffer */
+	if (!val)
+		return 0;
+
 #ifdef CONFIG_PHYS_ADDR_T_64BIT
 	{
 	u64 val2;
@@ -531,6 +535,7 @@ void mv_pp2x_prs_mac_multi_set(struct mv_pp2x_hw *hw, int port, int index,
 			       bool add);
 int mv_pp2x_prs_mac_da_accept(struct mv_pp2x_port *port,
 			      const u8 *da, bool add);
+int mv_pp2x_prs_vid_entry_accept(struct net_device *dev, u16 proto, u16 vid, bool add);
 int mv_pp2x_prs_def_flow(struct mv_pp2x_port *port);
 int mv_pp2x_prs_flow_set(struct mv_pp2x_port *port);
 void mv_pp2x_prs_mac_entry_del(struct mv_pp2x_port *port,
