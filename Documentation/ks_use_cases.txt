@@ -312,6 +312,8 @@ To build the Kernel image:
 		- Kernel Features ---> Preemption Model ---> No Forced Preemption (Server)
 		- Kernel hacking --->  Kernel debugging ---> Set to No
 		- Kernel hacking --->  CoreSight Tracing Support---> Set to No
+        - Virtualization---> Set to No
+        - Kernel hacking --->  Memtest ---> Set to No
 	5. make
 
 
@@ -325,6 +327,8 @@ To build the Kernel image:
 		- Kernel Features ---> Preemption Model ---> No Forced Preemption (Server)
 		- Kernel hacking --->  Kernel debugging ---> Set to No
 		- Kernel hacking --->  CoreSight Tracing Support---> Set to No
+        - Virtualization---> Set to No
+        - Kernel hacking --->  Memtest ---> Set to No
 		- For NAT enable in menuconfig:
 			- Network packet filtering framework (Netfilter)
 			- Netfilter connection tracking support
