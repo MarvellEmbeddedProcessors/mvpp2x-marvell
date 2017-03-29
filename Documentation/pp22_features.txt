@@ -109,12 +109,13 @@ L2 filtering
 	  L2 filtering TCAM by parsing the VLAN ID field.
 
 		- Filtering capability:
-			For each MUSDK port, it is possible to configure up to 10 VLAN ID filtering entries.
+			For each port, it is possible to configure up to 10 VLAN ID filtering entries.
 		- VLAN filtering behaviour:
 			- If no VLAN filtering entries are set, the system allows passing through all VLAN traffic.
 			- Whenever one or more VLAN ID filters are configured, all VLAN traffic matching one of the VLAN ID will pass
                           through the system, while all VLAN traffic not matching none of the configured VLAN ID's will be dropped.
 			- All non-VLAN traffic will pass through the system independently of the VLAN filter configured.
+		- VLAN could be added and deleted by ip link commands. See https://wiki.archlinux.org/index.php/VLAN
 
 TX/RX Queues
 ---------------
