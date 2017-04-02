@@ -614,6 +614,11 @@ void mvPp2V1DropCntrs(struct mv_pp2x *priv, int port)
 	struct mv_pp2x_hw *hw = &priv->hw;
 	struct mv_pp2x_port *pp2_port = mv_pp2x_port_struct_get(priv, port);
 
+	if (!pp2_port) {
+		DBG_MSG("Port %d not connected]\n", port);
+		return;	
+	}
+
 	DBG_MSG("\n[global drop counters]\n");
 	mv_pp2x_print_reg(hw, MVPP2_V1_OVERFLOW_MC_DROP_REG,
 			  "MV_PP2_OVERRUN_DROP_REG");
