@@ -73,6 +73,8 @@ static ssize_t mv_debug_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name]                > uc_filter_flush - flush UC MAC from filter list on the device\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name]                > uc_filter_dump - Dump UC MAC in filter list on the device\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "     mac_addr format: ff:ff:ff:ff:ff:ff\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name] [register]  [value]   >  phy_reg_write - Write phy register\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name] [register]     	      >  phy_reg_read - Read phy register\n");
 
 
 	return off;
@@ -243,6 +245,53 @@ error:
 	return err ? -EINVAL : len;
 }
 
+static ssize_t mv_debug_phy(struct device *dev,
+				  struct device_attribute *attr, const char *buf, size_t len)
+{
+	const char      *name = attr->attr.name;
+	unsigned int     err = 0, a = 0, b = 0;
+	char		if_name[10];
+	struct net_device *netdev;
+	int val;
+
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
+
+	sscanf(buf, "%s %x %x", if_name, &a, &b);
+
+	netdev = dev_get_by_name(&init_net, if_name);
+	if (!netdev) {
+		printk("%s: illegal interface <%s>\n", __func__, if_name);
+		return -EINVAL;
+	}
+
+	struct mv_pp2x_port *port = netdev_priv(netdev);
+
+	if (!port->mac_data.phy_dev){
+		printk("%s: No phy on interface <%s>\n", __func__, if_name);
+		err = 1;
+		goto error;
+	}
+
+	if (!strcmp(name, "phy_reg_write")) {
+		phy_write(port->mac_data.phy_dev, a, b);
+		val = phy_read(port->mac_data.phy_dev, a);
+		printk("Interface %s: phy register %x write %x\n", if_name, a, val);
+	} else if (!strcmp(name, "phy_reg_read")) {
+		val = phy_read(port->mac_data.phy_dev, a);
+		printk("Interface %s: phy register %x read %x\n", if_name, a, val);
+	} else {
+		printk("%s: illegal operation <%s>\n", __func__, attr->attr.name);
+	}
+
+error:
+	if (err)
+		printk("%s: error %d\n", __func__, err);
+	dev_put(netdev);
+	return err ? -EINVAL : len;
+}
+
+
 static DEVICE_ATTR(help,		S_IRUSR, mv_debug_show, NULL);
 static DEVICE_ATTR(debug_param,	(S_IRUSR|S_IWUSR), mv_debug_show,
 		   mv_debug_store_unsigned);
@@ -254,6 +303,9 @@ static DEVICE_ATTR(uc_filter_add,	S_IWUSR, NULL, mv_debug_store_mac);
 static DEVICE_ATTR(uc_filter_del,	S_IWUSR, NULL, mv_debug_store_mac);
 static DEVICE_ATTR(uc_filter_flush,	S_IWUSR, NULL, mv_debug_store_mac);
 static DEVICE_ATTR(uc_filter_dump,	S_IWUSR, NULL, mv_debug_store_mac);
+static DEVICE_ATTR(phy_reg_write,	S_IWUSR, NULL, mv_debug_phy);
+static DEVICE_ATTR(phy_reg_read,		S_IWUSR, NULL, mv_debug_phy);
+
 
 static struct attribute *debug_attrs[] = {
 	&dev_attr_help.attr,
@@ -266,6 +318,8 @@ static struct attribute *debug_attrs[] = {
 	&dev_attr_uc_filter_del.attr,
 	&dev_attr_uc_filter_flush.attr,
 	&dev_attr_uc_filter_dump.attr,
+	&dev_attr_phy_reg_write.attr,
+	&dev_attr_phy_reg_read.attr,
 	NULL
 };
 
