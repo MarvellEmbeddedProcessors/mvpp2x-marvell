@@ -63,9 +63,11 @@ static ssize_t mv_debug_help(char *buf)
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name] [cpu]     >  bind_cpu - Bind the interface to dedicated CPU\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "     NOTE: bind_cpu only valid when rss is disabled\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
-	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset val >mv_pp2x_reg_write    - Write mvpp2 register.\n");
-	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset     >mv_pp2x_reg_read     - Read mvpp2 register.\n");
-	off += scnprintf(buf + off, PAGE_SIZE,  "echo val        >debug_param          - Set global debug_param.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset val	        > mv_pp2x_reg_write    - Write mvpp2 register.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset		> mv_pp2x_reg_read     - Read mvpp2 register.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset val cpu	> mv_pp2x_reg_percpu_write    - Write mvpp2 percpu register.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo offset cpu	        > mv_pp2x_reg_percpu_read     - Read mvpp2 percpu register.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "echo val        > debug_param          - Set global debug_param.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "cat             debug_param           - Get global debug_param.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo val       > cpn_index            - Set cpn_index to use for sysfs commands.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name] [mac_addr]     > uc_filter_add - Add UC MAC to filter list on the device\n");
@@ -159,6 +161,13 @@ static ssize_t mv_debug_store_unsigned(struct device *dev,
 	} else if (!strcmp(name, "mv_pp2x_reg_write")) {
 		mv_pp2x_write(sysfs_cur_hw, a, b);
 		val = mv_pp2x_read(sysfs_cur_hw, a);
+		printk("mv_pp2x_write_read(0x%x)=0x%x\n", a, val);
+	} else if (!strcmp(name, "mv_pp2x_reg_percpu_read")) {
+		val = mv_pp2x_relaxed_read(sysfs_cur_hw, a, b);
+		printk("mv_pp2x_read(0x%x)=0x%x\n", a, val);
+	} else if (!strcmp(name, "mv_pp2x_reg_percpu_write")) {
+		mv_pp2x_relaxed_write(sysfs_cur_hw, a, b, c);
+		val = mv_pp2x_relaxed_read(sysfs_cur_hw, a, c);
 		printk("mv_pp2x_write_read(0x%x)=0x%x\n", a, val);
 	} else if (!strcmp(name, "debug_param")) {
 		mv_pp2x_debug_param_set(a);
@@ -298,6 +307,8 @@ static DEVICE_ATTR(debug_param,	(S_IRUSR|S_IWUSR), mv_debug_show,
 static DEVICE_ATTR(bind_cpu,		S_IWUSR, NULL, mv_debug_store);
 static DEVICE_ATTR(mv_pp2x_reg_read,	S_IWUSR, NULL, mv_debug_store_unsigned);
 static DEVICE_ATTR(mv_pp2x_reg_write,	S_IWUSR, NULL, mv_debug_store_unsigned);
+static DEVICE_ATTR(mv_pp2x_reg_percpu_read,	S_IWUSR, NULL, mv_debug_store_unsigned);
+static DEVICE_ATTR(mv_pp2x_reg_percpu_write,	S_IWUSR, NULL, mv_debug_store_unsigned);
 static DEVICE_ATTR(cpn_index,		S_IWUSR, NULL, mv_debug_store_unsigned);
 static DEVICE_ATTR(uc_filter_add,	S_IWUSR, NULL, mv_debug_store_mac);
 static DEVICE_ATTR(uc_filter_del,	S_IWUSR, NULL, mv_debug_store_mac);
@@ -306,13 +317,14 @@ static DEVICE_ATTR(uc_filter_dump,	S_IWUSR, NULL, mv_debug_store_mac);
 static DEVICE_ATTR(phy_reg_write,	S_IWUSR, NULL, mv_debug_phy);
 static DEVICE_ATTR(phy_reg_read,		S_IWUSR, NULL, mv_debug_phy);
 
-
 static struct attribute *debug_attrs[] = {
 	&dev_attr_help.attr,
 	&dev_attr_debug_param.attr,
 	&dev_attr_bind_cpu.attr,
 	&dev_attr_mv_pp2x_reg_read.attr,
 	&dev_attr_mv_pp2x_reg_write.attr,
+	&dev_attr_mv_pp2x_reg_percpu_read.attr,
+	&dev_attr_mv_pp2x_reg_percpu_write.attr,
 	&dev_attr_cpn_index.attr,
 	&dev_attr_uc_filter_add.attr,
 	&dev_attr_uc_filter_del.attr,
