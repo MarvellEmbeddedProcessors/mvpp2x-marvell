@@ -262,6 +262,7 @@ static ssize_t mv_debug_phy(struct device *dev,
 	char		if_name[10];
 	struct net_device *netdev;
 	int val;
+	struct mv_pp2x_port *port;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -274,7 +275,7 @@ static ssize_t mv_debug_phy(struct device *dev,
 		return -EINVAL;
 	}
 
-	struct mv_pp2x_port *port = netdev_priv(netdev);
+	port = netdev_priv(netdev);
 
 	if (!port->mac_data.phy_dev){
 		printk("%s: No phy on interface <%s>\n", __func__, if_name);
