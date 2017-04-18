@@ -128,8 +128,7 @@ static ssize_t mv_debug_store(struct device *dev,
 
 	if (!strcmp(name, "bind_cpu")) {
 		mv_pp2x_port_bind_cpu_set(port, b);
-	}
-	else {
+	} else {
 		err = 1;
 		printk("%s: illegal operation <%s>\n", __func__, attr->attr.name);
 	}

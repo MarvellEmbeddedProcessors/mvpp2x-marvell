@@ -74,6 +74,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 extern struct mv_pp2x_hw *sysfs_cur_hw;
 extern struct mv_pp2x *sysfs_cur_priv;
+extern struct mv_pp2x_port *sysfs_cur_port;
 extern char *pp2_dev_name[];
 
 #endif /* __MV_PP2X_SYSFS_H__ */

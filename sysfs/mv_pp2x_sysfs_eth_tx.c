@@ -40,6 +40,7 @@ static ssize_t mv_pp2_help(char *b)
 	int s = PAGE_SIZE; /* buffer size */
 
 	o += scnprintf(b+o, s-o, "cat                              txRegs          - show global TX registers\n");
+	o += scnprintf(b+o, s-o, "echo [p]                         > num_tx_queues   - show number of TX queues for port <p>\n");
 	o += scnprintf(b+o, s-o, "echo [p] [txq]                   > pTxqCounters  - show TXQ Counters for port <p/txp/txq> where <txq> range [0..7]\n");
 	o += scnprintf(b+o, s-o, "echo [p] [txq]                   > pTxqRegs      - show TXQ registers for port <p/txp/txq> where <txq> range [0..7]\n");
 	o += scnprintf(b+o, s-o, "echo [txq]                       > gTxqRegs      - show TXQ registers for global <txq> range [0..255]\n");
@@ -69,10 +70,11 @@ static ssize_t mv_pp2_show(struct device *dev,
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
-	if (!strcmp(name, "txRegs"))
+	if (!strcmp(name, "txRegs")) {
 		mvPp2TxRegs(sysfs_cur_priv);
-	else
+	} else {
 		off = mv_pp2_help(buf);
+	}
 
 	return off;
 }
@@ -84,6 +86,7 @@ static ssize_t mv_pp2_txq_store(struct device *dev,
 	int             err;
 	unsigned int    p, v, a, b, c;
 	unsigned long   flags;
+	struct mv_pp2x_port *pp2_port;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -96,6 +99,9 @@ static ssize_t mv_pp2_txq_store(struct device *dev,
 
 	if (!strcmp(name, "txqShow")) {
 		mvPp2TxqShow(sysfs_cur_priv, p, v, a);
+	} else if (!strcmp(name, "num_tx_queues")) {
+		pp2_port = mv_pp2x_port_struct_get(sysfs_cur_priv, p);
+		DBG_MSG("num_rx_queues=%d\n", pp2_port->num_tx_queues);
 	}  else if (!strcmp(name, "aggrTxqShow")) {
 		mvPp2AggrTxqShow(sysfs_cur_priv, p, v);
 	} else if (!strcmp(name, "gTxqRegs")) {
@@ -121,6 +127,7 @@ static ssize_t mv_pp2_txq_store(struct device *dev,
 
 static DEVICE_ATTR(help,         S_IRUSR, mv_pp2_show, NULL);
 static DEVICE_ATTR(txRegs,       S_IRUSR, mv_pp2_show, NULL);
+static DEVICE_ATTR(num_tx_queues,	S_IWUSR, NULL, mv_pp2_txq_store);
 static DEVICE_ATTR(aggrTxqRegs,  S_IWUSR, NULL, mv_pp2_txq_store);
 static DEVICE_ATTR(pTxqCounters, S_IWUSR, NULL, mv_pp2_txq_store);
 static DEVICE_ATTR(txqShow,      S_IWUSR, NULL, mv_pp2_txq_store);
@@ -136,6 +143,7 @@ static struct attribute *mv_pp2_tx_attrs[] = {
 	&dev_attr_txRegs.attr,
 	&dev_attr_txqShow.attr,
 	&dev_attr_gTxqRegs.attr,
+	&dev_attr_num_tx_queues.attr,
 	&dev_attr_pTxqRegs.attr,
 	&dev_attr_aggrTxqShow.attr,
 	NULL

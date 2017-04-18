@@ -39,6 +39,8 @@ static ssize_t mv_pp2_help(char *b)
 	int o = 0;
 
 	o += sprintf(b+o, "cat                    rxDmaRegs   - show RX DMA registers\n");
+	o += sprintf(b+o, "echo [p]             > num_rx_queues  - show number of RX queues for port <p>\n");
+	o += sprintf(b+o, "echo [p]             > first_rxq  - show first RX queue for port <p>\n");
 	o += sprintf(b+o, "echo [p]             > rxFifoRegs  - show RX FIFO registers for port <p>\n");
 	o += sprintf(b+o, "echo [p] [0|1]       > rx_group_regs - show RX Group registers for port <p>\n");
 	//o += sprintf(b+o, "echo [p] v           > rxWeight    - set weight for poll function, <v> - weight [0..255]\n");
@@ -65,10 +67,11 @@ static ssize_t mv_pp2_show(struct device *dev,
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
-	if (!strcmp(name, "rxDmaRegs"))
+	if (!strcmp(name, "rxDmaRegs")) {
 		mvPp2RxDmaRegsPrint(sysfs_cur_priv, 0, 0, stop);
-	else
+	} else {
 		off = mv_pp2_help(buf);
+	}
 
 	return off;
 }
@@ -80,6 +83,7 @@ static ssize_t mv_pp2_port_store(struct device *dev,
 	int             err;
 	unsigned int    p, v, a;
 	unsigned long   flags;
+	struct mv_pp2x_port *pp2_port;
 
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
@@ -92,6 +96,12 @@ static ssize_t mv_pp2_port_store(struct device *dev,
 
 	if (!strcmp(name, "rxqShow")) {
 		mvPp2RxqShow(sysfs_cur_priv, p, v, a);
+	} else if (!strcmp(name, "num_rx_queues")) {
+		pp2_port = mv_pp2x_port_struct_get(sysfs_cur_priv, p);
+		DBG_MSG("num_rx_queues=%d\n", pp2_port->num_rx_queues);
+	} else if (!strcmp(name, "first_rxq")) {
+		sysfs_cur_port = mv_pp2x_port_struct_get(sysfs_cur_priv, p);
+		DBG_MSG("first_rxq=%d\n", sysfs_cur_port->first_rxq);
 	} else if (!strcmp(name, "gRxqRegs")) {
 		mvPp2PhysRxqRegs(sysfs_cur_priv, p);
 	} else if (!strcmp(name, "pRxqRegs")) {
@@ -155,6 +165,8 @@ static ssize_t mv_pp2_rx_hex_store(struct device *dev,
 
 static DEVICE_ATTR(help,        S_IRUSR, mv_pp2_show, NULL);
 static DEVICE_ATTR(rxDmaRegs,	S_IRUSR, mv_pp2_show, NULL);
+static DEVICE_ATTR(num_rx_queues,	S_IWUSR, NULL, mv_pp2_port_store);
+static DEVICE_ATTR(first_rxq,	S_IWUSR, NULL, mv_pp2_port_store);
 static DEVICE_ATTR(rxqCounters, S_IWUSR, NULL, mv_pp2_port_store);
 static DEVICE_ATTR(rxqShow,     S_IWUSR, NULL, mv_pp2_port_store);
 static DEVICE_ATTR(gRxqRegs,    S_IWUSR, NULL, mv_pp2_port_store);
@@ -170,6 +182,8 @@ static DEVICE_ATTR(rx_group_regs,  S_IWUSR, NULL, mv_pp2_port_store);
 
 static struct attribute *mv_pp2_attrs[] = {
 	&dev_attr_help.attr,
+	&dev_attr_num_rx_queues.attr,
+	&dev_attr_first_rxq.attr,
 	&dev_attr_rxDmaRegs.attr,
 	&dev_attr_rxqShow.attr,
 	&dev_attr_rxqCounters.attr,

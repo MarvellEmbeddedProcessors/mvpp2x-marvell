@@ -66,6 +66,7 @@ disclaimer.
 struct mv_pp2x *sysfs_cur_priv;
 struct mv_pp2x_hw *sysfs_cur_hw;
 static struct platform_device * pp2_sysfs;
+struct mv_pp2x_port *sysfs_cur_port;
 
 #ifdef MVPP21
   char *pp2_dev_name[MAX_NUM_CP_110] = {"f10f0000.ethernet", "Null"};
@@ -146,6 +147,7 @@ static int mv_pp2_sysfs_init(void)
 
 	mv_gop_sysfs_init(&pd->kobj);
 	mv_fca_sysfs_init(&pd->kobj);
+	mv_pp2_musdk_sysfs_init(&pd->kobj);
 //	mv_pp2_dbg_sysfs_init(&pd->kobj);
 
 	return 0;
@@ -189,6 +191,7 @@ static void mv_pp2_sysfs_exit(void)
 	mv_pp2_gbe_sysfs_exit(&pd->kobj);
 	mv_gop_sysfs_exit(&pd->kobj);
 	mv_fca_sysfs_exit(&pd->kobj);
+	mv_pp2_musdk_sysfs_exit(&pd->kobj);
 	/* can't delete, we call to init/clean function from this sysfs */
 	/* TODO: open this line when we delete clean/init sysfs commands*/
 	/*mv_pp2_dbg_sysfs_exit(&pd->kobj);*/
