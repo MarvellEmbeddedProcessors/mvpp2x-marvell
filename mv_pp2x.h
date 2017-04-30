@@ -161,16 +161,6 @@ extern  u32 debug_param;
 #define QV_THR_2_CPU(sw_thread_id)	(sw_thread_id - first_addr_space)
 #define QV_CPU_2_THR(cpu_id)		(first_addr_space + cpu_id)
 
-/* TX FIFO constants */
-#define MVPP2_TX_FIFO_DATA_SIZE_10KB		0xa
-#define MVPP2_TX_FIFO_DATA_SIZE_3KB		0x3
-
-#define MVPP2_TX_FIFO_MINIMUM_THRESHOLD		256
-#define MVPP2_TX_FIFO_THRESHOLD_10KB	(MVPP2_TX_FIFO_DATA_SIZE_10KB * 1024 - \
-					MVPP2_TX_FIFO_MINIMUM_THRESHOLD)
-#define MVPP2_TX_FIFO_THRESHOLD_3KB	(MVPP2_TX_FIFO_DATA_SIZE_3KB * 1024 - \
-					MVPP2_TX_FIFO_MINIMUM_THRESHOLD)
-
 /* Used for define type of data saved in shadow: SKB or extended buffer or nothing */
 #define MVPP2_ETH_SHADOW_SKB		0x1
 #define MVPP2_ETH_SHADOW_EXT		0x2
@@ -521,8 +511,6 @@ struct mv_pp2x {
 	struct	mv_pp2x_hw hw;
 	struct mv_pp2x_platform_data *pp2xdata;
 
-	u16 cpu_map; /* Bitmap of the participating cpu's */
-
 	struct mv_pp2x_param_config pp2_cfg;
 
 	/* List of pointers to port structures */
@@ -540,12 +528,13 @@ struct mv_pp2x {
 	/* RX flow hash indir'n table, in pp22, the table contains the
 	* CPU idx according to weight
 	*/
-	u8 num_rss_tables;
+	u8 num_rss_tables; /* created for sysfs usage */
 	u32 rx_indir_table[MVPP22_RSS_TBL_LINE_NUM];
 	u32 l4_chksum_jumbo_port;
 
 	struct delayed_work stats_task;
 	struct workqueue_struct *workqueue;
+	struct notifier_block	cp_hotplug_nb;
 };
 
 struct mv_pp2x_pcpu_stats {
@@ -644,6 +633,7 @@ struct mv_pp2x_port {
 	struct mv_pp2x_ptp_desc *ptp_desc;
 	struct mv_pp2x_cos cos_cfg;
 	struct mv_pp2x_rss rss_cfg;
+	struct notifier_block	port_hotplug_nb;
 };
 
 struct pp2x_hw_params {
