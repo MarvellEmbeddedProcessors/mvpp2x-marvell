@@ -163,11 +163,11 @@ static ssize_t mv_debug_store_unsigned(struct device *dev,
 		val = mv_pp2x_read(sysfs_cur_hw, a);
 		printk("mv_pp2x_write_read(0x%x)=0x%x\n", a, val);
 	} else if (!strcmp(name, "mv_pp2x_reg_percpu_read")) {
-		val = mv_pp2x_relaxed_read(sysfs_cur_hw, a, b);
+		val = mv_pp22_thread_relaxed_read(sysfs_cur_hw, b, a);
 		printk("mv_pp2x_read(0x%x)=0x%x\n", a, val);
 	} else if (!strcmp(name, "mv_pp2x_reg_percpu_write")) {
-		mv_pp2x_relaxed_write(sysfs_cur_hw, a, b, c);
-		val = mv_pp2x_relaxed_read(sysfs_cur_hw, a, c);
+		mv_pp22_thread_relaxed_write(sysfs_cur_hw, c, a, b);
+		val = mv_pp22_thread_relaxed_read(sysfs_cur_hw, c, a);
 		printk("mv_pp2x_write_read(0x%x)=0x%x\n", a, val);
 	} else if (!strcmp(name, "debug_param")) {
 		mv_pp2x_debug_param_set(a);
