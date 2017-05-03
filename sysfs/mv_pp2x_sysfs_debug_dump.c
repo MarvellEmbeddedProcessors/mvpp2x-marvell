@@ -1951,7 +1951,6 @@ void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv)
 
 	DBG_MSG("num_present_cpus(%d) num_act_cpus(%d) num_online_cpus(%d)\n",
 		num_present_cpus(), num_active_cpus(), num_online_cpus());
-	DBG_MSG("cpu_map(%x)\n", priv->cpu_map);
 
 	DBG_MSG("pdev->name(%s) pdev->id(%d)\n", pdev->name, pdev->id);
 	DBG_MSG("dev.init_name(%s) dev.id(%d)\n",

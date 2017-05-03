@@ -61,7 +61,7 @@ int mv_pp2x_port_bind_cpu_set(struct mv_pp2x_port *port, u8 bind_cpu)
 		return -EINVAL;
 	}
 
-	if (!(port->priv->cpu_map & (1 << bind_cpu))) {
+	if (!((*cpumask_bits(cpu_online_mask)) & (1 << bind_cpu))) {
 		netdev_err(port->dev, "invalid cpu(%d)\n", bind_cpu);
 		return -EINVAL;
 	}
