@@ -42,6 +42,8 @@ static ssize_t mv_rss_help(char *buf)
 	int off = 0;
 	off += scnprintf(buf + off, PAGE_SIZE,  "cat                         rss_hw_dump  - dump rxq in rss table entry from hardware.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "cat                         rss_hw_rxq_tbl_dump  - dump rxq table assignment from hardware.\n");
+	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "cat                         num_rss_tables - show number of rss tables.\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "\n");
 	off += scnprintf(buf + off, PAGE_SIZE,  "echo [if_name] [mode]    >  rss_mode     - Set the hash mode for non-frag UDP packet\n");
@@ -75,6 +77,8 @@ static ssize_t mv_rss_show(struct device *dev,
 
 	if (!strcmp(name, "rss_hw_dump")) {
 		mv_pp22_rss_hw_dump(sysfs_cur_hw);
+	} else if (!strcmp(name, "rss_hw_rxq_tbl_dump")) {
+		mv_pp22_rss_hw_rxq_tbl_dump(sysfs_cur_hw);
 	} else if (!strcmp(name, "num_rss_tables")) {
 		off += scnprintf(buf + off, PAGE_SIZE, "%d\n", sysfs_cur_priv->num_rss_tables);
 	} else {
@@ -159,6 +163,7 @@ static ssize_t mv_rss_store4(struct device *dev,
 #endif
 
 static DEVICE_ATTR(rss_hw_dump,		S_IRUSR, mv_rss_show, NULL);
+static DEVICE_ATTR(rss_hw_rxq_tbl_dump,	S_IRUSR, mv_rss_show, NULL);
 static DEVICE_ATTR(num_rss_tables,	S_IRUSR, mv_rss_show, NULL);
 static DEVICE_ATTR(help,		S_IRUSR, mv_rss_show, NULL);
 static DEVICE_ATTR(rss_mode,		S_IWUSR, NULL, mv_rss_store);
@@ -171,6 +176,7 @@ static DEVICE_ATTR(rss_tbl_entry_set,	S_IWUSR, NULL, mv_rss_store4);
 
 static struct attribute *rss_attrs[] = {
 	&dev_attr_rss_hw_dump.attr,
+	&dev_attr_rss_hw_rxq_tbl_dump.attr,
 	&dev_attr_num_rss_tables.attr,
 	&dev_attr_help.attr,
 	&dev_attr_rss_mode.attr,

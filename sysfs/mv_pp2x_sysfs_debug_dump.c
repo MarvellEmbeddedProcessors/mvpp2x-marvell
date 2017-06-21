@@ -2469,5 +2469,27 @@ int mv_pp22_rss_hw_dump(struct mv_pp2x_hw *hw)
 }
 EXPORT_SYMBOL(mv_pp22_rss_hw_dump);
 
+int mv_pp22_rss_hw_rxq_tbl_dump(struct mv_pp2x_hw *hw)
+{
+	int rxq, port;
+	struct mv_pp22_rss_entry rss_entry;
+
+	memset(&rss_entry, 0, sizeof(struct mv_pp22_rss_entry));
+
+	rss_entry.sel = MVPP22_RSS_ACCESS_POINTER;
+
+	for (port = 0; port < MVPP2_MAX_PORTS; port++) {
+		DBG_MSG("\n-------- RXQ TABLE PORT %d-----------\n", port);
+		DBG_MSG("QUEUE	RSS TBL\n");
+
+		for (rxq = 0; rxq < MVPP22_RSS_TBL_LINE_NUM; rxq++) {
+			rss_entry.u.pointer.rxq_idx = port * MVPP22_RSS_TBL_LINE_NUM + rxq;
+			if (mv_pp22_rss_tbl_entry_get(hw, &rss_entry))
+				return -1;
+		}
+	}
+	return MV_OK;
+}
+EXPORT_SYMBOL(mv_pp22_rss_hw_rxq_tbl_dump);
 
 

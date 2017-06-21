@@ -130,6 +130,7 @@ int mv_pp2x_cls_c2_sw_words_dump(struct mv_pp2x_cls_c2_entry *c2);
 int mv_pp2x_cls_c2_hit_cntr_dump(struct mv_pp2x_hw *hw);
 int mv_pp2x_cls_c2_regs_dump(struct mv_pp2x_hw *hw);
 int mv_pp22_rss_hw_dump(struct mv_pp2x_hw *hw);
+int mv_pp22_rss_hw_rxq_tbl_dump(struct mv_pp2x_hw *hw);
 
 int mvPp2RateCalc(int rate, unsigned int accuracy, unsigned int *pPeriod,
 		  unsigned int *pTokens);
