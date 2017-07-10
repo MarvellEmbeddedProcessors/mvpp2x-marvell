@@ -24,6 +24,7 @@ before use.
 Sysfs Build Instructions
 ----------------------------------------------------------------------
 1. Folder with sysfs sources should be copied to Linux kernel mvpp2x driver directory:
+   Sysfs sources could be found in release sources-mvpp2x-sysfs-devel-X.X.X.zip file in kernel/sources
 
 		# cp -rf sysfs/ drivers/net/ethernet/marvell/mvpp2x/
 

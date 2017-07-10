@@ -55,7 +55,7 @@ num_cos_queues module parameter
 	- num_cos_queues determinate number of CoS queues. Number of RXQ's and TXQ's depend on num_cos_queues:
 		- Number of TXQ's = num_cos_queues * number_of_ports
 		- Number of RXQ's if queue singe mode set = num_cos_queues * number_of_ports
-		- Number of RXQ's if queue singe mode set = num_cos_queues * number_of_ports * online_cpus
+		- Number of RXQ's if queue multi mode set = num_cos_queues * number_of_ports * online_cpus
 	- Configuration range(1-8): 1-8, default is 4
 	- Parameter is common for all ports.
 	- Example:
