@@ -507,7 +507,7 @@ void mvPp2AggrTxqShow(struct mv_pp2x *priv, int cpu, int mode)
 
 	DBG_MSG("id=%d, size=%d, count=%d, next_desc=%d, pending_cntr=%d\n",
 		aggr_queue->id,
-		aggr_queue->size, aggr_queue->count,
+		aggr_queue->size, aggr_queue->sw_count + aggr_queue->hw_count,
 		aggr_queue->next_desc_to_proc,
 		mv_pp2x_aggr_desc_num_read(priv, cpu));
 
