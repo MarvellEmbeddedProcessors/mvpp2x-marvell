@@ -29,6 +29,29 @@
 #define MVPP2_DRIVER_NAME "mvpp2"
 #define MVPP2_DRIVER_VERSION "1.0"
 
+#define MVPP2X_SKB_MAGIC_MASK		0xFFFFFFC0
+#define MVPP2X_SKB_MAGIC_SKB_OFFS	3
+#define MVPP2X_SKB_PP2_CELL_OFFS	4
+#define MVPP2X_CB_REC_OFFS			5
+#define MVPP2X_SKB_BPID_MASK		0xF
+#define MVPP2X_SKB_CELL_MASK		0x3
+
+/* SKB magic, mainly used for skb recycle, here it is the address[34 : 8] of skb */
+#define MVPP2X_SKB_MAGIC(skb)   (((unsigned int)(((u64)skb) >> \
+				MVPP2X_SKB_MAGIC_SKB_OFFS)) & MVPP2X_SKB_MAGIC_MASK)
+/* Cb to store magic and bpid, IPv6 TCP will consume the most cb[] with 44 bytes, so the last 5 bytes is safe to use */
+#define MVPP2X_SKB_CB(skb)                          (*(unsigned int *)(&skb->cb[sizeof(skb->cb) - MVPP2X_CB_REC_OFFS]))
+/* Set magic and bpid, magic[31:5], pp2_id[5:4], source pool[3:0] */
+#define MVPP2X_SKB_MAGIC_BPID_SET(skb, magic_bpid)  (MVPP2X_SKB_CB(skb) = magic_bpid)
+/* Get bpid */
+#define MVPP2X_SKB_BPID_GET(skb)                    (MVPP2X_SKB_CB(skb) & MVPP2X_SKB_BPID_MASK)
+#define MVPP2X_SKB_PP2_CELL_GET(skb)        ((MVPP2X_SKB_CB(skb) >> MVPP2X_SKB_PP2_CELL_OFFS) & \
+						MVPP2X_SKB_CELL_MASK)
+
+#define MVPP2X_SKB_RECYCLE_MAGIC_GET(skb)           (MVPP2X_SKB_CB(skb) & MVPP2X_SKB_MAGIC_MASK)
+/* Recycle magic check */
+#define MVPP2X_SKB_RECYCLE_MAGIC_IS_OK(skb)         (MVPP2X_SKB_MAGIC(skb) == MVPP2X_SKB_RECYCLE_MAGIC_GET(skb))
+
 #define PFX			MVPP2_DRIVER_NAME ": "
 
 #define IRQ_NAME_SIZE (36)
@@ -133,6 +156,7 @@
 /* Coalescing */
 #define MVPP2_TXDONE_COAL_PKTS		64
 #define MVPP2_TXDONE_HRTIMER_PERIOD_NS	1000000UL
+#define MVPP2_TX_HRTIMER_PERIOD_NS	50000UL
 #define MVPP2_TXDONE_COAL_USEC		1000
 
 #define MVPP2_RX_COAL_PKTS		32
@@ -150,6 +174,7 @@
 #define MVPP2_BM_SHORT_BUF_NUM		2048
 #define MVPP2_BM_LONG_BUF_NUM		1024
 #define MVPP2_BM_JUMBO_BUF_NUM		512
+#define MVPP2_BM_PER_CPU_THRESHOLD	(MVPP2_MAX_CPUS * 2)
 
 #define MVPP2_ALL_BUFS			0
 
@@ -164,9 +189,13 @@ extern  u32 debug_param;
 /* Used for define type of data saved in shadow: SKB or extended buffer or nothing */
 #define MVPP2_ETH_SHADOW_SKB		0x1
 #define MVPP2_ETH_SHADOW_EXT		0x2
+#define MVPP2_ETH_SHADOW_REC		0x4
+
+#define MVPP2_UNIQUE_HASH		0x4567492
 
 #define MVPP2_EXTRA_BUF_SIZE	120
 #define MVPP2_EXTRA_BUF_NUM	(MVPP2_MAX_TXD * MVPP2_MAX_TXQ)
+#define MVPP2_SKB_NUM		(MVPP2_MAX_RXD * MVPP2_MAX_RXQ * MVPP2_MAX_PORTS)
 
 enum mvppv2_version {
 	PPV21 = 21,
@@ -342,8 +371,11 @@ struct mv_pp2x_aggr_tx_queue {
 	/* Number of Tx DMA descriptors in the descriptor ring */
 	int size;
 
-	/* Number of currently used Tx DMA descriptor in the descriptor ring */
-	int count;
+	/* Number of currently used Tx DMA descriptor in the descriptor ring used by SW */
+	int sw_count;
+
+	/* Number of currently used Tx DMA descriptor in the descriptor ring used by HW */
+	int hw_count;
 
 	/* Virtual pointer to address of the Aggr_Tx DMA descriptors
 	* memory_allocation
@@ -525,6 +557,9 @@ struct mv_pp2x {
 	u16 num_pools;
 	struct mv_pp2x_bm_pool *bm_pools;
 
+	/* Per-CPU CP control */
+	struct mv_pp2x_cp_pcpu __percpu *pcpu;
+
 	/* RX flow hash indir'n table, in pp22, the table contains the
 	* CPU idx according to weight
 	*/
@@ -554,6 +589,17 @@ struct mv_pp2x_port_pcpu {
 	int ext_buf_size;
 	struct list_head ext_buf_port_list;
 	struct mv_pp2x_ext_buf_pool *ext_buf_pool;
+};
+
+/* Per-CPU CP control */
+struct mv_pp2x_cp_pcpu {
+	struct list_head skb_port_list;
+	struct mv_pp2x_skb_pool *skb_pool;
+	int in_use[MVPP2_BM_POOLS_NUM];
+
+	struct hrtimer tx_timer;
+	struct tasklet_struct tx_tasklet;
+	bool tx_timer_scheduled;
 };
 
 struct queue_vector {
@@ -634,6 +680,7 @@ struct mv_pp2x_port {
 	struct mv_pp2x_cos cos_cfg;
 	struct mv_pp2x_rss rss_cfg;
 	struct notifier_block	port_hotplug_nb;
+	int use_interrupts;
 };
 
 struct pp2x_hw_params {
@@ -659,11 +706,23 @@ struct mv_pp2x_ext_buf_struct {
 	u8 *ext_buf_data;
 };
 
+struct mv_pp2x_skb_struct {
+	struct list_head skb_list;
+	struct sk_buff *skb;
+};
+
 struct mv_pp2x_ext_buf_pool {
 	int buf_pool_size;
 	int buf_pool_next_free;
 	int buf_pool_in_use;
 	struct mv_pp2x_ext_buf_struct *ext_buf_struct;
+};
+
+struct mv_pp2x_skb_pool {
+	int skb_pool_size;
+	int skb_pool_in_use;
+	int skb_pool_next_free;
+	struct mv_pp2x_skb_struct *skb_struct;
 };
 
 static inline struct mv_pp2x_port *mv_pp2x_port_struct_get(struct mv_pp2x *priv,
@@ -797,6 +856,7 @@ int mv_pp2x_setup_rxqs(struct mv_pp2x_port *port);
 int mv_pp2x_setup_txqs(struct mv_pp2x_port *port);
 void mv_pp2x_cleanup_txqs(struct mv_pp2x_port *port);
 void mv_pp2x_set_ethtool_ops(struct net_device *netdev);
+void mv_pp2x_set_non_kernel_ethtool_ops(struct net_device *netdev);
 int mv_pp22_rss_rxfh_indir_set(struct mv_pp2x_port *port);
 int mv_pp2x_cos_classifier_set(struct mv_pp2x_port *port,
 			       enum mv_pp2x_cos_classifier cos_mode);

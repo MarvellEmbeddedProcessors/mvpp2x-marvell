@@ -3270,9 +3270,9 @@ static void mv_pp2x_cls_flow_rss_hash(struct mv_pp2x_hw *hw,
 				      MVPP2_CLS_LKP_HASH, MVPP2_CLS_FL_RSS_PRI);
 	fe->index = entry_idx;
 
-	/* Update last for UDP NF flow */
-	if ((lkpid_attr & MVPP2_PRS_FL_ATTR_UDP_BIT) &&
-	    !(lkpid_attr & MVPP2_PRS_FL_ATTR_FRAG_BIT)) {
+	/* Update last for TCP & UDP NF flow */
+	if (((lkpid_attr & (MVPP2_PRS_FL_ATTR_TCP_BIT | MVPP2_PRS_FL_ATTR_UDP_BIT)) &&
+	     !(lkpid_attr & MVPP2_PRS_FL_ATTR_FRAG_BIT))) {
 		if (!hw->cls_shadow->flow_info[lkpid -
 			MVPP2_PRS_FL_START].flow_entry_rss1) {
 			if (rss_mode == MVPP2_RSS_HASH_2T)
@@ -3331,8 +3331,9 @@ void mv_pp2x_cls_flow_tbl_config(struct mv_pp2x_hw *hw)
 					     MVPP2_COS_TYPE_DSCP);
 			/* RSS hash rule */
 			if ((!(lkpid_attr & MVPP2_PRS_FL_ATTR_FRAG_BIT)) &&
-			    (lkpid_attr & MVPP2_PRS_FL_ATTR_UDP_BIT)) {
-				/* RSS hash rules for UDP rss mode update */
+			    (lkpid_attr & (MVPP2_PRS_FL_ATTR_TCP_BIT |
+				MVPP2_PRS_FL_ATTR_UDP_BIT))) {
+				/* RSS hash rules for TCP & UDP rss mode update */
 				mv_pp2x_cls_flow_rss_hash(hw, &fe, lkpid,
 							  MVPP2_RSS_HASH_2T);
 				mv_pp2x_cls_flow_rss_hash(hw, &fe, lkpid,
@@ -3355,8 +3356,9 @@ void mv_pp2x_cls_flow_tbl_config(struct mv_pp2x_hw *hw)
 					     MVPP2_COS_TYPE_DSCP);
 			/* RSS hash rule */
 			if ((!(lkpid_attr & MVPP2_PRS_FL_ATTR_FRAG_BIT)) &&
-			    (lkpid_attr & MVPP2_PRS_FL_ATTR_UDP_BIT)) {
-				/* RSS hash rules for UDP rss mode update */
+			    (lkpid_attr & (MVPP2_PRS_FL_ATTR_TCP_BIT |
+				MVPP2_PRS_FL_ATTR_UDP_BIT))) {
+				/* RSS hash rules for TCP & UDP rss mode update */
 				mv_pp2x_cls_flow_rss_hash(hw, &fe, lkpid,
 							  MVPP2_RSS_HASH_2T);
 				mv_pp2x_cls_flow_rss_hash(hw, &fe, lkpid,
@@ -3892,14 +3894,14 @@ int mv_pp2x_aggr_desc_num_check(struct mv_pp2x *priv,
 				struct mv_pp2x_aggr_tx_queue *aggr_txq,
 				int num, int cpu)
 {
-	if ((aggr_txq->count + num) > aggr_txq->size) {
+	if ((aggr_txq->sw_count + aggr_txq->hw_count + num) > aggr_txq->size) {
 		/* Update number of occupied aggregated Tx descriptors */
 		u32 val = mv_pp2x_relaxed_read(&priv->hw,
 				MVPP2_AGGR_TXQ_STATUS_REG(cpu), cpu);
 
-		aggr_txq->count = val & MVPP2_AGGR_TXQ_PENDING_MASK;
+		aggr_txq->hw_count = val & MVPP2_AGGR_TXQ_PENDING_MASK;
 
-		if ((aggr_txq->count + num) > aggr_txq->size)
+		if ((aggr_txq->sw_count + aggr_txq->hw_count + num) > aggr_txq->size)
 			return -ENOMEM;
 	}
 
@@ -6298,6 +6300,10 @@ int mv_pp22_rss_tbl_entry_get(struct mv_pp2x_hw *hw,
 		return -EINVAL;
 
 	if (rss->sel == MVPP22_RSS_ACCESS_POINTER) {
+		/* Set index */
+		reg_val |= (rss->u.pointer.rxq_idx <<
+				MVPP22_RSS_IDX_RXQ_NUM_OFF);
+		mv_pp2x_write(hw, MVPP22_RSS_IDX_REG, reg_val);
 		/* Read entry */
 		rss->u.pointer.rss_tbl_ptr =
 			mv_pp2x_read(hw, MVPP22_RSS_RXQ2RSS_TBL_REG) &

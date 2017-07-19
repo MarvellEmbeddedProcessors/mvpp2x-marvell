@@ -1214,7 +1214,7 @@
 #define MVPP2_CPU_DESC_CHUNK		128
 
 /* Max number of Tx descriptors in each aggregated queue */
-#define MVPP2_AGGR_TXQ_SIZE		512
+#define MVPP2_AGGR_TXQ_SIZE		2048
 
 /* Descriptor aligned size */
 #define MVPP2_DESC_ALIGNED_SIZE		32
@@ -1224,8 +1224,8 @@
 					MVPP2_DESC_Q_ALIGN)
 #define MVPP2_DESCQ_MEM_ALIGN(mem)	(ALIGN(mem, MVPP2_DESC_Q_ALIGN))
 
-/* Descriptor alignment mask */
-#define MVPP2_TX_DESC_ALIGN		(MVPP2_DESC_ALIGNED_SIZE - 1)
+/* TX descriptor data offset mask */
+#define MVPP2_TX_DESC_DATA_OFFSET		0XFF
 
 /* TX FIFO constants */
 #define MVPP2_TX_FIFO_DATA_SIZE_10KB		0xa
@@ -1269,8 +1269,10 @@
 #define MVPP2_MAX_L3_ADDR_SIZE		16
 
 /* Port flags */
-#define MVPP2_F_LOOPBACK		BIT(0)
-#define MVPP2_F_IFCAP_NETMAP    BIT(1)
+#define MVPP2_F_LOOPBACK		BIT(0) /* Loopback port */
+#define MVPP2_F_IFCAP_NETMAP		BIT(1) /* netmap port */
+#define MVPP2_F_IF_MUSDK		BIT(2) /* musdk port */
+#define MVPP2_F_IF_MUSDK_DOWN		BIT(3) /* musdk port that has been put stopped */
 
 /* Marvell tag types */
 enum mv_pp2x_tag_type {
@@ -1793,6 +1795,7 @@ enum mv_pp2x_bm_pool_log_num {
 
 #define MVPP2_TXD_L3_OFF_SHIFT		0
 #define MVPP2_TXD_IP_HLEN_SHIFT		8
+#define MVPP2_TXD_BUF_MOD		BIT(7)
 #define MVPP2_TXD_L4_CSUM_FRAG		BIT(13)
 #define MVPP2_TXD_L4_CSUM_NOT		BIT(14)
 #define MVPP2_TXD_IP_CSUM_DISABLE	BIT(15)
