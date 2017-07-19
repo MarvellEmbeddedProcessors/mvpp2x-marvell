@@ -17,10 +17,10 @@ obj-m := mvpp2x_sysfs.o
 #obj-$m += mv_pp2.o
 
 SYSFS_MOD_DIR = $(M)
-ifdef KERNEL_SOURCES
-PP2_MOD_DIR = $(KDIR)/drivers/net/ethernet/marvell/mvpp2x
-else
+ifdef LOCAL_SOURCES
 PP2_MOD_DIR = $(SYSFS_MOD_DIR)/..
+else
+PP2_MOD_DIR = $(KDIR)/drivers/net/ethernet/marvell/mvpp2x
 endif
 
 MV_EBU_NET_DIR = $(SYSFS_MOD_DIR)/mvebu_net
