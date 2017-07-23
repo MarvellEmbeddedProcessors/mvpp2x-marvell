@@ -227,7 +227,10 @@ static ssize_t mv_debug_store_mac(struct device *dev,
 			mac_uc[i] = (u8)b[i];
 		dev_uc_del(netdev, mac_uc);
 	} else if (!strcmp(name, "uc_filter_flush")) {
-		dev_uc_flush(netdev);
+		struct netdev_hw_addr *ha;
+
+		netdev_for_each_uc_addr(ha, netdev)
+			dev_uc_del(netdev, ha->addr);
 	} else if (!strcmp(name, "uc_filter_dump")) {
 		struct netdev_hw_addr *ha;
 
