@@ -1,1 +1,1 @@
-mvpp2x-devel-17.08.0
+armada-17.10.0
