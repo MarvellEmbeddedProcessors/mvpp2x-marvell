@@ -411,15 +411,15 @@ int mv_pp2x_prs_hw_write(struct mv_pp2x_hw *hw, struct mv_pp2x_prs_entry *pe)
 	/* Clear entry invalidation bit */
 	pe->tcam.word[MVPP2_PRS_TCAM_INV_WORD] &= ~MVPP2_PRS_TCAM_INV_MASK;
 
-	/* Write tcam index - indirect access */
-	mv_pp2x_write(hw, MVPP2_PRS_TCAM_IDX_REG, pe->index);
-	for (i = 0; i < MVPP2_PRS_TCAM_WORDS; i++)
-		mv_pp2x_write(hw, MVPP2_PRS_TCAM_DATA_REG(i), pe->tcam.word[i]);
-
 	/* Write sram index - indirect access */
 	mv_pp2x_write(hw, MVPP2_PRS_SRAM_IDX_REG, pe->index);
 	for (i = 0; i < MVPP2_PRS_SRAM_WORDS; i++)
 		mv_pp2x_write(hw, MVPP2_PRS_SRAM_DATA_REG(i), pe->sram.word[i]);
+
+	/* Write tcam index - indirect access */
+	mv_pp2x_write(hw, MVPP2_PRS_TCAM_IDX_REG, pe->index);
+	for (i = 0; i < MVPP2_PRS_TCAM_WORDS; i++)
+		mv_pp2x_write(hw, MVPP2_PRS_TCAM_DATA_REG(i), pe->tcam.word[i]);
 
 	return 0;
 }
@@ -920,22 +920,22 @@ static void mv_pp2x_prs_mac_drop_all_set(struct mv_pp2x_hw *hw,
 	mv_pp2x_prs_hw_write(hw, &pe);
 }
 
-/* Set port to promiscuous mode */
-void mv_pp2x_prs_mac_promisc_set(struct mv_pp2x_hw *hw, int port, bool add)
+/* Set port to unicast promiscuous mode */
+void mv_pp2x_prs_mac_uc_promisc_set(struct mv_pp2x_hw *hw, int port, bool add)
 {
 	struct mv_pp2x_prs_entry pe;
 
 	/* Promiscuous mode - Accept unknown packets */
 
-	if (hw->prs_shadow[MVPP2_PE_MAC_PROMISCUOUS].valid) {
+	if (hw->prs_shadow[MVPP2_PE_MAC_UC_PROMISCUOUS].valid) {
 		/* Entry exist - update port only */
-		pe.index = MVPP2_PE_MAC_PROMISCUOUS;
+		pe.index = MVPP2_PE_MAC_UC_PROMISCUOUS;
 		mv_pp2x_prs_hw_read(hw, &pe);
 	} else {
 		/* Entry doesn't exist - create new */
 		memset(&pe, 0, sizeof(struct mv_pp2x_prs_entry));
 		mv_pp2x_prs_tcam_lu_set(&pe, MVPP2_PRS_LU_MAC);
-		pe.index = MVPP2_PE_MAC_PROMISCUOUS;
+		pe.index = MVPP2_PE_MAC_UC_PROMISCUOUS;
 
 		/* Continue - set next lookup */
 		mv_pp2x_prs_sram_next_lu_set(&pe, MVPP2_PRS_LU_DSA);
@@ -943,6 +943,10 @@ void mv_pp2x_prs_mac_promisc_set(struct mv_pp2x_hw *hw, int port, bool add)
 		/* Set result info bits */
 		mv_pp2x_prs_sram_ri_update(&pe, MVPP2_PRS_RI_L2_UCAST,
 					   MVPP2_PRS_RI_L2_CAST_MASK);
+
+		/* Update tcam entry data first byte */
+		mv_pp2x_prs_tcam_data_byte_set(&pe, 0, MVPP2_PRS_UCAST_VAL,
+					       MVPP2_PRS_CAST_MASK);
 
 		/* Shift to ethertype */
 		mv_pp2x_prs_sram_shift_set(&pe, 2 * ETH_ALEN,
@@ -961,27 +965,20 @@ void mv_pp2x_prs_mac_promisc_set(struct mv_pp2x_hw *hw, int port, bool add)
 	mv_pp2x_prs_hw_write(hw, &pe);
 }
 
-/* Accept multicast */
-void mv_pp2x_prs_mac_multi_set(struct mv_pp2x_hw *hw, int port, int index,
-			       bool add)
+/* Set port to multicast promiscuous mode */
+void mv_pp2x_prs_mac_mc_promisc_set(struct mv_pp2x_hw *hw, int port, bool add)
 {
 	struct mv_pp2x_prs_entry pe;
-	unsigned char da_mc;
 
-	/* Ethernet multicast address first byte is
-	 * 0x01 for IPv4 and 0x33 for IPv6
-	 */
-	da_mc = (index == MVPP2_PE_MAC_MC_ALL) ? 0x01 : 0x33;
-
-	if (hw->prs_shadow[index].valid) {
+	if (hw->prs_shadow[MVPP2_PE_MAC_MC_PROMISCUOUS].valid) {
 		/* Entry exist - update port only */
-		pe.index = index;
+		pe.index = MVPP2_PE_MAC_MC_PROMISCUOUS;
 		mv_pp2x_prs_hw_read(hw, &pe);
 	} else {
 		/* Entry doesn't exist - create new */
 		memset(&pe, 0, sizeof(struct mv_pp2x_prs_entry));
 		mv_pp2x_prs_tcam_lu_set(&pe, MVPP2_PRS_LU_MAC);
-		pe.index = index;
+		pe.index = MVPP2_PE_MAC_MC_PROMISCUOUS;
 
 		/* Continue - set next lookup */
 		mv_pp2x_prs_sram_next_lu_set(&pe, MVPP2_PRS_LU_DSA);
@@ -991,7 +988,8 @@ void mv_pp2x_prs_mac_multi_set(struct mv_pp2x_hw *hw, int port, int index,
 					   MVPP2_PRS_RI_L2_CAST_MASK);
 
 		/* Update tcam entry data first byte */
-		mv_pp2x_prs_tcam_data_byte_set(&pe, 0, da_mc, 0xff);
+		mv_pp2x_prs_tcam_data_byte_set(&pe, 0, MVPP2_PRS_MCAST_VAL,
+					       MVPP2_PRS_CAST_MASK);
 
 		/* Shift to ethertype */
 		mv_pp2x_prs_sram_shift_set(&pe, 2 * ETH_ALEN,
@@ -1708,10 +1706,8 @@ static void mv_pp2x_prs_mac_init(struct mv_pp2x_hw *hw)
 
 	/* place holders only - no ports */
 	mv_pp2x_prs_mac_drop_all_set(hw, 0, false);
-	mv_pp2x_prs_mac_promisc_set(hw, 0, false);
-
-	mv_pp2x_prs_mac_multi_set(hw, 0, MVPP2_PE_MAC_MC_ALL, false);
-	mv_pp2x_prs_mac_multi_set(hw, 0, MVPP2_PE_MAC_MC_IP6, false);
+	mv_pp2x_prs_mac_uc_promisc_set(hw, 0, false);
+	mv_pp2x_prs_mac_mc_promisc_set(hw, 0, false);
 }
 
 /* Set default entries for various types of dsa packets */
@@ -4153,6 +4149,12 @@ void mv_pp2x_egress_enable(struct mv_pp2x_port *port)
 	int tx_port_num = mv_pp2x_egress_port(port);
 	struct mv_pp2x_hw *hw = &port->priv->hw;
 
+	/* Don't do nothing for MUSDK ports since MUSDK manages
+	 * its own queues
+	 */
+	if (port->flags & MVPP2_F_IF_MUSDK)
+		return;
+
 	/* Enable all initialized TXs. */
 	qmap = 0;
 	for (queue = 0; queue < port->num_tx_queues; queue++) {
@@ -4177,6 +4179,12 @@ void mv_pp2x_egress_disable(struct mv_pp2x_port *port)
 	int delay;
 	int tx_port_num = mv_pp2x_egress_port(port);
 	struct mv_pp2x_hw *hw = &port->priv->hw;
+
+	/* Don't do nothing for MUSDK ports since MUSDK manages
+	 * its own queues
+	 */
+	if (port->flags & MVPP2_F_IF_MUSDK)
+		return;
 
 	/* Issue stop command for active channels only */
 	mv_pp2x_write(hw, MVPP2_TXP_SCHED_PORT_INDEX_REG, tx_port_num);

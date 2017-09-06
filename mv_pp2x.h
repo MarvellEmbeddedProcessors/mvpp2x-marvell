@@ -393,9 +393,6 @@ struct mv_pp2x_aggr_tx_queue {
 
 	/* Index of the next Tx DMA descriptor to process */
 	int next_desc_to_proc;
-
-	/* Used to statistic the desc number to xmit in bulk */
-	u32 xmit_bulk;
 };
 
 struct mv_pp2x_rx_queue {
@@ -544,6 +541,8 @@ struct mv_pp2x {
 	struct mv_pp2x_platform_data *pp2xdata;
 
 	struct mv_pp2x_param_config pp2_cfg;
+
+	struct platform_device *pdev;
 
 	/* List of pointers to port structures */
 	u16 num_ports;

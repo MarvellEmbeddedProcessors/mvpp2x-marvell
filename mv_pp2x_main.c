@@ -536,7 +536,7 @@ err_unroll_pools:
 	dev_err(&pdev->dev, "failed to create BM pool %d, size %d\n", i, size);
 	for (i = i - 1; i >= 0; i--)
 		mv_pp2x_bm_pool_destroy(&pdev->dev, priv, &priv->bm_pools[i]);
-		return err;
+	return err;
 }
 
 static int mv_pp2x_bm_init(struct platform_device *pdev, struct mv_pp2x *priv)
@@ -872,6 +872,11 @@ static void mv_pp2x_defaults_set(struct mv_pp2x_port *port)
 		mv_pp2x_write(hw, MVPP2_RXQ_CONFIG_REG(queue), val);
 	}
 
+	/* Enable classifier high queue in forwarding port control*/
+	val = mv_pp2x_read(hw, MVPP2_CLS_SWFWD_PCTRL_REG);
+	val &= ~(MVPP2_CLS_SWFWD_PCTRL_MASK(port->id));
+	mv_pp2x_write(hw, MVPP2_CLS_SWFWD_PCTRL_REG, val);
+
 	/* At default, mask all interrupts to all present cpus */
 	mv_pp2x_port_interrupts_disable(port);
 }
@@ -1067,6 +1072,15 @@ static void mv_pp2x_txq_bufs_free(struct mv_pp2x_port *port,
 		uintptr_t skb = (uintptr_t)txq_pcpu->tx_skb[txq_pcpu->txq_get_index];
 		int data_size = txq_pcpu->data_size[txq_pcpu->txq_get_index];
 		struct sk_buff *skb_rec;
+
+		txq_pcpu->tx_buffs[txq_pcpu->txq_get_index] = 0;
+		txq_pcpu->tx_skb[txq_pcpu->txq_get_index] = 0;
+		txq_pcpu->data_size[txq_pcpu->txq_get_index] = 0;
+
+		if (unlikely(!buf_phys_addr)) {
+			mv_pp2x_txq_inc_get(txq_pcpu);
+			continue;
+		}
 
 		if (skb & MVPP2_ETH_SHADOW_EXT) {
 			/* Refill TSO external pool */
@@ -1415,18 +1429,18 @@ static int mv_pp2x_txq_init(struct mv_pp2x_port *port,
 	for_each_present_cpu(cpu) {
 		txq_pcpu = per_cpu_ptr(txq->pcpu, cpu);
 		txq_pcpu->size = txq->size;
-		txq_pcpu->tx_skb = kmalloc(txq_pcpu->size *
+		txq_pcpu->tx_skb = kcalloc(txq_pcpu->size,
 					   sizeof(*txq_pcpu->tx_skb),
 					   GFP_KERNEL);
 		if (!txq_pcpu->tx_skb)
 			goto error;
 
-		txq_pcpu->tx_buffs = kmalloc(txq_pcpu->size *
+		txq_pcpu->tx_buffs = kcalloc(txq_pcpu->size,
 					     sizeof(dma_addr_t), GFP_KERNEL);
 		if (!txq_pcpu->tx_buffs)
 			goto error;
 
-		txq_pcpu->data_size = kmalloc(txq_pcpu->size *
+		txq_pcpu->data_size = kcalloc(txq_pcpu->size,
 						sizeof(int), GFP_KERNEL);
 		if (!txq_pcpu->data_size)
 			goto error;
@@ -1993,11 +2007,10 @@ static void mv_pp2x_tx_send_proc_cb(unsigned long data)
 
 	aggr_txq = &priv->aggr_txqs[cpu];
 
-	if (likely(aggr_txq->xmit_bulk > 0)) {
-		aggr_txq->sw_count -= aggr_txq->xmit_bulk;
-		aggr_txq->hw_count += aggr_txq->xmit_bulk;
-		mv_pp2x_write(&priv->hw, MVPP2_AGGR_TXQ_UPDATE_REG, aggr_txq->xmit_bulk);
-		aggr_txq->xmit_bulk = 0;
+	if (likely(aggr_txq->sw_count > 0)) {
+		aggr_txq->hw_count += aggr_txq->sw_count;
+		mv_pp2x_write(&priv->hw, MVPP2_AGGR_TXQ_UPDATE_REG, aggr_txq->sw_count);
+		aggr_txq->sw_count = 0;
 	}
 }
 
@@ -3092,14 +3105,12 @@ static inline int mv_pp2_tx_tso(struct sk_buff *skb, struct net_device *dev,
 	}
 
 	aggr_txq->sw_count += total_desc_num;
-	aggr_txq->xmit_bulk += total_desc_num;
 
 	if (!skb->xmit_more) {
 		/* Transmit TCP segment with bulked descriptors and cancel tx hr timer if exist */
-		aggr_txq->sw_count -= aggr_txq->xmit_bulk;
-		aggr_txq->hw_count += aggr_txq->xmit_bulk;
-		mv_pp2x_aggr_txq_pend_desc_add(port, aggr_txq->xmit_bulk);
-		aggr_txq->xmit_bulk = 0;
+		aggr_txq->hw_count += aggr_txq->sw_count;
+		mv_pp2x_aggr_txq_pend_desc_add(port, aggr_txq->sw_count);
+		aggr_txq->sw_count = 0;
 		mv_pp2x_tx_timer_kill(cp_pcpu);
 	}
 
@@ -3327,7 +3338,6 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 	}
 	txq_pcpu->reserved_num -= frags;
 	aggr_txq->sw_count += frags;
-	aggr_txq->xmit_bulk += frags;
 
 #ifdef CONFIG_MV_PTP_SERVICE
 	/* If packet is PTP add Time-Stamp request into the tx_desc */
@@ -3335,8 +3345,16 @@ static int mv_pp2x_tx(struct sk_buff *skb, struct net_device *dev)
 #endif
 
 	/* Start 50 microseconds timer to transmit */
-	if (!skb->xmit_more)
-		mv_pp2x_tx_timer_set(cp_pcpu);
+	if (!skb->xmit_more) {
+		if (skb->hash == MVPP2_UNIQUE_HASH) {
+			mv_pp2x_tx_timer_set(cp_pcpu);
+		} else {
+			mv_pp2x_tx_timer_kill(cp_pcpu);
+			aggr_txq->hw_count += aggr_txq->sw_count;
+			mv_pp2x_aggr_txq_pend_desc_add(port, aggr_txq->sw_count);
+			aggr_txq->sw_count = 0;
+		}
+	}
 
 out:
 	if (likely(frags > 0)) {
@@ -3348,12 +3366,11 @@ out:
 		u64_stats_update_end(&stats->syncp);
 	} else {
 		/* Transmit bulked descriptors*/
-		if (aggr_txq->xmit_bulk > 0) {
+		if (aggr_txq->sw_count > 0) {
 			mv_pp2x_tx_timer_kill(cp_pcpu);
-			aggr_txq->sw_count -= aggr_txq->xmit_bulk;
-			aggr_txq->hw_count += aggr_txq->xmit_bulk;
-			mv_pp2x_aggr_txq_pend_desc_add(port, aggr_txq->xmit_bulk);
-			aggr_txq->xmit_bulk = 0;
+			aggr_txq->hw_count += aggr_txq->sw_count;
+			mv_pp2x_aggr_txq_pend_desc_add(port, aggr_txq->sw_count);
+			aggr_txq->sw_count = 0;
 		}
 		dev->stats.tx_dropped++;
 		dev_kfree_skb_any(skb);
@@ -3538,6 +3555,7 @@ static void mv_serdes_port_init(struct mv_pp2x_port *port)
 		break;
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
+	case PHY_INTERFACE_MODE_1000BASEX:
 		if (port->mac_data.flags & MV_EMAC_F_SGMII2_5)
 			mode = COMPHY_DEF(COMPHY_HS_SGMII_MODE, port->id,
 					  COMPHY_SPEED_3_125G, COMPHY_POLARITY_NO_INVERT);
@@ -3625,6 +3643,7 @@ void mv_pp2x_start_dev(struct mv_pp2x_port *port)
 		case PHY_INTERFACE_MODE_RGMII:
 		case PHY_INTERFACE_MODE_SGMII:
 		case PHY_INTERFACE_MODE_QSGMII:
+		case PHY_INTERFACE_MODE_1000BASEX:
 			mv_gop110_gmac_max_rx_size_set(gop, mac_num,
 						       port->pkt_size);
 		break;
@@ -3683,6 +3702,20 @@ void mv_pp2x_start_dev(struct mv_pp2x_port *port)
 	}
 }
 
+/* Clear aggregated TXQ and kill transmit hrtimer */
+static void mv_pp2x_trans_aggr_txq(void *arg)
+{
+	struct mv_pp2x_port *port = arg;
+	struct mv_pp2x_cp_pcpu *cp_pcpu = this_cpu_ptr(port->priv->pcpu);
+	int cpu = smp_processor_id();
+	struct mv_pp2x_aggr_tx_queue *aggr_txq = &port->priv->aggr_txqs[cpu];
+
+	mv_pp2x_tx_timer_kill(cp_pcpu);
+	aggr_txq->hw_count += aggr_txq->sw_count;
+	mv_pp2x_aggr_txq_pend_desc_add(port, aggr_txq->sw_count);
+	aggr_txq->sw_count = 0;
+}
+
 /* Set hw internals when stopping port */
 void mv_pp2x_stop_dev(struct mv_pp2x_port *port)
 {
@@ -3696,6 +3729,9 @@ void mv_pp2x_stop_dev(struct mv_pp2x_port *port)
 
 	/* Disable interrupts on all CPUs */
 	mv_pp2x_port_interrupts_disable(port);
+
+	/* Drain aggregated TXQ on all CPU's */
+	on_each_cpu(mv_pp2x_trans_aggr_txq, port, 1);
 
 	mv_pp2x_port_napi_disable(port);
 
@@ -4048,11 +4084,10 @@ static void mv_pp2x_set_rx_promisc(struct mv_pp2x_port *port)
 	struct mv_pp2x_hw *hw = &port->priv->hw;
 	int id = port->id;
 
-	/* Accept all: Multicast + Unicast */
-	mv_pp2x_prs_mac_multi_set(hw, id, MVPP2_PE_MAC_MC_ALL, true);
-	mv_pp2x_prs_mac_multi_set(hw, id, MVPP2_PE_MAC_MC_IP6, true);
 	/* Enter promisc mode */
-	mv_pp2x_prs_mac_promisc_set(hw, id, true);
+	/* Accept all: Multicast + Unicast */
+	mv_pp2x_prs_mac_uc_promisc_set(hw, id, true);
+	mv_pp2x_prs_mac_mc_promisc_set(hw, id, true);
 	/* Remove all port->id's mcast enries */
 	mv_pp2x_prs_mac_entry_del(port, MVPP2_PRS_MAC_MC, MVPP2_DEL_MAC_ALL);
 	/* Remove all port->id's ucast enries except M2M entry */
@@ -4065,12 +4100,20 @@ static void mv_pp2x_set_rx_allmulti(struct mv_pp2x_port *port)
 	int id = port->id;
 
 	/* Accept all multicast */
-	mv_pp2x_prs_mac_multi_set(hw, id,
-				  MVPP2_PE_MAC_MC_ALL, true);
-	mv_pp2x_prs_mac_multi_set(hw, id,
-				  MVPP2_PE_MAC_MC_IP6, true);
+	mv_pp2x_prs_mac_mc_promisc_set(hw, id, true);
 	/* Remove all multicast filter entries from parser */
 	mv_pp2x_prs_mac_entry_del(port, MVPP2_PRS_MAC_MC, MVPP2_DEL_MAC_ALL);
+}
+
+static void mv_pp2x_set_rx_uc_multi(struct mv_pp2x_port *port)
+{
+	struct mv_pp2x_hw *hw = &port->priv->hw;
+	int id = port->id;
+
+	/* Accept all unicast */
+	mv_pp2x_prs_mac_uc_promisc_set(hw, id, true);
+	/* Remove all unicast filter entries from parser */
+	mv_pp2x_prs_mac_entry_del(port, MVPP2_PRS_MAC_UC, MVPP2_DEL_MAC_ALL);
 }
 
 /* register unicast and multicast addresses */
@@ -4085,9 +4128,9 @@ static void mv_pp2x_set_rx_mode(struct net_device *dev)
 	if (dev->flags & IFF_PROMISC) {
 		mv_pp2x_set_rx_promisc(port);
 	} else {
-		/* Put dev into promisc if MAC num greater than uc filter max */
+		/* Put dev into UC promisc if MAC num greater than uc filter max */
 		if (netdev_uc_count(dev) > port->priv->pp2_cfg.uc_filter_max) {
-			mv_pp2x_set_rx_promisc(port);
+			mv_pp2x_set_rx_uc_multi(port);
 			return;
 		}
 		/* Remove old enries not in uc list except M2M entry */
@@ -4106,7 +4149,8 @@ static void mv_pp2x_set_rx_mode(struct net_device *dev)
 					   ha->addr[4], ha->addr[5]);
 		}
 		/* Leave promisc mode */
-		mv_pp2x_prs_mac_promisc_set(hw, id, false);
+		mv_pp2x_prs_mac_uc_promisc_set(hw, id, false);
+		mv_pp2x_prs_mac_mc_promisc_set(hw, id, false);
 
 		if (dev->flags & IFF_ALLMULTI) {
 			mv_pp2x_set_rx_allmulti(port);
@@ -4137,17 +4181,13 @@ static void mv_pp2x_set_rx_mode(struct net_device *dev)
 				}
 			}
 			/* Reject other MC mac entries */
-			mv_pp2x_prs_mac_multi_set(hw, id,
-						  MVPP2_PE_MAC_MC_ALL, false);
-			mv_pp2x_prs_mac_multi_set(hw, id,
-						  MVPP2_PE_MAC_MC_IP6, false);
+			mv_pp2x_prs_mac_mc_promisc_set(hw, id, false);
 		}
 	}
 }
 
 static int mv_pp2x_set_mac_address(struct net_device *dev, void *p)
 {
-	struct mv_pp2x_port *port = netdev_priv(dev);
 	const struct sockaddr *addr = p;
 	int err;
 
@@ -4156,28 +4196,11 @@ static int mv_pp2x_set_mac_address(struct net_device *dev, void *p)
 		goto error;
 	}
 
-	if (!netif_running(dev)) {
-		err = mv_pp2x_prs_update_mac_da(dev, addr->sa_data);
-		if (!err)
-			return 0;
-		/* Reconfigure parser to accept the original MAC address */
-		err = mv_pp2x_prs_update_mac_da(dev, dev->dev_addr);
-		goto error;
-	}
-
-	mv_pp2x_stop_dev(port);
-
 	err = mv_pp2x_prs_update_mac_da(dev, addr->sa_data);
 	if (!err)
-		goto out_start;
-
-	/* Reconfigure parser accept the original MAC address */
+		return 0;
+	/* Reconfigure parser to accept the original MAC address */
 	err = mv_pp2x_prs_update_mac_da(dev, dev->dev_addr);
-	if (err)
-		goto error;
-out_start:
-	mv_pp2x_start_dev(port);
-	return 0;
 
 error:
 	netdev_err(dev, "fail to change MAC address\n");
@@ -4645,6 +4668,8 @@ static int mv_pp2_init_emac_data(struct mv_pp2x_port *port,
 		fixed_link_node = of_get_child_by_name(emac_node, "fixed-link");
 		port->mac_data.duplex = of_property_read_bool(fixed_link_node,
 				"full-duplex");
+		if (port->mac_data.speed == SPEED_2500)
+			port->mac_data.flags |= MV_EMAC_F_SGMII2_5;
 		if (of_property_read_u32(fixed_link_node, "speed",
 					 &port->mac_data.speed))
 			return -EINVAL;
@@ -4653,6 +4678,7 @@ static int mv_pp2_init_emac_data(struct mv_pp2x_port *port,
 
 		switch (phy_mode) {
 		case PHY_INTERFACE_MODE_SGMII:
+		case PHY_INTERFACE_MODE_1000BASEX:
 			speed = 0;
 			/* check phy speed */
 			of_property_read_u32(emac_node, "phy-speed", &speed);
@@ -4736,11 +4762,13 @@ static u32 mvp_pp2x_gop110_netc_cfg_create(struct mv_pp2x *priv)
 				val |= MV_NETC_GE_MAC0_RXAUI_L23;
 		}
 		if (mac->gop_index == 2) {
-			if (mac->phy_mode == PHY_INTERFACE_MODE_SGMII)
+			if (mac->phy_mode == PHY_INTERFACE_MODE_SGMII ||
+			    mac->phy_mode == PHY_INTERFACE_MODE_1000BASEX)
 				val |= MV_NETC_GE_MAC2_SGMII;
 		}
 		if (mac->gop_index == 3) {
-			if (mac->phy_mode == PHY_INTERFACE_MODE_SGMII)
+			if (mac->phy_mode == PHY_INTERFACE_MODE_SGMII ||
+			    mac->phy_mode == PHY_INTERFACE_MODE_1000BASEX)
 				val |= MV_NETC_GE_MAC3_SGMII;
 			else if (mac->phy_mode == PHY_INTERFACE_MODE_RGMII)
 				val |= MV_NETC_GE_MAC3_RGMII;
@@ -4784,13 +4812,12 @@ static void mv_pp2x_get_device_stats(struct work_struct *work)
 }
 
 /* Initialize port HW */
-static int mv_pp2x_port_init(struct mv_pp2x_port *port)
+static int mv_pp2x_port_hw_init(struct mv_pp2x_port *port)
 {
-	struct device *dev = port->dev->dev.parent;
 	struct mv_pp2x *priv = port->priv;
 	struct gop_hw *gop = &port->priv->hw.gop;
 	struct mv_mac_data *mac = &port->mac_data;
-	int queue, err;
+	int err = 0;
 
 	/* Disable port */
 	mv_pp2x_egress_disable(port);
@@ -4800,6 +4827,31 @@ static int mv_pp2x_port_init(struct mv_pp2x_port *port)
 	else
 		if (!(port->flags & MVPP2_F_LOOPBACK))
 			mv_gop110_port_disable(gop, mac, port->comphy);
+
+	/* Configure Rx queue group interrupt for this port */
+	priv->pp2xdata->mv_pp2x_port_isr_rx_group_cfg(port);
+
+	mv_pp2x_ingress_disable(port);
+
+	/* Port default configuration */
+	mv_pp2x_defaults_set(port);
+
+	/* Port's classifier configuration */
+	mv_pp2x_cls_oversize_rxq_set(port);
+	mv_pp2x_cls_port_config(port);
+
+	/* Initialize pools for swf */
+	if (!(port->flags & MVPP2_F_IF_MUSDK))
+		err = mv_pp2x_swf_bm_pool_init(port);
+
+	return err;
+}
+
+/* Initialize port */
+static int mv_pp2x_port_init(struct mv_pp2x_port *port)
+{
+	struct device *dev = port->dev->dev.parent;
+	int queue, err;
 
 	/* Allocate queues */
 	port->txqs = devm_kcalloc(dev, port->num_tx_queues, sizeof(*port->txqs),
@@ -4819,17 +4871,8 @@ static int mv_pp2x_port_init(struct mv_pp2x_port *port)
 
 	/* Associate physical Rx queues to port and initialize.  */
 	err = mv_pp2x_port_rxqs_init(dev, port);
-
 	if (err)
 		goto err_free_percpu;
-
-	/* Configure queue_vectors */
-
-	if (!(port->flags & MVPP2_F_IF_MUSDK))
-		priv->pp2xdata->mv_pp2x_port_queue_vectors_init(port);
-
-	/* Configure Rx queue group interrupt for this port */
-	priv->pp2xdata->mv_pp2x_port_isr_rx_group_cfg(port);
 
 	/* Create Rx descriptor rings */
 	for (queue = 0; queue < port->num_rx_queues; queue++) {
@@ -4840,21 +4883,14 @@ static int mv_pp2x_port_init(struct mv_pp2x_port *port)
 		rxq->time_coal = MVPP2_RX_COAL_USEC;
 	}
 
-	mv_pp2x_ingress_disable(port);
-
-	/* Port default configuration */
-	mv_pp2x_defaults_set(port);
-
-	/* Port's classifier configuration */
-	mv_pp2x_cls_oversize_rxq_set(port);
-	mv_pp2x_cls_port_config(port);
-
 	/* Provide an initial Rx packet size */
 	port->pkt_size = MVPP2_RX_PKT_SIZE(port->dev->mtu);
 
-	/* Initialize pools for swf */
+	/* Configure queue_vectors */
 	if (!(port->flags & MVPP2_F_IF_MUSDK))
-		err = mv_pp2x_swf_bm_pool_init(port);
+		port->priv->pp2xdata->mv_pp2x_port_queue_vectors_init(port);
+
+	err = mv_pp2x_port_hw_init(port);
 	if (err)
 		goto err_free_percpu;
 	return 0;
@@ -4917,14 +4953,14 @@ static int mv_pp2x_port_cpu_callback(struct notifier_block *nfb,
 		if (port->priv->pp2xdata->interrupt_tx_done)
 			on_each_cpu_mask(&cpus_mask, mv_pp2x_tx_done_pkts_coal_set, port, 1);
 		break;
-	case CPU_DOWN_PREPARE:
+	case CPU_DEAD:
+	case CPU_DEAD_FROZEN:
 		cp_pcpu = per_cpu_ptr(port->priv->pcpu, cpu);
 		aggr_txq = &port->priv->aggr_txqs[cpu];
 		mv_pp2x_tx_timer_kill(cp_pcpu);
-		aggr_txq->sw_count -= aggr_txq->xmit_bulk;
-		aggr_txq->hw_count += aggr_txq->xmit_bulk;
-		mv_pp22_thread_write(&port->priv->hw, cpu, MVPP2_AGGR_TXQ_UPDATE_REG, aggr_txq->xmit_bulk);
-		aggr_txq->xmit_bulk = 0;
+		aggr_txq->hw_count += aggr_txq->sw_count;
+		mv_pp22_thread_write(&port->priv->hw, cpu, MVPP2_AGGR_TXQ_UPDATE_REG, aggr_txq->sw_count);
+		aggr_txq->sw_count = 0;
 	}
 
 	return NOTIFY_OK;
@@ -5903,6 +5939,7 @@ static int mv_pp2x_probe(struct platform_device *pdev)
 	if (!priv)
 		return -ENOMEM;
 	hw = &priv->hw;
+	priv->pdev = pdev;
 
 	err = mv_pp2x_platform_data_get(pdev, priv, &cell_index, &port_count);
 	if (err) {
@@ -6097,6 +6134,151 @@ static int mv_pp2x_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+/* Ports initialization after suspend */
+static int mv_pp2x_port_resume(struct platform_device *pdev,
+			       struct device_node *port_node,
+			       struct mv_pp2x *priv, struct mv_pp2x_port *port)
+{
+	struct device_node *emac_node = NULL;
+	int i;
+
+	if (priv->pp2_version == PPV22 && !(port->flags & MVPP2_F_LOOPBACK)) {
+		emac_node = of_parse_phandle(port_node, "emac-data", 0);
+		port->mac_data.link_irq = irq_of_parse_and_map(emac_node, 0);
+	}
+
+	if (port->mac_data.phy_node)
+		mv_pp2x_phy_connect(port);
+
+	for (i = 0; i < port->num_irqs; i++)
+		port->of_irqs[i] = irq_of_parse_and_map(port_node, i);
+
+	mv_pp2x_port_hw_init(port);
+
+	return 0;
+}
+
+/* Routine configure mvpp2x HW after suspend */
+static int mv_pp2x_probe_after_suspend(struct device *dev)
+{
+	struct mv_pp2x *priv = dev_get_drvdata(dev);
+	int i, err;
+	struct platform_device *pdev = priv->pdev;
+	struct device_node *dn = pdev->dev.of_node;
+	struct device_node *port_node;
+
+	/* Resume network controller */
+	err = mv_pp2x_init(pdev, priv);
+	if (err < 0) {
+		dev_err(&pdev->dev, "failed to resume controller\n");
+		return err;
+	}
+
+	i = 0;
+	/* Resume ports */
+	for_each_available_child_of_node(dn, port_node) {
+		mv_pp2x_port_resume(pdev, port_node, priv, priv->port_list[i]);
+		i++;
+	}
+
+	if (priv->pp2_version == PPV22) {
+		/* Init tx&rx fifo for each port */
+		mv_pp22_tx_fifo_init(priv);
+		mv_pp22_rx_fifo_init(priv);
+		mv_pp22_set_net_comp(priv);
+	} else {
+		mv_pp21_fifo_init(priv);
+	}
+
+	return 0;
+}
+
+/* Routine suspend to RAM CP */
+static int mvpp2x_suspend(struct device *dev)
+{
+	struct mv_pp2x *priv = dev_get_drvdata(dev);
+	int i, num_of_ports;
+	struct platform_device *pdev = priv->pdev;
+
+	num_of_ports = priv->num_ports;
+	for (i = 0; i < num_of_ports; i++) {
+		struct mv_mac_data *mac = &priv->port_list[i]->mac_data;
+		/* Stop interface if port is up */
+		if (netif_running(priv->port_list[i]->dev))
+			mv_pp2x_stop(priv->port_list[i]->dev);
+		/* Dispose all port IRQ's */
+		if (mac->link_irq != MVPP2_NO_LINK_IRQ)
+			irq_dispose_mapping(mac->link_irq);
+		mv_pp2x_port_irqs_dispose_mapping(priv->port_list[i]);
+
+		if (mac->phy_node)
+			mv_pp2x_phy_disconnect(priv->port_list[i]);
+
+		/* Null all pointers to BM pools, pool's will be reconfigured in resume procedure */
+		priv->port_list[i]->pool_short = NULL;
+		priv->port_list[i]->pool_long = NULL;
+		/* Missing flag will trigger GoP reconfiguration in resume routine */
+		mac->flags &= ~MV_EMAC_F_INIT;
+	}
+
+	for_each_present_cpu(i) {
+		struct mv_pp2x_aggr_tx_queue *aggr_txq = &priv->aggr_txqs[i];
+
+		dma_free_coherent(&pdev->dev,
+				  MVPP2_DESCQ_MEM_SIZE(aggr_txq->size),
+				  aggr_txq->desc_mem, aggr_txq->descs_phys);
+	}
+
+	devm_kfree(&pdev->dev, priv->hw.prs_shadow);
+	devm_kfree(&pdev->dev, priv->hw.cls_shadow);
+	devm_kfree(&pdev->dev, priv->hw.c2_shadow);
+	devm_kfree(&pdev->dev, priv->aggr_txqs);
+
+	for (i = 0; i < priv->num_pools; i++) {
+		struct mv_pp2x_bm_pool *bm_pool = &priv->bm_pools[i];
+
+		mv_pp2x_bm_pool_destroy(dev, priv, bm_pool);
+	}
+
+	return 0;
+}
+
+/* Routine resume CP after S2RAM */
+static int mvpp2x_resume(struct device *dev)
+{
+	struct mv_pp2x *priv;
+	int i, num_of_ports, err;
+
+	err = mv_pp2x_probe_after_suspend(dev);
+	if (err < 0)
+		return err;
+
+	priv = dev_get_drvdata(dev);
+	num_of_ports = priv->num_ports;
+
+	for (i = 0; i < num_of_ports; i++) {
+		if (priv->port_list[i]->comphy)
+			phy_init(priv->port_list[i]->comphy);
+		/* Start interface if port was up before suspend */
+		if (netif_running(priv->port_list[i]->dev))
+			mv_pp2x_open(priv->port_list[i]->dev);
+
+		if (priv->port_list[i]->dev->flags & IFF_PROMISC)
+			mv_pp2x_set_rx_promisc(priv->port_list[i]);
+		else if (priv->port_list[i]->dev->flags & IFF_ALLMULTI)
+			mv_pp2x_set_rx_allmulti(priv->port_list[i]);
+	}
+
+	return 0;
+}
+
+static const struct dev_pm_ops mv_pp2x_pm_ops = {
+	.suspend = mvpp2x_suspend,
+	.resume = mvpp2x_resume,
+};
+#endif /* CONFIG_PM_SLEEP */
+
 MODULE_DEVICE_TABLE(of, mv_pp2x_match_tbl);
 
 static struct platform_driver mv_pp2x_driver = {
@@ -6105,6 +6287,9 @@ static struct platform_driver mv_pp2x_driver = {
 	.driver = {
 		.name = MVPP2_DRIVER_NAME,
 		.of_match_table = mv_pp2x_match_tbl,
+#ifdef CONFIG_PM_SLEEP
+		.pm = &mv_pp2x_pm_ops,
+#endif
 	},
 };
 
