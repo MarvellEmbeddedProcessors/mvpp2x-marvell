@@ -65,10 +65,11 @@ num_cos_queues module parameter
 
 rss_mode module parameter
 -----------------------------
-	- rss_mode determinate the way to calculate UDP HASH value for RSS. It has 2 options:
-		- 0 – UDP_2TUPLE, means UDP packets hash based on 2T
-		- 1 – UDP_5TUPLE, means UDP packets hash based on 5T
+	- rss_mode determinate the way to calculate UDP and TCP HASH value for RSS. It has 2 options:
+		- 0 – 2 TUPLE, means UDP and TCP packets hash based on 2T
+		- 1 – 5 TUPLE, means UDP and TCP packets hash based on 5T
 	- Parameter is per port and set for all ports.
+	- Default is 2 TUPLE RSS mode.
 	- Example:
 
 			# insmod mvpp2x.ko rss_mode=1
