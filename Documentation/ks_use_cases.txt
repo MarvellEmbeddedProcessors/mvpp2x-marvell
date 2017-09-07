@@ -86,6 +86,8 @@ To run the use case:
 	3. Traffic generator:
 		- Configure UDP traffic with same destination & source MAC address,
 		  same destination IP and different source IP for different flows.
+		- Configure UDP source port 10100 and destination port 20200 for
+		  all flows.
 		- Set TG's source/designation MAC address in L2 packet payload
 		- Generate bi/one directional traffic
 
@@ -162,6 +164,8 @@ In Linux:
 	3. Traffic generator:
 		- Configure UDP traffic with same destination & source MAC address,
 		  same destination IP and different source IP for different flows.
+		- Configure UDP source port 10100 and destination port 20200 for
+		  all flows.
 		- Generate bi-directional or uni-directional traffic as required.
 
 
@@ -299,6 +303,8 @@ To run the use case:
 	3. Traffic generator:
 		- Configure UDP traffic with same destination & source MAC address,
 		  same destination IP and different source IP for different flows.
+		- Configure UDP source port 10100 and destination port 20200 for
+		  all flows.
 		- Generate bi/one directional traffic
 
 
