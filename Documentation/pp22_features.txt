@@ -15,6 +15,7 @@ Related Documentation
 ---------------------
 The features described in this section can be operated through several interfaces and mechanisms.
 Please refer to the proper documentation for the related mechanisms:
+
 	- Linux ifconfig command: see http://linuxcommand.org/man_pages/ifconfig8.html
 	- Linux ethtool commands: see http://linuxcommand.org/man_pages/ethtool8.html
 	- PPv2.2 module parameters: see "PPv2.2 Kernel Module Parameters" documentation section.
@@ -30,6 +31,7 @@ Interface/Link Control
 
 	Limitations:
 	- Speed/Duplex configuration is not supported for Peridot module.
+
 	- To enable 10G<->1G / 100M / 10M transition, port should support XLG mode and
 		comphy selector should be set in MAC device tree node.
 		See Linux Kernel Documentation/devicetree/bindings/net/marvell-pp2x.txt
@@ -78,6 +80,7 @@ L2 filtering
 1. Unicast MAC address/Multicast MAC addresses filtering:
 	- MAC filtering is implemented by hardware on A70x0 and A80x0. MAC filtering is done in a dedicated parser & L2 filtering TCAM 
 	  by parsing the DMAC field.
+
 		- Filtering capability:
 			For each port, it is possible to configure up to 25 UC and MC filtering entries
 			By default, the maximum number of UC entries is 4, and the maximum number of MC entries is 21( 25 - max UC entries.
@@ -130,6 +133,7 @@ There are two delay criterions: number of frames and time.
 
 The frames parameters specifies how many packets are received/transmitted in specific queue ring before generating an interrupt.
 The time parameters specifies how many microseconds after at least 1 packet is received/transmitted before generating an interrupt.
+
 Parameter could be set by port.
   - TX/RX coalescing could be set via ethtool command.
   - TX/RX coalescing range:

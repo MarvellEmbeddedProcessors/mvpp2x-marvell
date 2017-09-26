@@ -62,9 +62,9 @@ Sysfs Usage
 		# cat help
 
 			cat                         rss_hw_dump  - dump rxq in rss table entry from hardware.
-			echo [if_name] [mode]    >  rss_mode     - Set the hash mode for non-frag UDP packet
-													[mode]      - 0 - 2-Tuple
-																- 1 - 5-Tuple
+
+			echo [if_name] [mode]    >  rss_mode     - Set the hash mode for non-frag UDP packet [mode]: 0 - 2_Tuple, 1 - 5_Tuple
+
 			echo [if_name] [cpu]     >  rss_dflt_cpu - Set cpu to handle the non-IP packet
 
 4. To set specific parameter write configurations into config file with echo command:
@@ -77,6 +77,7 @@ Sysfs RSS configuration
 Different RSS parameters could be set by RSS sysfs commands.
 - RSS sysfs directory: /sys/devices/platform/pp2/rss
 - Supported commands:
+
 	- rss_mode - Set UDP HASH calculate mode
 
 		Command is per port. Usage:
@@ -105,6 +106,7 @@ Sysfs Rx CoS configuration
 - Supported commands:
 	- cos_classifier - Set CoS one of CoS modes.
 	  It has 4 options:
+
 		- 0 – VLAN_MODE
 		- 1 – DSCP_MODE
 		- 2 – VLAN_DSCP_MODE
