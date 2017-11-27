@@ -114,37 +114,37 @@ Sysfs Rx CoS configuration
 
 		Command is per port. Usage:
 
-			# echo device cos_mode > cos_classifier_set
+			# echo device cos_mode > classifier_set
 
 		Example:
 
-			# echo eth0 1  >  cos_classifier_set
+			# echo eth0 1  >  classifier_set
 
 		To show parameter:
 
-			# echo device > cos_classifier_show
+			# echo device > classifier_show
 
 		Example:
 
-			# echo eth0 >  cos_classifier_show
+			# echo eth0 >  classifier_show
 
 	- default_cos - Set default CoS value for untagged or non-IP
 
 		Command is per port. Usage:
 
-			# echo device cos_value > default_cos_set
+			# echo device cos_value > cos_default_set
 
 		Example:
 
-			# echo eth0 2  >  default_cos_set
+			# echo eth0 2  >  cos_default_set
 
 		To show parameter:
 
-			# echo device > default_cos_show
+			# echo device > cos_default_show
 
 		Example:
 
-			# echo eth0 >  default_cos_show
+			# echo eth0 >  cos_default_show
 
 	- pri_map - Set mapping data from CoS to RX queue
 
