@@ -61,30 +61,32 @@ disclaimer.
 //#include "dpi/mvPp2DpiHw.h"
 //#include "wol/mvPp2Wol.h"
 
-#define MAX_NUM_CP_110 2
-
 struct mv_pp2x *sysfs_cur_priv;
 struct mv_pp2x_hw *sysfs_cur_hw;
 static struct platform_device * pp2_sysfs;
 struct mv_pp2x_port *sysfs_cur_port;
 
-#ifdef MVPP21
-  char *pp2_dev_name[MAX_NUM_CP_110] = {"f10f0000.ethernet", "Null"};
-#else
-  char *pp2_dev_name[MAX_NUM_CP_110] = {"f2000000.ppv22", "f4000000.ppv22"};
-#endif
-
 extern void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv);
 extern void mv_pp2x_pp2_ports_print(struct mv_pp2x *priv);
+
+
+
 
 static int mv_pp2_sysfs_init(void)
 {
 	struct device *pd;
-	struct device *pp2_dev;
+	struct device *pp2_dev = NULL;
+	struct device_driver *pp2_drv;
 	struct platform_device *pp2_plat_dev;
 	struct mv_pp2x *priv;
 	int cpn_index;
 
+	pp2_drv = driver_find(MVPP2_DRIVER_NAME, &platform_bus_type);
+
+	if (!pp2_drv) {
+		printk(KERN_ERR"%s: cannot find pp2 driver\n", __func__);
+		return -ENOENT;
+	}
 
 	pd = bus_find_device_by_name(&platform_bus_type, NULL, "pp2");
 	if (!pd) {
@@ -96,21 +98,24 @@ static int mv_pp2_sysfs_init(void)
 		printk(KERN_ERR"%s: cannot find sysfs pp2 device\n", __func__);
 		return -1;
 	}
-
 	for (cpn_index = 0; cpn_index < MAX_NUM_CP_110; cpn_index++) {
-		pp2_dev = bus_find_device_by_name(&platform_bus_type, NULL,
-						  pp2_dev_name[cpn_index]);
+		pp2_dev = driver_find_device(pp2_drv, pp2_dev, NULL, pp2x_sysfs_match_device);
 		if (!pp2_dev)
-			continue;
-
+			break;
 		priv = dev_get_drvdata(pp2_dev);
+
 		pp2_plat_dev = to_platform_device(pp2_dev);
 		mv_pp2x_pp2_basic_print(pp2_plat_dev, priv);
 		mv_pp2x_pp2_ports_print(priv);
+
 		if (cpn_index == 0) {
 			sysfs_cur_priv = priv;
 			sysfs_cur_hw = &priv->hw;
 		}
+	}
+	if (!sysfs_cur_priv) {
+		printk(KERN_ERR"%s: cannot find pp2 device\n", __func__);
+		return -ENOENT;
 	}
 
 	mv_pp2_prs_high_sysfs_init(&pd->kobj);
@@ -144,7 +149,6 @@ static int mv_pp2_sysfs_init(void)
 
 
 	mv_pp2_gbe_sysfs_init(&pd->kobj);
-
 	mv_gop_sysfs_init(&pd->kobj);
 	mv_fca_sysfs_init(&pd->kobj);
 	mv_pp2_musdk_sysfs_init(&pd->kobj);
@@ -200,9 +204,14 @@ static void mv_pp2_sysfs_exit(void)
 
 static int __init mpp2_sysfs_module_init(void)
 {
-	mv_pp2_sysfs_init();
+	int err;
 
-	return(0);
+	err = mv_pp2_sysfs_init();
+	if (err)
+		printk(KERN_ERR"(%s) failed\n", __func__);
+
+
+	return(err);
 }
 
 static void __exit mpp2_sysfs_module_exit(void)

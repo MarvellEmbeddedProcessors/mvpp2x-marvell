@@ -64,6 +64,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __MV_PP2X_SYSFS_H__
 #define __MV_PP2X_SYSFS_H__
 
+#define MAX_NUM_CP_110 8
+#define MVPP2_DRIVER_NAME "mvpp2"
+
 #include "mv_pp2x.h"
 #include "mv_pp2x_hw.h"
 #include "mv_pp2x_sysfs_debug.h"
@@ -75,6 +78,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern struct mv_pp2x_hw *sysfs_cur_hw;
 extern struct mv_pp2x *sysfs_cur_priv;
 extern struct mv_pp2x_port *sysfs_cur_port;
-extern char *pp2_dev_name[];
+
+static inline int pp2x_sysfs_match_device(struct device *dev, void *data)
+ {
+     return 1;
+ }
+
 
 #endif /* __MV_PP2X_SYSFS_H__ */

@@ -36,10 +36,25 @@ disclaimer.
 
 void mv_pp2x_syfs_cpn_set(int index)
 {
-	struct device *pp2_dev;
+	struct device_driver *pp2_drv;
+	struct device *pp2_dev = NULL;
 	struct mv_pp2x *priv;
+	u8 iteration;
 
-	pp2_dev = bus_find_device_by_name(&platform_bus_type, NULL, pp2_dev_name[index]);
+	pp2_drv = driver_find(MVPP2_DRIVER_NAME, &platform_bus_type);
+	if (!pp2_drv) {
+		printk(KERN_ERR"%s: cannot find pp2 driver\n", __func__);
+		return ;
+	}
+
+	for (iteration = 0; iteration <= index; iteration++) {
+		pp2_dev = driver_find_device(pp2_drv, pp2_dev, NULL, pp2x_sysfs_match_device);
+		if (!pp2_dev) {
+			pr_err("index(%u) has no associated platform device\n", index);
+			return ;
+		}
+	}
+
 	priv = dev_get_drvdata(pp2_dev);
 
 	sysfs_cur_priv = priv;
