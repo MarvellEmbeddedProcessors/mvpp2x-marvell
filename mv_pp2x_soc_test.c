@@ -2674,7 +2674,7 @@ void mvPp2PlcrHwRegs(struct mv_pp2x_hw *hw)
 	}
 
 	pr_info("\nPer RXQ: Non zero early drop thresholds\n");
-	for (i = 0; i < MVPP2_RXQ_TOTAL_NUM; i++) {
+	for (i = 0; i < RXQ_TOTAL_PER_CPU_NUM; i++) {
 		mv_pp2x_write(hw, MVPP2_PLCR_EDROP_RXQ_REG, i);
 		val = mv_pp2x_read(hw, MVPP2_PLCR_EDROP_RXQ_TR_REG);
 		if (val != 0)

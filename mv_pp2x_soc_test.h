@@ -18,6 +18,9 @@
 #ifndef _MV_PP2X_SOC_TEST_H_
 #define _MV_PP2X_SOC_TEST_H_
 
+/* Total number of RXQs available to all ports */
+#define RXQ_TOTAL_PER_CPU_NUM		(MVPP2_MAX_PORTS * MVPP2_MAX_RXQ)
+
 /* C3 test Macros */
 #define HEK_EXT_FMT				"%8.8x %8.8x %8.8x | %8.8x %8.8x %8.8x %8.8x %8.8x %8.8x"
 #define HEK_EXT_VAL(p)				p[8], p[7], p[6], p[5], p[4], p[3], p[2], p[1], p[0]
