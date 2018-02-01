@@ -65,26 +65,6 @@ static ssize_t mv_pp2_show(struct device *dev,
 		off = scnprintf(buf, PAGE_SIZE, "%d\n", rel_first_rxq);
 	} else if (!strcmp(name, "num_tx_queues")) {
 		off = scnprintf(buf, PAGE_SIZE, "%d\n", sysfs_cur_port->num_tx_queues);
-	} else if (!strcmp(name, "port_stats")) {
-		struct gop_hw *gop = &sysfs_cur_port->priv->hw.gop;
-		int gop_port = sysfs_cur_port->mac_data.gop_index;
-		struct gop_stat	*gop_statistics = &sysfs_cur_port->mac_data.gop_statistics;
-
-		mv_gop110_mib_counters_stat_update(gop, gop_port, gop_statistics);
-		mv_pp2x_counters_stat_update(sysfs_cur_port, gop_statistics);
-
-		off += scnprintf(buf + off, PAGE_SIZE, "rx_bytes %llu\n", gop_statistics->rx_byte);
-		off += scnprintf(buf + off, PAGE_SIZE, "rx_frames %llu\n", gop_statistics->rx_frames);
-		off += scnprintf(buf + off, PAGE_SIZE, "rx_unicast %llu\n", gop_statistics->rx_unicast);
-		off += scnprintf(buf + off, PAGE_SIZE, "rx_ppv2_overrun %llu\n", gop_statistics->rx_ppv2_overrun);
-		off += scnprintf(buf + off, PAGE_SIZE, "rx_cls_drop %llu\n", gop_statistics->rx_cls_drop);
-		off += scnprintf(buf + off, PAGE_SIZE, "rx_total_err %llu\n", gop_statistics->rx_total_err);
-		off += scnprintf(buf + off, PAGE_SIZE, "tx_bytes %llun", gop_statistics->tx_byte);
-		off += scnprintf(buf + off, PAGE_SIZE, "tx_frames %llu\n", gop_statistics->tx_frames);
-		off += scnprintf(buf + off, PAGE_SIZE, "tx_unicast %llu\n", gop_statistics->tx_unicast);
-		off += scnprintf(buf + off, PAGE_SIZE, "collision %llu\n", gop_statistics->collision);
-		off += scnprintf(buf + off, PAGE_SIZE, "late_collision %llu\n", gop_statistics->late_collision);
-		off += scnprintf(buf + off, PAGE_SIZE, "tx_crc_sent %llu\n", gop_statistics->tx_crc_sent);
 	} else {
 		off = mv_pp2_help(buf);
 	}
@@ -133,7 +113,6 @@ static DEVICE_ATTR(help,		S_IRUSR, mv_pp2_show, NULL);
 static DEVICE_ATTR(num_rx_queues,	S_IRUSR, mv_pp2_show, NULL);
 static DEVICE_ATTR(first_rxq,		S_IRUSR, mv_pp2_show, NULL);
 static DEVICE_ATTR(num_tx_queues,	S_IRUSR, mv_pp2_show, NULL);
-static DEVICE_ATTR(port_stats,		S_IRUSR, mv_pp2_show, NULL);
 static DEVICE_ATTR(sysfs_current_port,	S_IWUSR, NULL, mv_pp2_port_store);
 
 static struct attribute *mv_pp2_attrs[] = {
@@ -141,7 +120,6 @@ static struct attribute *mv_pp2_attrs[] = {
 	&dev_attr_num_rx_queues.attr,
 	&dev_attr_first_rxq.attr,
 	&dev_attr_num_tx_queues.attr,
-	&dev_attr_port_stats.attr,
 	&dev_attr_sysfs_current_port.attr,
 	NULL
 };
