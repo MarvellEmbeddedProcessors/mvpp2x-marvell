@@ -22,6 +22,7 @@
 #include <linux/netdevice.h>
 #include <linux/string.h>
 #include <linux/log2.h>
+#include <linux/uio_driver.h>
 
 #include "mv_pp2x_hw_type.h"
 #include "mv_gop110_hw_type.h"
@@ -150,11 +151,18 @@
 
 /* Various constants */
 #define MVPP2_MAX_SW_THREADS	4
-#define MVPP2_MAX_CPUS		4
-#define MVPP2_MAX_SHARED	1
+#define MVPP2_MAX_ADDR_SPACES			9 /* MVpp22 HW has 9 hif's(address spaces)
+						   * Aggr/RX/TX queues, queue vectors and other per hif stuff
+						   * Allocation would be limited by maximum number of hif's in
+						   * mvpp22 HW.
+						   */
+#define MVPP2_MAX_CPUS_IN_AP			8
+#define MVPP2_DEFAULT_RX_COUNT			8
+#define MVPP2_DEFAULT_OTHER_COUNT		1
+#define MVPP22_MAX_NUM_RXQ			32
 
 /* Coalescing */
-#define MVPP2_TXDONE_COAL_PKTS		64
+#define MVPP2_TXDONE_COAL_PKTS		32
 #define MVPP2_TXDONE_HRTIMER_PERIOD_NS	1000000UL
 #define MVPP2_TX_HRTIMER_PERIOD_NS	50000UL
 #define MVPP2_TXDONE_COAL_USEC		1000
@@ -174,7 +182,7 @@
 #define MVPP2_BM_SHORT_BUF_NUM		2048
 #define MVPP2_BM_LONG_BUF_NUM		1024
 #define MVPP2_BM_JUMBO_BUF_NUM		512
-#define MVPP2_BM_PER_CPU_THRESHOLD	(MVPP2_MAX_CPUS * 2)
+#define MVPP2_BM_PER_CPU_THRESHOLD(num_of_cpus)	(num_of_cpus * 2)
 
 #define MVPP2_ALL_BUFS			0
 
@@ -183,8 +191,8 @@
 extern  u32 debug_param;
 
 /* Convert cpu_id to sw_thread_id */
-#define QV_THR_2_CPU(sw_thread_id)	(sw_thread_id - first_addr_space)
-#define QV_CPU_2_THR(cpu_id)		(first_addr_space + cpu_id)
+#define QV_THR_2_MASTER_AP_CPU(ap_id, sw_thread_id)	((ap_id * MVPP2_MAX_CPUS_IN_AP) + sw_thread_id)
+#define QV_CPU_2_ADR_SP(cpu_id, num_of_aps)		(cpu_id / num_of_aps)
 
 /* Used for define type of data saved in shadow: SKB or extended buffer or nothing */
 #define MVPP2_ETH_SHADOW_SKB		0x1
@@ -195,7 +203,7 @@ extern  u32 debug_param;
 
 #define MVPP2_EXTRA_BUF_SIZE	120
 #define MVPP2_EXTRA_BUF_NUM	(MVPP2_MAX_TXD * MVPP2_MAX_TXQ)
-#define MVPP2_SKB_NUM		(MVPP2_MAX_RXD * MVPP2_MAX_RXQ * MVPP2_MAX_PORTS)
+#define MVPP2_SKB_NUM		(MVPP2_MAX_RXD * MVPP2_MAX_RXQ_PER_CPU * MVPP2_MAX_PORTS)
 
 enum mvppv2_version {
 	PPV21 = 21,
@@ -203,8 +211,9 @@ enum mvppv2_version {
 };
 
 enum mv_pp2x_queue_vector_type {
-	MVPP2_SHARED,
-	MVPP2_PRIVATE
+	MVPP2_RX_SHARED,
+	MVPP2_PRIVATE,
+	MVPP2_TX_SHARED
 };
 
 enum mv_pp2x_queue_distribution_mode {
@@ -214,7 +223,8 @@ enum mv_pp2x_queue_distribution_mode {
 	 * configured on the additional interrupt.
 	 */
 	MVPP2_QDIST_SINGLE_MODE,
-	MVPP2_QDIST_MULTI_MODE	/* PPv2.2 only requires N interrupts */
+	MVPP2_QDIST_MULTI_MODE,	/* PPv2.2 only requires N interrupts */
+	MVPP2_SINGLE_RESOURCE_MODE
 };
 
 enum mv_pp2x_cos_classifier {
@@ -225,13 +235,13 @@ enum mv_pp2x_cos_classifier {
 	MVPP2_COS_CLS_DSCP_VLAN
 };
 
-enum mv_pp2x_rss_nf_udp_mode {
-	MVPP2_RSS_NF_UDP_2T,	/* non-frag UDP packet hash value
-				* is calculated based on 2T
-				*/
-	MVPP2_RSS_NF_UDP_5T	/* non-frag UDP packet hash value
-				*is calculated based on 5T
-				*/
+enum mv_pp2x_rss_mode {
+	MVPP2_RSS_2T,	/* non-frag UDP&TCP packet hash value
+			 * is calculated based on 2T
+			 */
+	MVPP2_RSS_5T	/* non-frag UDP&TCP packet hash value
+			 * is calculated based on 5T
+			 */
 };
 
 struct gop_stat {
@@ -304,6 +314,9 @@ struct mv_mac_data {
 #define MV_EMAC_F_PORT_UP	BIT(MV_EMAC_F_PORT_UP_BIT)
 #define MV_EMAC_F_5G		BIT(MV_EMAC_F_5G_BIT)
 
+#define MV_BM_LOCK			BIT(0)
+#define MV_AGGR_QUEUE_LOCK	BIT(1)
+
 #define MVPP2_NO_LINK_IRQ	0
 
 /* Per-CPU Tx queue control */
@@ -342,7 +355,7 @@ struct mv_pp2x_tx_queue {
 	int size;
 
 	/* Per-CPU control of physical Tx queues */
-	struct mv_pp2x_txq_pcpu __percpu *pcpu;
+	struct mv_pp2x_txq_pcpu *pcpu;
 
 	u32 pkts_coal;
 
@@ -365,9 +378,6 @@ struct mv_pp2x_tx_queue {
 };
 
 struct mv_pp2x_aggr_tx_queue {
-	/* Physical number of this Tx queue */
-	u8 id;
-
 	/* Number of Tx DMA descriptors in the descriptor ring */
 	int size;
 
@@ -377,23 +387,29 @@ struct mv_pp2x_aggr_tx_queue {
 	/* Number of currently used Tx DMA descriptor in the descriptor ring used by HW */
 	int hw_count;
 
+	/* Index of the next Tx DMA descriptor to process */
+	int next_desc_to_proc;
+
+	/* Virtual pointer to address of the Aggr_Tx DMA descriptors array */
+	struct mv_pp2x_tx_desc *first_desc;
+
+	/* Index of the last Tx DMA descriptor */
+	int last_desc;
+
+	/* AGGR TX queue lock */
+	spinlock_t spinlock;
+
+	/* DMA address of the Tx DMA descriptors array */
+	dma_addr_t descs_phys;
+
 	/* Virtual pointer to address of the Aggr_Tx DMA descriptors
 	* memory_allocation
 	*/
 	void *desc_mem;
 
-	/* Virtual pointer to address of the Aggr_Tx DMA descriptors array */
-	struct mv_pp2x_tx_desc *first_desc;
-
-	/* DMA address of the Tx DMA descriptors array */
-	dma_addr_t descs_phys;
-
-	/* Index of the last Tx DMA descriptor */
-	int last_desc;
-
-	/* Index of the next Tx DMA descriptor to process */
-	int next_desc_to_proc;
-};
+	/* Physical number of this Tx queue */
+	u8 id;
+} __aligned(MVPP2_CACHE_LINE_SIZE);
 
 struct mv_pp2x_rx_queue {
 	/* RX queue number, in the range 0-31 for physical RXQs */
@@ -467,7 +483,7 @@ struct mv_pp2x_hw {
 				 *devm_ioremap_resource().
 				 */
 	void __iomem *lms_base;
-	void __iomem *cpu_base[MVPP2_MAX_CPUS];
+	void __iomem *cpu_base[MVPP2_MAX_ADDR_SPACES];
 
 	phys_addr_t phys_addr_start;
 	phys_addr_t phys_addr_end;
@@ -496,6 +512,8 @@ struct mv_pp2x_hw {
 	struct mv_pp2x_cls_shadow *cls_shadow;
 	/* C2 shadow info */
 	struct mv_pp2x_c2_shadow *c2_shadow;
+
+	bool mv_pp2x_no_single_mode;
 };
 
 struct mv_pp2x_cos {
@@ -509,7 +527,7 @@ struct mv_pp2x_cos {
 };
 
 struct mv_pp2x_rss {
-	u8 rss_mode; /*UDP packet */
+	u8 rss_mode; /*UDP&TCP packets */
 	u8 dflt_cpu; /*non-IP packet */
 	u8 rss_en;
 };
@@ -529,6 +547,15 @@ struct mv_pp2x_param_config {
 			*/
 	u8 uc_filter_max; /* The unicast filter list max, multiple of 4 */
 	u8 mc_filter_max; /* The multicast filter list max, multiple of 4 */
+
+	u8 num_of_ap; /* Num of AP's in system */
+	u8 spinlocks_bitmap; /* bitmap of required locks */
+	bool recycling; /* indicate if recycle enabled */
+};
+
+struct mv_pp2x_uio {
+	int num_maps;
+	struct uio_info u_info;
 };
 
 /* Shared Packet Processor resources */
@@ -545,19 +572,20 @@ struct mv_pp2x {
 	struct platform_device *pdev;
 
 	/* List of pointers to port structures */
-	u16 num_ports;
 	struct mv_pp2x_port **port_list;
+	u16 num_ports;
 
 	/* Aggregated TXQs */
 	u16 num_aggr_qs;
 	struct mv_pp2x_aggr_tx_queue *aggr_txqs;
+	u16 aggr_txqs_align_offs;
 
 	/* BM pools */
 	u16 num_pools;
 	struct mv_pp2x_bm_pool *bm_pools;
 
 	/* Per-CPU CP control */
-	struct mv_pp2x_cp_pcpu __percpu *pcpu;
+	struct mv_pp2x_cp_pcpu **pcpu;
 
 	/* RX flow hash indir'n table, in pp22, the table contains the
 	* CPU idx according to weight
@@ -566,9 +594,16 @@ struct mv_pp2x {
 	u32 rx_indir_table[MVPP22_RSS_TBL_LINE_NUM];
 	u32 l4_chksum_jumbo_port;
 
+	u8 rx_count;
+	u8 other_count;
+	/* Spinlocks per hif to protect BM refill */
+	spinlock_t bm_spinlock[8];
+
 	struct delayed_work stats_task;
 	struct workqueue_struct *workqueue;
 	struct notifier_block	cp_hotplug_nb;
+	struct mv_pp2x_uio uio;
+
 };
 
 struct mv_pp2x_pcpu_stats {
@@ -601,6 +636,15 @@ struct mv_pp2x_cp_pcpu {
 	bool tx_timer_scheduled;
 };
 
+struct sub_queue_vector {
+	struct napi_struct napi;
+	struct call_single_data csd;
+	u32 queue_mask;
+	u8 cpu_id;
+	struct queue_vector *parent;
+	u32 pending_cause_rx;
+};
+
 struct queue_vector {
 	u32 irq;
 	char irq_name[IRQ_NAME_SIZE];
@@ -615,10 +659,22 @@ struct queue_vector {
 	u32 pending_cause_rx; /* mask in absolute port_queues, not relative as
 			* in Ethernet Occupied Interrupt Cause (EthOccIC))
 			*/
+	u8 ap_id; /* ID of master AP */
+	struct sub_queue_vector **sub_vec;
+	u8 num_of_sub_vectors;
 	struct mv_pp2x_port *parent;
+
+	/* spinlock to protect queue_vector interrupt HW mask */
+	spinlock_t hw_mask_lock;
+	u32 queue_mask;
+	bool cold_cpu;
 };
 
 struct mv_pp2x_ptp_desc; /* per-port private PTP descriptor */
+
+struct mv_pp2x_port_uio {
+	struct uio_info u_info;
+};
 
 struct mv_pp2x_port {
 	u8 id;
@@ -642,6 +698,11 @@ struct mv_pp2x_port {
 	/* port's  number of tx_queues */
 	u8 num_tx_queues;
 
+	/* port's configured number of rx_queues */
+	u8 cfg_num_rx_queues;
+	/* port's configured number of tx_queues */
+	u8 cfg_num_tx_queues;
+
 	struct mv_pp2x_rx_queue **rxqs; /*Each Port has up tp 32 rxq_queues.*/
 	struct mv_pp2x_tx_queue **txqs;
 	struct net_device *dev;
@@ -651,7 +712,7 @@ struct mv_pp2x_port {
 			*/
 
 	/* Per-CPU port control */
-	struct mv_pp2x_port_pcpu __percpu *pcpu;
+	struct mv_pp2x_port_pcpu **pcpu;
 	/* Flags */
 	u64 flags;
 
@@ -670,16 +731,27 @@ struct mv_pp2x_port {
 	int txq_stop_limit;
 
 	u32 num_qvector;
+
+	/* port's configured number of qvectors */
+	u32 cfg_num_qvector;
+
 	/* q_vector is the parameter that will be passed to
 	 * mv_pp2_isr(int irq, void *dev_id=q_vector)
 	 */
-	struct queue_vector q_vector[MVPP2_MAX_CPUS + MVPP2_MAX_SHARED];
+
+	u8 ap_id;
+
+	struct queue_vector *q_vector;
 
 	struct mv_pp2x_ptp_desc *ptp_desc;
 	struct mv_pp2x_cos cos_cfg;
 	struct mv_pp2x_rss rss_cfg;
 	struct notifier_block	port_hotplug_nb;
-	int use_interrupts;
+	bool port_hotplugged;
+	bool use_interrupts; /* Used by Netmap */
+	bool interrupt_tx_done;
+
+	struct mv_pp2x_port_uio uio;
 };
 
 struct pp2x_hw_params {
@@ -870,6 +942,7 @@ int mv_pp2x_txq_reserved_desc_num_proc(struct mv_pp2x *priv,
 				       struct mv_pp2x_tx_queue *txq,
 				       struct mv_pp2x_txq_pcpu *txq_pcpu,
 				       int num, int cpu);
+int mv_pp2x_port_musdk_set(void *netdev_priv);
+int mv_pp2x_port_musdk_clear(void *netdev_priv);
 
 #endif /*_MVPP2_H_*/
-

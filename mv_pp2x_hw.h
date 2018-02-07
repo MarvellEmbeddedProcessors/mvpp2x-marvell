@@ -27,38 +27,41 @@
 
 static inline void mv_pp2x_write(struct mv_pp2x_hw *hw, u32 offset, u32 data)
 {
-	int cpu = get_cpu();
-	void *reg_ptr = hw->cpu_base[cpu] + offset;
+	void *reg_ptr = hw->cpu_base[0] + offset;
 
 	writel(data, reg_ptr);
-	put_cpu();
 }
 
 static inline void mv_pp2x_relaxed_write(struct mv_pp2x_hw *hw, u32 offset, u32 data,
 					 int cpu)
 {
-	void *reg_ptr = hw->cpu_base[cpu] + offset;
+	void *reg_ptr;
+
+	cpu = hw->mv_pp2x_no_single_mode * cpu;
+	reg_ptr = hw->cpu_base[cpu] + offset;
 
 	writel_relaxed(data, reg_ptr);
 }
 
 static inline u32 mv_pp2x_read(struct mv_pp2x_hw *hw, u32 offset)
 {
-	int cpu = get_cpu();
-	void *reg_ptr = hw->cpu_base[cpu] + offset;
 	u32 val;
 
+	void *reg_ptr = hw->cpu_base[0] + offset;
+
 	val = readl(reg_ptr);
-	put_cpu();
 
 	return val;
 }
 
 static inline u32 mv_pp2x_relaxed_read(struct mv_pp2x_hw *hw, u32 offset, int cpu)
 {
-	void *reg_ptr = hw->cpu_base[cpu] + offset;
 	u32 val;
+	void *reg_ptr;
 
+	cpu = hw->mv_pp2x_no_single_mode * cpu;
+
+	reg_ptr = hw->cpu_base[cpu] + offset;
 	val = readl_relaxed(reg_ptr);
 	return val;
 }
@@ -170,66 +173,6 @@ mv_pp2x_rxq_next_desc_get(struct mv_pp2x_rx_queue *rxq)
 	return (rxq->first_desc + rx_desc);
 }
 
-/* Mask the current CPU's Rx/Tx interrupts */
-static inline void mv_pp2x_interrupts_mask(void *arg)
-{
-	struct mv_pp2x_port *port = arg;
-
-	mv_pp2x_write(&port->priv->hw, MVPP2_ISR_RX_TX_MASK_REG(port->id), 0);
-}
-
-/* Unmask the current CPU's Rx/Tx interrupts */
-static inline void mv_pp2x_interrupts_unmask(void *arg)
-{
-	struct mv_pp2x_port *port = arg;
-	u32 val;
-
-	val = MVPP2_CAUSE_MISC_SUM_MASK | MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK;
-	/* Don't unmask Tx done interrupts for ports working in Netmap mode*/
-	if (!(port->flags & MVPP2_F_IFCAP_NETMAP) && port->priv->pp2xdata->interrupt_tx_done)
-		val |= MVPP2_CAUSE_TXQ_OCCUP_DESC_ALL_MASK;
-
-	mv_pp2x_write(&port->priv->hw,
-		      MVPP2_ISR_RX_TX_MASK_REG(port->id), val);
-}
-
-static inline void mv_pp2x_shared_thread_interrupts_mask(
-		struct mv_pp2x_port *port)
-{
-	struct queue_vector *q_vec = &port->q_vector[0];
-	int i;
-
-	if (!port->priv->pp2xdata->multi_addr_space)
-		return;
-
-	for (i = 0; i < port->num_qvector; i++) {
-		if (q_vec[i].qv_type == MVPP2_SHARED)
-			mv_pp22_thread_write(&port->priv->hw,
-					     q_vec[i].sw_thread_id,
-					    MVPP2_ISR_RX_TX_MASK_REG(port->id),
-					    0);
-	}
-}
-
-/* Unmask the shared CPU's Rx interrupts */
-static inline void mv_pp2x_shared_thread_interrupts_unmask(
-		struct mv_pp2x_port *port)
-{
-	struct queue_vector *q_vec = &port->q_vector[0];
-	int i;
-
-	if (!port->priv->pp2xdata->multi_addr_space)
-		return;
-
-	for (i = 0; i < port->num_qvector; i++) {
-		if (q_vec[i].qv_type == MVPP2_SHARED)
-			mv_pp22_thread_write(&port->priv->hw,
-					     q_vec[i].sw_thread_id,
-					    MVPP2_ISR_RX_TX_MASK_REG(port->id),
-					  MVPP2_CAUSE_RXQ_OCCUP_DESC_ALL_MASK);
-	}
-}
-
 static inline struct mv_pp2x_rx_queue *mv_pp2x_get_rx_queue(
 		struct mv_pp2x_port *port, u32 cause)
 {
@@ -286,6 +229,11 @@ static inline void mv_pp2x_bm_hw_pool_create(struct mv_pp2x_hw *hw,
 
 	val = mv_pp2x_read(hw, MVPP2_BM_POOL_CTRL_REG(pool));
 	val |= MVPP2_BM_START_MASK;
+	val &= ~MVPP2_BM_LOW_THRESH_MASK;
+	val &= ~MVPP2_BM_HIGH_THRESH_MASK;
+	val |= MVPP2_BM_LOW_THRESH_VALUE(MVPP2_BM_BPPI_LOW_THRESH);
+	val |= MVPP2_BM_HIGH_THRESH_VALUE(MVPP2_BM_BPPI_HIGH_THRESH);
+
 	mv_pp2x_write(hw, MVPP2_BM_POOL_CTRL_REG(pool), val);
 }
 
@@ -293,6 +241,11 @@ static inline void mv_pp2x_bm_pool_put_virtual(struct mv_pp2x_hw *hw, u32 pool,
 					       dma_addr_t buf_phys_addr,
 					      u8 *buf_virt_addr, int cpu)
 {
+#if defined(CONFIG_ARCH_DMA_ADDR_T_64BIT) && defined(CONFIG_PHYS_ADDR_T_64BIT)
+	mv_pp2x_relaxed_write(hw, MVPP22_BM_PHY_VIRT_HIGH_RLS_REG,
+			      upper_32_bits(buf_phys_addr), cpu);
+#endif
+
 	mv_pp2x_relaxed_write(hw, MVPP2_BM_VIRT_RLS_REG,
 			      lower_32_bits((uintptr_t)buf_virt_addr), cpu);
 
@@ -334,7 +287,7 @@ static inline void mv_pp2x_bm_pool_mc_put(struct mv_pp2x_port *port, int pool,
 static inline void mv_pp2x_port_interrupts_enable(struct mv_pp2x_port *port)
 {
 	int sw_thread_mask = 0, i;
-	struct queue_vector *q_vec = &port->q_vector[0];
+	struct queue_vector *q_vec = port->q_vector;
 
 	for (i = 0; i < port->num_qvector; i++)
 		sw_thread_mask |= q_vec[i].sw_thread_mask;
@@ -345,7 +298,7 @@ static inline void mv_pp2x_port_interrupts_enable(struct mv_pp2x_port *port)
 static inline void mv_pp2x_port_interrupts_disable(struct mv_pp2x_port *port)
 {
 	int sw_thread_mask = 0, i;
-	struct queue_vector *q_vec = &port->q_vector[0];
+	struct queue_vector *q_vec = port->q_vector;
 
 	for (i = 0; i < port->num_qvector; i++)
 		sw_thread_mask |= q_vec[i].sw_thread_mask;
@@ -574,7 +527,6 @@ struct mv_pp2x_tx_desc *mv_pp2x_txq_prev_desc_get(
 int mv_pp2x_txq_alloc_reserved_desc(struct mv_pp2x *priv,
 				    struct mv_pp2x_tx_queue *txq,
 				    int num, int cpu);
-void mv_pp2x_aggr_txq_pend_desc_add(struct mv_pp2x_port *port, int pending);
 int mv_pp2x_aggr_desc_num_read(struct mv_pp2x *priv, int cpu);
 int mv_pp2x_aggr_desc_num_check(struct mv_pp2x *priv,
 				struct mv_pp2x_aggr_tx_queue *aggr_txq,
@@ -617,7 +569,8 @@ void mv_pp2x_rx_pkts_coal_set(struct mv_pp2x_port *port,
 			      struct mv_pp2x_rx_queue *rxq);
 void mv_pp2x_rx_time_coal_set(struct mv_pp2x_port *port,
 			      struct mv_pp2x_rx_queue *rxq);
-void mv_pp2x_tx_done_pkts_coal_set(void *arg);
+void mv_pp2x_tx_done_pkts_coal_set(struct mv_pp2x_port *port, int address_space);
+void mv_pp2x_tx_done_pkts_coal_set_all(struct mv_pp2x_port *port);
 void mv_pp2x_cause_error(struct net_device *dev, int cause);
 void mv_pp2x_rx_error(struct mv_pp2x_port *port,
 		      struct mv_pp2x_rx_desc *rx_desc);
@@ -705,6 +658,8 @@ int mv_pp2x_cls_hw_lkp_hit_get(struct mv_pp2x_hw *hw, int lkpid, int way,
 			       unsigned int *cnt);
 void mv_pp2x_cls_flow_write(struct mv_pp2x_hw *hw,
 			    struct mv_pp2x_cls_flow_entry *fe);
+void mv_pp2x_cls_flow_read(struct mv_pp2x_hw *hw, int index,
+			   struct mv_pp2x_cls_flow_entry *fe);
 int mv_pp2x_cls_sw_flow_port_set(struct mv_pp2x_cls_flow_entry *fe,
 				 int type, int portid);
 int mv_pp2x_cls_sw_flow_hek_num_set(struct mv_pp2x_cls_flow_entry *fe,

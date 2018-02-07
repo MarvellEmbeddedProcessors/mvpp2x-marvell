@@ -286,6 +286,7 @@ int mv_pp2x_eth_tool_nway_reset(struct net_device *dev)
 	case PHY_INTERFACE_MODE_RGMII:
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
+	case PHY_INTERFACE_MODE_1000BASEX:
 		err = mv_gop110_check_port_type(gop, mac->gop_index);
 		if (err) {
 			pr_err("GOP %d set to 1000Base-X\n", mac->gop_index);
@@ -329,6 +330,7 @@ static void mv_pp2x_get_pauseparam(struct net_device *dev,
 	case PHY_INTERFACE_MODE_RGMII:
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
+	case PHY_INTERFACE_MODE_1000BASEX:
 		mv_gop110_port_link_status(gop,	mac, &status);
 		pause->autoneg =
 			(status.autoneg_fc ? AUTONEG_ENABLE : AUTONEG_DISABLE);
@@ -383,6 +385,7 @@ static int mv_pp2x_set_pauseparam(struct net_device *dev,
 	case PHY_INTERFACE_MODE_RGMII:
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
+	case PHY_INTERFACE_MODE_1000BASEX:
 		if (mac->speed == SPEED_2500) {
 			err = mv_gop110_check_port_type(gop, gop_port);
 			if (err) {
@@ -588,6 +591,7 @@ static int mv_pp2x_ethtool_set_settings(struct net_device *dev,
 	case PHY_INTERFACE_MODE_RGMII:
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
+	case PHY_INTERFACE_MODE_1000BASEX:
 		err = mv_pp2x_autoneg_gmac_check_valid(mac, gop, cmd, &status);
 		if (err < 0)
 			return err;
@@ -660,9 +664,9 @@ static int mv_pp2x_ethtool_set_coalesce(struct net_device *dev,
 
 		txq->pkts_coal = c->tx_max_coalesced_frames;
 	}
-	if (port->priv->pp2xdata->interrupt_tx_done) {
+	if (port->interrupt_tx_done) {
 		mv_pp2x_tx_done_time_coal_set(port, port->tx_time_coal);
-		on_each_cpu(mv_pp2x_tx_done_pkts_coal_set, port, 1);
+		mv_pp2x_tx_done_pkts_coal_set_all(port);
 	}
 
 	return 0;
@@ -769,6 +773,9 @@ static u32 mv_pp2x_ethtool_get_rxfh_indir_size(struct net_device *dev)
 	if (port->priv->pp2_version == PPV21)
 		return -EOPNOTSUPP;
 
+	if (port->flags & MVPP2_F_IF_MUSDK)
+		return -EOPNOTSUPP;
+
 	return ARRAY_SIZE(port->priv->rx_indir_table);
 }
 
@@ -784,7 +791,7 @@ static int mv_pp2x_get_rss_hash_opts(struct mv_pp2x_port *port,
 	case UDP_V4_FLOW:
 	case UDP_V6_FLOW:
 		nfc->data |= RXH_IP_SRC | RXH_IP_DST;
-		if (port->rss_cfg.rss_mode == MVPP2_RSS_NF_UDP_5T)
+		if (port->rss_cfg.rss_mode == MVPP2_RSS_5T)
 			nfc->data |= RXH_L4_B_0_1 | RXH_L4_B_2_3;
 		break;
 	case IPV4_FLOW:
@@ -807,7 +814,10 @@ static int mv_pp2x_ethtool_get_rxnfc(struct net_device *dev,
 	if (port->priv->pp2_version == PPV21)
 		return -EOPNOTSUPP;
 
-	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+	if (port->priv->pp2_cfg.queue_mode != MVPP2_QDIST_MULTI_MODE)
+		return -EOPNOTSUPP;
+
+	if (port->flags & MVPP2_F_IF_MUSDK)
 		return -EOPNOTSUPP;
 
 	if (!port)
@@ -851,10 +861,10 @@ static int mv_pp2x_set_rss_hash_opt(struct mv_pp2x_port *port,
 			return -EINVAL;
 		switch (nfc->data & (RXH_L4_B_0_1 | RXH_L4_B_2_3)) {
 		case 0:
-			mv_pp22_rss_mode_set(port, MVPP2_RSS_NF_UDP_2T);
+			mv_pp22_rss_mode_set(port, MVPP2_RSS_2T);
 			break;
 		case (RXH_L4_B_0_1 | RXH_L4_B_2_3):
-			mv_pp22_rss_mode_set(port, MVPP2_RSS_NF_UDP_5T);
+			mv_pp22_rss_mode_set(port, MVPP2_RSS_5T);
 			break;
 		default:
 			return -EINVAL;
@@ -875,7 +885,10 @@ static int mv_pp2x_ethtool_set_rxnfc(struct net_device *dev, struct ethtool_rxnf
 		return -EOPNOTSUPP;
 
 	/* Single mode doesn't support RSS features */
-	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+	if (port->priv->pp2_cfg.queue_mode != MVPP2_QDIST_MULTI_MODE)
+		return -EOPNOTSUPP;
+
+	if (port->flags & MVPP2_F_IF_MUSDK)
 		return -EOPNOTSUPP;
 
 	switch (cmd->cmd) {
@@ -899,7 +912,10 @@ static int mv_pp2x_ethtool_get_rxfh(struct net_device *dev, u32 *indir, u8 *key,
 		return -EOPNOTSUPP;
 
 	/* Single mode doesn't support RSS features */
-	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+	if (port->priv->pp2_cfg.queue_mode != MVPP2_QDIST_MULTI_MODE)
+		return -EOPNOTSUPP;
+
+	if (port->flags & MVPP2_F_IF_MUSDK)
 		return -EOPNOTSUPP;
 
 	if (hfunc)
@@ -919,12 +935,16 @@ static int mv_pp2x_ethtool_set_rxfh(struct net_device *dev, const u32 *indir,
 {
 	int i, err;
 	struct mv_pp2x_port *port = netdev_priv(dev);
+	u32 rx_indir_table_orig[MVPP22_RSS_TBL_LINE_NUM];
 
 	if (port->priv->pp2_version == PPV21)
 		return -EOPNOTSUPP;
 
 	/* Single mode doesn't support RSS features */
-	if (port->priv->pp2_cfg.queue_mode == MVPP2_QDIST_SINGLE_MODE)
+	if (port->priv->pp2_cfg.queue_mode != MVPP2_QDIST_MULTI_MODE)
+		return -EOPNOTSUPP;
+
+	if (port->flags & MVPP2_F_IF_MUSDK)
 		return -EOPNOTSUPP;
 
 	/* We require at least one supported parameter to be changed
@@ -937,12 +957,18 @@ static int mv_pp2x_ethtool_set_rxfh(struct net_device *dev, const u32 *indir,
 	if (!indir)
 		return 0;
 
-	for (i = 0; i < ARRAY_SIZE(port->priv->rx_indir_table); i++)
+	for (i = 0; i < ARRAY_SIZE(port->priv->rx_indir_table); i++) {
+		rx_indir_table_orig[i] = port->priv->rx_indir_table[i];
 		port->priv->rx_indir_table[i] = indir[i];
+	}
 
 	err =  mv_pp22_rss_rxfh_indir_set(port);
 	if (err) {
 		netdev_err(dev, "fail to change rxfh indir table");
+		/* Rollback rx_indir_table */
+		for (i = 0; i < ARRAY_SIZE(port->priv->rx_indir_table); i++)
+			port->priv->rx_indir_table[i] = rx_indir_table_orig[i];
+		mv_pp22_rss_rxfh_indir_set(port);
 		return err;
 	}
 
@@ -961,6 +987,7 @@ static int mv_pp2x_ethtool_get_regs_len(struct net_device *dev)
 	case PHY_INTERFACE_MODE_RGMII:
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
+	case PHY_INTERFACE_MODE_1000BASEX:
 		return MV_PP2_REGS_GMAC_LEN * sizeof(u32);
 	case PHY_INTERFACE_MODE_XAUI:
 	case PHY_INTERFACE_MODE_RXAUI:
@@ -996,6 +1023,7 @@ static void mv_pp2x_ethtool_get_regs(struct net_device *dev,
 	case PHY_INTERFACE_MODE_RGMII:
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
+	case PHY_INTERFACE_MODE_1000BASEX:
 		memset(p, 0, MV_PP2_REGS_GMAC_LEN * sizeof(u32));
 		mv_gop110_gmac_registers_dump(port, p);
 	break;
@@ -1140,6 +1168,7 @@ static void mv_pp2x_eth_tool_diag_test(struct net_device *netdev,
 	case PHY_INTERFACE_MODE_RGMII:
 	case PHY_INTERFACE_MODE_SGMII:
 	case PHY_INTERFACE_MODE_QSGMII:
+	case PHY_INTERFACE_MODE_1000BASEX:
 	break;
 	case PHY_INTERFACE_MODE_XAUI:
 	case PHY_INTERFACE_MODE_RXAUI:
@@ -1159,6 +1188,23 @@ static void mv_pp2x_eth_tool_diag_test(struct net_device *netdev,
 		test->flags |= data[i] ? ETH_TEST_FL_FAILED : 0;
 
 	msleep_interruptible(4 * 1000);
+}
+
+static void mv_pp2x_get_channels(struct net_device *netdev,
+				 struct ethtool_channels *ch)
+{
+	struct mv_pp2x_port *port = netdev_priv(netdev);
+
+	if (port->priv->pp2_version == PPV21)
+		return;
+	/* Only multi queue mode support rx_count(# of Hot CPU's) and
+	 * other_count(# of adreess spaces used by cold CPU's)
+	 */
+	if (port->priv->pp2_cfg.queue_mode != MVPP2_QDIST_MULTI_MODE)
+		return;
+
+	ch->rx_count = port->priv->rx_count;
+	ch->other_count = port->priv->other_count;
 }
 
 static const struct ethtool_ops mv_pp2x_eth_tool_ops = {
@@ -1184,41 +1230,11 @@ static const struct ethtool_ops mv_pp2x_eth_tool_ops = {
 	.get_regs_len           = mv_pp2x_ethtool_get_regs_len,
 	.get_regs		= mv_pp2x_ethtool_get_regs,
 	.self_test		= mv_pp2x_eth_tool_diag_test,
+	.get_channels		= mv_pp2x_get_channels,
 };
 
 void mv_pp2x_set_ethtool_ops(struct net_device *netdev)
 {
 	netdev->ethtool_ops = &mv_pp2x_eth_tool_ops;
-}
-
-/* Following eth_tool_ops is for musdk_ports, i.e. eth_ports that have the musdk-status property in their dts. */
-static const struct ethtool_ops mv_pp2x_non_kernel_eth_tool_ops = {
-	.get_link		= ethtool_op_get_link,
-	.get_settings		= mv_pp2x_ethtool_get_settings,
-	/*.set_settings		= mv_pp2x_ethtool_set_settings,*/
-	/*.set_coalesce		= mv_pp2x_ethtool_set_coalesce,*/
-	/*.get_coalesce		= mv_pp2x_ethtool_get_coalesce,*/
-	.nway_reset		= mv_pp2x_eth_tool_nway_reset,
-	.get_drvinfo		= mv_pp2x_ethtool_get_drvinfo,
-	.get_ethtool_stats	= mv_pp2x_eth_tool_get_ethtool_stats,
-	.get_sset_count		= mv_pp2x_eth_tool_get_sset_count,
-	.get_strings		= mv_pp2x_eth_tool_get_strings,
-	/*.get_ringparam	= mv_pp2x_ethtool_get_ringparam,*/
-	/*.set_ringparam	= mv_pp2x_ethtool_set_ringparam,*/
-	.get_pauseparam		= mv_pp2x_get_pauseparam,
-	.set_pauseparam		= mv_pp2x_set_pauseparam,
-	.get_rxfh_indir_size	= mv_pp2x_ethtool_get_rxfh_indir_size,
-	.get_rxnfc		= mv_pp2x_ethtool_get_rxnfc,
-	.set_rxnfc		= mv_pp2x_ethtool_set_rxnfc,
-	.get_rxfh		= mv_pp2x_ethtool_get_rxfh,
-	.set_rxfh		= mv_pp2x_ethtool_set_rxfh,
-	.get_regs_len           = mv_pp2x_ethtool_get_regs_len,
-	.get_regs		= mv_pp2x_ethtool_get_regs,
-	.self_test		= mv_pp2x_eth_tool_diag_test,
-};
-
-void mv_pp2x_set_non_kernel_ethtool_ops(struct net_device *netdev)
-{
-	netdev->ethtool_ops = &mv_pp2x_non_kernel_eth_tool_ops;
 }
 
