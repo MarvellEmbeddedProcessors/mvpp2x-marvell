@@ -37,7 +37,7 @@ queue_mode module parameter
 -----------------------------
 	- queue_mode determines the interrupt structure. It has 3 options:
 		- 0  – SINGLE_MODE, means single mode (shared) - rx interrupt.
-		- 1  – MULTI_MODE, means multi mode (RSS) - rx interrupt.
+		- 1  – MULTI_MODE, means multi mode (RSS) - rx interrupt. MULTI_MODE is default mode.
 		- 2  - SINGLE_RESOURCE_MODE, means single interrupt and address space allocated by kernel.
 	- In SINGLE_MODE each online CPU will has his own TX interrupt and all CPU's will has common RX interrupt.
 	  RX smp_affinity could be changed by changing proc/irq/<IRQ>/smp_affinity.
