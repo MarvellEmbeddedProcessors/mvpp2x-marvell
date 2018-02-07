@@ -15,6 +15,7 @@ Table of Contents
 10. tx_queue_size module parameter
 11. uc_filter_max module parameter
 12. stats_delay_msec module parameter
+13. rx_count module parameter
 
 
 Module parameters overview
@@ -34,21 +35,48 @@ Module parameters overview
 
 queue_mode module parameter
 -----------------------------
-	- queue_mode determines the interrupt structure. It has 2 options:
+	- queue_mode determines the interrupt structure. It has 3 options:
 		- 0  – SINGLE_MODE, means single mode (shared) - rx interrupt.
 		- 1  – MULTI_MODE, means multi mode (RSS) - rx interrupt.
+		- 2  - SINGLE_RESOURCE_MODE, means single interrupt and address space allocated by kernel.
 	- In SINGLE_MODE each online CPU will has his own TX interrupt and all CPU's will has common RX interrupt.
 	  RX smp_affinity could be changed by changing proc/irq/<IRQ>/smp_affinity.
 
 		Example:
 
 			# echo 1 > proc/irq/160/smp_affinity
+			
+	- A8KP SINGLE_MODE:
+		- Single AP - 8 or less CPU's. Same as A8K.
+		- Dual/Quad AP - 2/4 CPU's share same interrupt for TX interrupt and same address for TX
+	  
 
 	- In MULTI_MODE each online CPU will has his own TX and RX common interrupt. Traffic distribution could be changed by RSS feature.
 	- Parameter is per port and set for all ports.
 	- Example:
 
 			# insmod mvpp2x.ko queue_mode=1
+			
+	- A8KP SINGLE_MODE:
+		- Single AP - 8 or less CPU's. Same as A8K.
+		- Dual/Quad AP - CPUs can be splitter to hot and cold CPUs.
+		  Hot CPU - can receive and send traffic, this CPU supposed to be fast.
+		  Cold CPU - can only transmit traffic, this CPU not supposed to be fast.
+		  For cold CPUs, TX Shared type interrupt were added.
+		  Default settings:
+		  For system with 16/32 CPUs: 8 - Hot CPU's, each has his own Interrupt
+									      and address space.
+									  8/24 - Cold CPU's, all share same Interrupt
+									         and address space.
+		  Number of hot CPU's could be set by rx_count module parameter.
+
+
+	- In SINGLE_RESOURCE_MODE for TX all CPU's share single address space.
+	  TX done and RX handled by CPU 0, address space 0 and by single Interrupt.
+	- Parameter is per port and set for all ports.
+	- Example:
+
+			# insmod mvpp2x.ko queue_mode=2
 
 
 num_cos_queues module parameter
@@ -163,3 +191,9 @@ stats_delay_msec module parameter
 	- Parameter is common for all ports.
 	- Default parameter is 250 msec
 
+rx_count module parameter
+----------------------------------------------------------------------
+	- rx_count define number of hot CPU's(number of CPUs that can do RX and TX) in system.
+	- Relevant only for A8KP with at least two AP's(16 CPU's and more) and only for MVPP2_QDIST_MULTI_MODE
+	- Parameter is common for all ports.
+	- Default parameter is 8. Possible parameters are 8, 16 and 32.

@@ -240,8 +240,7 @@ If there are 4 CPUs in the SOC, and only CPU2 and CPU3 are online, then the firs
 RSS tables are configured per CPN, so on A8040 each CPN group of ports has his own RSS tables configurations.
 
 There are 2 kinds of way to calculate the HASH value, one is based on 5T and another is based on 2T.
-In general, for TCP packets it is always based on 5T, but for UDP packets both ways are OK, and it is configurable.
-So there is a parameter (rss_mode) supplied to tell system the way to calculate UDP HASH value.
+So there is a parameter (rss_mode) supplied to tell system the way to calculate UDP and TCP HASH value.
 There is a special case, IP fragment packet, regardless of L4 protocol,	its HASH value is always based on 2T.
 Because HASH value only exists in IP packets, another parameter (default_cpu) is supplied to tell system which CPU should handle the non-IP packets.
 
@@ -250,8 +249,8 @@ RSS parameters:
 		- 0 – SINGLE_MODE, means single mode (shared) rx interrupt.
 		- 1 – MULTI_MODE, means multi mode (RSS) rx interrupt.
 	- rss_mode: has 2 options:
-		- 0 – UDP_2TUPLE, means UDP packets hash based on 2T
-		- 1 – UDP_5TUPLE, means UDP packets hash based on 5T
+		- 0 – 2TUPLE, means UDP and TCP packets hash based on 2T
+		- 1 – 5TUPLE, means UDP and TCP packets hash based on 5T
 	- default_cpu: the default CPU to handle non-IP packets
 
 	while queue_mode can be set only via module parameter, rss_mode and default_cpu can be set via either module parameter or sysfs command.

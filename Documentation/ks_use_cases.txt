@@ -35,7 +35,7 @@ To run the use case:
 		- Reset board and stop system in boot by hitting on any button
 		- Set multi queue mode:
 
-				set extra_params mvpp2x.queue_mode=1
+				setenv extra_params mvpp2x.queue_mode=1
 				save
 
 		- Press boot to start Linux
@@ -116,7 +116,7 @@ To run the use case:
 		- Reset board and stop system in boot by hitting on any button.
 		- Set multi queue mode:
 
-				set extra_params mvpp2x.queue_mode=1
+				setenv extra_params mvpp2x.queue_mode=1
 				save
 
 		- Press boot to start Linux
@@ -250,7 +250,7 @@ To run the use case:
 		- Reset board and stop system in boot by hitting on any button
 		- Set multi queue mode:
 
-				set extra_params mvpp2x.queue_mode=1
+				setenv extra_params mvpp2x.queue_mode=1
 				save
 
 		- Press boot to start Linux
