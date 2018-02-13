@@ -32,6 +32,7 @@ Module parameters overview
 
 			# insmod mvpp2x.ko queue_mode=1
 
+.. _queue_mode:
 
 queue_mode module parameter
 -----------------------------
