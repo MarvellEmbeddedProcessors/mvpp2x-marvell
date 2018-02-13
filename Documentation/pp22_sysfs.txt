@@ -20,6 +20,7 @@ information about various devices and kernel subsystems, exported virtual files 
 used for their configurations. Sysfs compiled as internal ko module and insmod should be done
 before use.
 
+.. _pp2x_sysfs_build:
 
 Sysfs Build Instructions
 ----------------------------------------------------------------------
