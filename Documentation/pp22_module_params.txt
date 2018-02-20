@@ -1,4 +1,4 @@
-PPv2.2 Kernel Module Parameters
+﻿PPv2.2 Kernel Module Parameters
 ===============================
 
 Table of Contents
@@ -19,66 +19,89 @@ Table of Contents
 
 
 Module parameters overview
--------------------------------
-	- module_param allowing drivers to declare parameters that the user can specify on either boot or module load and
-	  then have these parameters exposed in the driver as global variables.
-	- Parameter is common for all ports.
-	- module_param could be set in u-boot extra_params. Example:
+---------------------------
+Kernel module parameters (**module_param**) allow drivers to declare parameters that the user can specify on either boot or module load and then have these parameters exposed in the driver as global variables.
 
-			# set extra_params mvpp2x.queue_mode=1
-			# save
+**module_param** is common for all ports.
 
-	  or during module insmod. Example:
+**module_param** could be set in two ways:
 
-			# insmod mvpp2x.ko queue_mode=1
+	* In u-boot extra_params. Example::
+
+		# set extra_params mvpp2x.queue_mode=1
+		# save
+
+	* During module insmod. Example::
+
+		# insmod mvpp2x.ko queue_mode=1
 
 .. _queue_mode:
 
-queue_mode module parameter
+*queue_mode* module parameter
 -----------------------------
-	- queue_mode determines the interrupt structure. It has 3 options:
-		- 0  – SINGLE_MODE, means single mode (shared) - rx interrupt.
-		- 1  – MULTI_MODE, means multi mode (RSS) - rx interrupt. MULTI_MODE is default mode.
-		- 2  - SINGLE_RESOURCE_MODE, means single interrupt and address space allocated by kernel.
-	- In SINGLE_MODE each online CPU will has his own TX interrupt and all CPU's will has common RX interrupt.
-	  RX smp_affinity could be changed by changing proc/irq/<IRQ>/smp_affinity.
+**queue_mode** parameter determines the interrupt structure. It has 3 options:
 
-		Example:
+	* 0  – SINGLE_MODE, means single mode (shared) rx interrupt.
+	* 1  – MULTI_MODE, means multi mode (RSS) rx interrupt. MULTI_MODE is default mode.
+	* 2  - SINGLE_RESOURCE_MODE, means single interrupt and single address space (hif) allocated by kernel.
+
+	.. Note::
+		The maximum number of Host Interface (``hifs``) objects that define address space and TX aggregation queue is limited to ``9`` per system, so in systems with more than 8 CPUs, some CPUs will share the same hif.
+
+1) SINGLE_MODE
+
+	In this mode all CPU's will have a common RX interrupt.
+
+	RX smp_affinity could be changed by changing proc/irq/<IRQ>/smp_affinity. For example::
 
 			# echo 1 > proc/irq/160/smp_affinity
-			
-	- A8KP SINGLE_MODE:
-		- Single AP - 8 or less CPU's. Same as A8K.
-		- Dual/Quad AP - 2/4 CPU's share same interrupt for TX interrupt and same address for TX
-	  
 
-	- In MULTI_MODE each online CPU will has his own TX and RX common interrupt. Traffic distribution could be changed by RSS feature.
-	- Parameter is per port and set for all ports.
-	- Example:
+	TX interrupt handling in SINGLE_MODE performed as follows:
 
-			# insmod mvpp2x.ko queue_mode=1
-			
-	- A8KP SINGLE_MODE:
-		- Single AP - 8 or less CPU's. Same as A8K.
-		- Dual/Quad AP - CPUs can be splitter to hot and cold CPUs.
-		  Hot CPU - can receive and send traffic, this CPU supposed to be fast.
-		  Cold CPU - can only transmit traffic, this CPU not supposed to be fast.
-		  For cold CPUs, TX Shared type interrupt were added.
-		  Default settings:
-		  For system with 16/32 CPUs: 8 - Hot CPU's, each has his own Interrupt
-									      and address space.
-									  8/24 - Cold CPU's, all share same Interrupt
-									         and address space.
-		  Number of hot CPU's could be set by rx_count module parameter.
+		* For systems with 8 and less CPUs: A7K, A8K, A8KP Single AP:
+			Each online CPU will have his own TX interrupt and all CPU's will have a common RX interrupt.
+
+		* For systems with more than 8 CPUs: A8KP Dual/Quad AP:
+			In this case each 2 (or 4) CPU's will share same interrupt for TX done interrupt and same address space (hif) for TX. For example: CPU's 0 and 1 mapped to address space and Interrupt 0, CPU's 2 and 4 mapped to address space and Interrupt 1 and etc.
+
+	.. Note::
+		In SINGLE_MODE number of allocated by Kernel hif's equal to ``number of CPU's + 1`` (up to maximum 9 hif's).
 
 
-	- In SINGLE_RESOURCE_MODE for TX all CPU's share single address space.
-	  TX done and RX handled by CPU 0, address space 0 and by single Interrupt.
-	- Parameter is per port and set for all ports.
-	- Example:
+2) MULTI_MODE
 
-			# insmod mvpp2x.ko queue_mode=2
+	In this mode common TX done and RX interrupt is used. Traffic distribution could be changed by RSS feature.
 
+	TX done/RX interrupt handling in MULTI_MODE performed as follows:
+
+		* For systems with 8 and less CPUs: A7K, A8K, A8KP Single AP:
+			Each online CPU will have his own TX done and RX common interrupt.
+
+		* For systems with more than 8 CPUs: A8KP Dual/Quad AP:
+			CPUs can be splitted to hot and cold CPUs.
+				- Hot CPU
+					Can receive and send traffic. This CPU has his own interrupt and address space (hif) and supposed to be fast.
+				- Cold CPU
+					Can only transmit traffic. All Cold CPUs share same Interrupt and address space (hif) and not supposed to be fast. For cold CPUs, TX done Shared type interrupt were added.
+
+			.. Note::
+				Number of hot CPU's could be set by rx_count module parameter. Cold and hot CPU's mapping is fixed and cannot be changed.
+
+			Default settings (for system with 16/32 CPUs):
+				- CPU 0 to 7 are Hot CPU's.
+				- CPU 8 to 15/35 are Cold CPU's.
+
+	.. Note::
+		In MULTI_MODE number of allocated by Kernel hif's equal to ``number of CPU's`` (up to maximum 9 hif's).
+
+
+3) SINGLE_RESOURCE_MODE
+
+	In this mode for TX all CPU's share single address space(hif).
+	TX done and RX handled by CPU 0, address space 0 and by single Interrupt.
+
+	.. Note::
+		In SINGLE_RESOURCE_MODE number of allocated by Kernel hif's equal to ``1``.
 
 num_cos_queues module parameter
 --------------------------------
