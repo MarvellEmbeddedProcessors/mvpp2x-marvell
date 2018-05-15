@@ -1975,7 +1975,7 @@ void mv_pp2x_pp2_basic_print(struct platform_device *pdev, struct mv_pp2x *priv)
 			priv->hw.gop.gop_110.smi_base,
 			priv->hw.gop.gop_110.xsmi_base);
 		DBG_MSG("gop_addr: mspg(%p) xpcs(%p) ptp(%p)\n",
-			priv->hw.gop.gop_110.mspg_base,
+			priv->hw.gop.gop_110.mspg.base,
 			priv->hw.gop.gop_110.xpcs_base,
 			priv->hw.gop.gop_110.ptp.base);
 		DBG_MSG("gop_addr: rfu1(%p)\n",
