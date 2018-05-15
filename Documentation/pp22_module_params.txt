@@ -194,7 +194,7 @@ rx_queue_size module parameter
 
 tx_queue_size module parameter
 --------------------------------
-	- tx_queue_size define RX descriptors ring size.
+	- tx_queue_size define TX descriptors ring size.
 	- Parameter is per port and set for all ports.
 	- Descriptors ring size range: 32-2048 (in multiples of 16), default is 2048
 	- Example:
