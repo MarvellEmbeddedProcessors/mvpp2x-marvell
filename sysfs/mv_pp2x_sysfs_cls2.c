@@ -160,7 +160,7 @@ static ssize_t mv_cls2_store(struct device *dev,
 	else if (!strcmp(name, "qos_sw_queue"))
 		mv_pp2x_cls_c2_qos_queue_set(&qos_entry, a);
 	else if (!strcmp(name, "act_sw_clear"))
-		memset(&c2_entry, 0, sizeof(struct mv_pp2x_c2_add_entry));
+		memset(&c2_entry, 0, sizeof(c2_entry));
 	else if (!strcmp(name, "act_hw_write"))
 		mv_pp2x_cls_c2_hw_write(sysfs_cur_hw, a, &c2_entry);
 	else if (!strcmp(name, "act_hw_read"))
