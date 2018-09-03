@@ -101,7 +101,12 @@ static ssize_t mv_pp2_txq_store(struct device *dev,
 		mvPp2TxqShow(sysfs_cur_priv, p, v, a);
 	} else if (!strcmp(name, "num_tx_queues")) {
 		pp2_port = mv_pp2x_port_struct_get(sysfs_cur_priv, p);
-		DBG_MSG("num_rx_queues=%d\n", pp2_port->num_tx_queues);
+		if (!pp2_port) {
+			err = 1;
+			printk(KERN_ERR "%s: unconnected port %d\n", __func__, p);
+		} else {
+			DBG_MSG("num_rx_queues=%d\n", pp2_port->num_tx_queues);
+		}
 	}  else if (!strcmp(name, "aggrTxqShow")) {
 		mvPp2AggrTxqShow(sysfs_cur_priv, p, v);
 	} else if (!strcmp(name, "gTxqRegs")) {
